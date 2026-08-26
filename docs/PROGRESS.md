@@ -1422,3 +1422,71 @@ turned out to understate the true GEMM cost. Committed alongside this
 write-up (probe, job script, all three run logs including both API-error
 attempts, full trail preserved). `benchmark.py` untouched, no archive
 cell touched.
+
+## New round: broader research, revisiting risk/effort-based rejections
+
+User asked for deeper research into hardware-specific and compiler-level
+techniques not yet tried, plus a re-look at anything closed for risk/effort
+reasons rather than fundamental infeasibility, with explicit appetite for
+higher risk this round. Full plan (tiered by risk) at the plan-mode
+artifact; summary: Tier 1 compiler-level/zero-accuracy-risk (max-autotune,
+inductor knobs, cudnn.benchmark), Tier 2 precision/real-risk (plain FP16 —
+never tried, unlike BF16 — scoped narrowest-first: FFN-only, attention-only,
+full-model; INT8 FFN), Tier 3 higher-effort-now-feasible (G2.3 L2
+persistence via a real C++ extension, now confirmed buildable in this
+container; G3.6 minimax GELU).
+
+### 25. G6.1 (`torch.compile(mode="max-autotune")`) — tried, decisive accuracy failure, reverted
+
+**What was tried:** swapped both of `UserOptimizedTransformer`'s internal
+`torch.compile()` calls (the non-causal `_optimized_forward` path and the
+causal fallback) from `mode="reduce-overhead"` to `mode="max-autotune"`.
+Confirmed via grep beforehand this was genuinely untried — `max-autotune`
+existed only as an unused `--compile-mode` CLI choice, never wired into
+the class's own hardcoded calls. Motivation: `max-autotune` still builds
+and replays CUDA graphs (doesn't give up G2.4's launch-overhead win) and
+additionally lets inductor search real Triton/CUTLASS/cuBLAS kernel
+candidates per op, including epilogue fusion cuBLAS's own API can't
+express — looked additive, not a tradeoff.
+
+**Result: decisive accuracy failure on the very first shape tested**
+(`results/g6_1_max_autotune_smoke_FAILED_run56.log`, job 56, tiny shape —
+script aborted under `set -e` before reaching default/causal). All 5
+trials FAIL: `max_abs` 0.00220–0.00242 (2.2–2.4x over the 0.001 budget),
+1250/163840 elements failing outright under the full disjunctive
+criterion (both abs>0.001 AND rel>>1% on the same failing elements, not a
+near-zero-denominator artifact).
+
+**Root cause, read directly from the autotuner's own choice log:**
+`max-autotune`'s kernel search does not select one homogeneous kernel
+family — for one GEMM shape (64×512 @ 512×2048) it picked a Triton kernel
+(`triton_mm_40`, `ALLOW_TF32=True`) over cuBLAS's own `mm`; for another
+(64×2048 @ 2048×512) cuBLAS `mm` itself won outright; for the fused
+`addmm` case, Triton won again. The shipped `reduce-overhead` path never
+did this search — every GEMM went through cuBLAS's own native TF32 tensor-
+core path uniformly. Triton's `ALLOW_TF32=True` is a *software* emulation
+of TF32 (a 3-pass FP32 decomposition), not the same hardware datapath as
+cuBLAS's native TF32 GEMM — different rounding, and here enough of it to
+push several layers' worth of accumulated error over budget by the time
+it reaches the output.
+
+**Why this closes without a workaround, not just this particular run:**
+the only way to keep max-autotune's real value proposition (epilogue
+fusion) is to let it search Triton candidates, and it's exactly the
+Triton-vs-cuBLAS kernel heterogeneity that causes the drift — restricting
+the autotuner to cuBLAS/ATEN-only backends would recover the shipped
+model's accuracy exactly by producing the shipped model's kernel
+selection, at which point there is no speedup left to have (no epilogue
+fusion, no benefit over `reduce-overhead`). There's no middle setting that
+keeps the win and drops the risk; it's a package deal that already failed.
+
+**Reverted immediately** (`git checkout -- benchmark.py`, verified clean
+via `git status`, `check_validity.py` still passes). Committed alongside
+this write-up: `jobs/g6_1_max_autotune_smoke.sbatch`,
+`results/g6_1_max_autotune_smoke_FAILED_run56.log`. No archive cell
+touched.
+
+**Closes Tier 1 item 2 (inductor config knobs) as moot along with it** —
+those knobs (`coordinate_descent_tuning`, explicit `epilogue_fusion`) only
+have an effect *under* max-autotune's search; with that mode itself closed
+on accuracy, there's nothing left for them to tune.
