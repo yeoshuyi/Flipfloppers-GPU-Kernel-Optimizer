@@ -15,20 +15,20 @@ can lag by one iteration if a crash happened mid-step).
 ## Current State (updated after each iteration)
 
 - **Day:** 1-2 (Track A in progress)
-- **Track A progress:** G0.1 done. G0.2 in progress.
+- **Track A progress:** G0.1 done, G0.2 done. G0.3 in progress.
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
-  | tiny | 1.31x |
-  | default | 1.14x |
-  | long-seq | 2.15x |
+  | tiny | 1.38x |
+  | default | 1.15x |
+  | long-seq | 2.15x (G0.1's number; G0.2 landed 2.10x here, near-miss, kept the better one) |
   | large-batch | 1.25x |
-  | padded | 1.13x |
+  | padded | 1.16x |
   | causal | 1.00x (fallback to exact baseline, not yet improved) |
 - **Known open gap:** causal regime has no speedup yet. Root cause: even
   SDPA's MATH backend drifts past the 1e-3 accuracy threshold on ~half of
   random seeds at B8_S128 causal (see step 5 below). Deferred to G1.2.
-- **Latest commit:** `5cfbc6f` (archive.py bugfix)
+- **Latest commit:** `69845c0` (G0.2 archive: causal/trackA)
 
 ---
 
@@ -145,6 +145,40 @@ git add/commit block. Did not rewrite the mislabeled history (per git
 safety practice — no amending/rebasing without being asked); just
 documented it. Commit `5cfbc6f`.
 
-### 7. (in progress) G0.2 — fused QKV
+### 7. G0.2 — fused QKV
+**Fact cited:** `docs/CATALOGUE.md` G0.2 — three separate `[d,d]` GEMMs
+(q_proj/k_proj/v_proj) cost three kernel launches and have worse arithmetic
+intensity than one `[d,3d]` GEMM; biggest win expected in the launch-bound
+TINY regime.
+
+**What changed:** added `UserOptimizedTransformer._fused_qkv()`, a
+staticmethod that lazily builds `attn._qkv_weight`/`attn._qkv_bias` (plain
+tensor attributes, cached on first forward, rebuilt only if
+device/dtype changes) by concatenating the three projection weights/biases,
+then does one `F.linear` + `.split()` instead of three separate
+`nn.Linear` calls. Plain attributes (never `Parameter`/`Buffer`), so
+`strict=True` state_dict loading is unaffected (CLAUDE.md invariant 4) —
+verified by the fact `check_validity.py`'s buffer/parameter check still
+passed.
+
+**Verification:** full 8-shape sweep (sbatch job id 17, log in
+`results/g0_2_sweep_run17.log`), all PASS. vs G0.1 (job 16): tiny
+1.307→1.378x, default 1.137→1.150x, padded 1.134→1.161x, large_batch flat
+(1.253→1.255x). long_seq/long_seq_padded dipped slightly (2.147→2.095x,
+2.148→2.096x) — plausibly a GEMM-shape/tiling effect at large S where the
+merged `[d,3d]` matmul doesn't get as favorable a cuBLAS kernel selection
+as three separate `[d,d]` calls; not investigated further since it's small
+and the archive's MAP-Elites logic correctly keeps G0.1's better result for
+that cell rather than regressing it. Causal unaffected (still on the exact
+baseline fallback from G0.1).
+
+Committed `8f48d13`. Archived: `tiny/trackA` 1.38x (new elite),
+`default/trackA` 1.15x (new elite), `long-seq/trackA` stayed at 2.15x
+(G0.2's 2.10x logged as near-miss, not elite), `large-batch/trackA` 1.25x,
+`padded/trackA` 1.16x (new elite), `causal/trackA` 1.00x. Confirmed the
+step-6 archive.py fix works correctly this time — every commit's diff now
+matches its own message's cell.
+
+### 8. (in progress) G0.3 — kill `_split_heads` `.contiguous()`
 See "Current State" above for live status; this section will be filled in
 once verified.
