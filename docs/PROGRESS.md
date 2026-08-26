@@ -10,32 +10,68 @@ first** if resuming cold. Then `git log --oneline` and `python3
 tools/archive.py summary` for the authoritative current numbers (this file
 can lag by one iteration if a crash happened mid-step).
 
+## Session summary (2026-08-26)
+
+Bootstrap (Phase 0, baseline sweep) plus 8 verified Track A optimisations,
+one per iteration, each gated on `tools/check_validity.py` → full 8-shape
+accuracy sweep → benchmark → `tools/archive.py`:
+
+| # | id | what | regimes affected |
+|---|---|---|---|
+| G0.1 | SDPA replaces manual attention | all non-causal (causal gated to fallback — accuracy) |
+| G0.2 | fused QKV (one `[d,3d]` matmul) | all non-causal |
+| G0.3 | skip `.contiguous()` before SDPA | all non-causal |
+| G0.5 | all-ones-mask fast path | all non-causal (found the `attn_mask=None` path was dead code) |
+| G1.1 | fold LayerNorm affine into consumer linears | all non-causal |
+| G1.2 | fold attention scale into `W_Q` | all non-causal (exact, but ~0 speedup under SDPA) |
+| G2.4 | `torch.compile` CUDA graphs | all non-causal (found+fixed a real CUDAGraphs pool bug) |
+| G2.4b | `torch.compile` on baseline's exact causal math | causal only (tight accuracy margin, disclosed) |
+
+**Final speedups (`python3 tools/archive.py summary`):** tiny 4.65x,
+default 1.61x, long-seq 2.35x, large-batch 1.61x, padded 1.60x, causal
+1.75x. Every regime improved.
+
+**The one real bug found this session:** G2.4's lazy weight-folding cache
+was built *inside* the `torch.compile`d region, handing out a pointer into
+CUDA graph pool memory that the next replay overwrote. PyTorch's own
+safety net raised a clear `RuntimeError` rather than silently corrupting
+output — caught on the first smoke test, fixed by moving weight-folding to
+run eagerly before the compiled call. Full story in step 12 below.
+
+**Known gaps / good next steps, not started:** G2.1 (BF16 GEMMs — real
+accuracy risk given margins are now tighter than before G2.4/G2.4b), G3
+fusion work (FFN tile, warp-shuffle reductions — CUDA/Triton territory),
+and the `ncu` profiling infrastructure that `.claude/agents/profiler.md`
+expects but doesn't exist yet (see "Current State" below).
+
 ---
 
 ## Current State (updated after each iteration)
 
-- **Day:** 1-2 (G0 and G1 done for the non-causal path; G2 in progress)
-- **Track A progress:** G0.1, G0.2, G0.3, G0.5, G1.1, G1.2, G2.4 done.
-  G0.4/G0.6 skipped. Attempting a fresh idea for causal next (see step 13).
+- **Day:** 1-2. **Every regime has a real, verified speedup as of this
+  session.** A natural stopping point — see "Session summary" below.
+- **Track A progress:** G0.1, G0.2, G0.3, G0.5, G1.1, G1.2, G2.4, G2.4b
+  done. G0.4/G0.6 skipped (not applicable / not torch-level).
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
   | tiny | 4.65x |
-  | default | 1.60x |
+  | default | 1.61x |
   | long-seq | 2.35x |
   | large-batch | 1.61x |
   | padded | 1.60x |
-  | causal | 1.00x (fallback to exact baseline, not yet improved) |
-- **Known open gap:** causal regime has no speedup yet, and the gap to
-  every other regime just widened a lot (1.00x vs 1.6-4.65x). Root cause of
-  why SDPA can't be used for causal: even its MATH backend drifts past the
-  1e-3 accuracy threshold on ~half of random seeds at B8_S128 causal (step
-  5). G1.2's scale-folding does NOT fix this (proven bit-identical to the
-  unfolded version, step 11). Next attempt (step 13): compile the exact
-  baseline computation for causal (no SDPA, no folding, so no new accuracy
-  risk from that angle) purely for launch-overhead reduction, same lever as
-  G2.4 gave the non-causal path.
-- **Latest commit:** `9853ede` (G2.4 archive: padded/trackA)
+  | causal | **1.75x** (was stuck at 1.00x for most of this session — see step 13) |
+- **Accuracy risk to know about:** causal's speedup (G2.4b, step 13) comes
+  with a genuinely tight `max_abs` margin (~92-99% of the 0.001 atol budget,
+  vs comfortably-under-80% everywhere else). Verified safe via a 40-seed
+  probe (0/40 true failures) before shipping, but this is disclosed, not
+  comfortable — re-verify if the model/shapes/grading protocol change.
+- **ncu profiling infra gap:** `.claude/agents/profiler.md` expects
+  `tools/`-based ncu-to-JSON parsing + a profiling `jobs/*.sbatch` that
+  don't exist yet. G2.4's "launch-bound" fact was inferred from timing
+  deltas instead. Worth building before G3/G4 decisions that need real
+  `SpeedOfLight`/occupancy data.
+- **Latest commit:** `a79f897` (G2.4b archive: causal/trackA)
 
 ---
 
@@ -453,5 +489,55 @@ inductor's fusion can still shift `max_abs` away from the current exact
 (step 5), so this needs the same smoke-test-first caution as G2.4, not an
 assumption that "no lazy caching" means "no risk."
 
-Results will land here once verified (or reverted, if it regresses
-accuracy).
+**It worked, with a real accuracy trade-off, disclosed rather than
+buried.** Smoke test (`default_causal` + `causal_padded` only,
+`results/g2_4b_smoke_run25.log`) passed its 5 trials — but at
+`max_abs=0.000994682`, **99.5% of the 0.001 atol budget**, where it was
+previously exactly `0`. A 5-trial pass at that margin isn't strong
+evidence by itself (the earlier SDPA-based causal attempts failed on
+~50% of held-out seeds at a similar margin).
+
+**Before shipping, ran a proper diagnostic** — `probes/g2_4b_causal_compile_probe.py`,
+40 seeds, checking `benchmark.py`'s actual *disjunctive* pass/fail rule
+(`abs_ok OR rel_ok` per element) rather than just "did `max_abs` cross
+`atol`". Result (`results/g2_4b_probe_run26.log`):
+
+```
+seeds=40 true_failures(abs&rel both exceed)=0 max_abs_over_atol_alone=4
+max=0.001175 mean=0.000921 min=0.000780
+```
+
+**0 of 40 seeds had a true failure** (an element where both criteria are
+violated simultaneously). 4/40 seeds briefly exceeded `atol` alone, but
+were consistently saved by the relative-error criterion — because (unlike
+the SDPA attempts' failure mode) the elements involved aren't
+near-zero-magnitude. This is a categorically different, much safer
+situation than the SDPA attempts' ~50% true-failure rate, not a lucky
+coincidence: the underlying values here have real magnitude, so a small
+absolute drift from inductor's fusion doesn't simultaneously blow up the
+relative error the way it did when SDPA's kernel disagreed with baseline
+at near-zero causal-mask-boundary values.
+
+**Judged safe enough to ship, with the margin disclosed plainly** (commit
+`2aaa0b1`) — but this is a *tight* margin (mean `max_abs` ~92% of budget
+across 40 seeds), not a comfortable one. Worth re-checking if the model,
+shapes, or grading protocol ever change.
+
+**Verification:** full 8-shape sweep (sbatch job id 27,
+`results/g2_4b_sweep_run27.log`), all PASS. Non-causal shapes essentially
+unchanged from G2.4 (`results/g2_4_sweep_run24.log`, small ±1% noise).
+Causal:
+
+| shape | before | after |
+|---|---|---|
+| default_causal | 1.000x | **1.747x** |
+| causal_padded | 1.001x | **1.753x** |
+
+Archived: new elites for `default/trackA` (1.61x), `large-batch/trackA`
+(1.61x, tied), and — the headline result — `causal/trackA` **1.75x, up
+from 1.00x**. `tiny`/`long-seq`/`padded` logged as near-misses (tiny
+4.59x vs the standing 4.65x elite — noise, not a regression from this
+diff, which doesn't touch the non-causal path at all).
+
+**Every regime now has a real, verified speedup for the first time this
+session.**
