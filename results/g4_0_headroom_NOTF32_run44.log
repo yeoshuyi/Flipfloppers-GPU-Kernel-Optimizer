@@ -1,0 +1,57 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+/usr/local/lib/python3.12/dist-packages/torch/_inductor/compile_fx.py:321: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+USDT:2026-08-26 13:15:18 33958:33958 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:15:18 33958:33958 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:15:22 33958:33958 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:15:22 33958:33958 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:15:33 33958:33958 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:15:33 33958:33958 SyncActivityProfilerHandler.cpp:59] profiler_stop
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+=== C. CUDA-graph marginal cost per kernel ===
+  K=  16 trivial kernels in one graph:    14.31 us ( 0.894 us/kernel)
+  K=  64 trivial kernels in one graph:    55.49 us ( 0.867 us/kernel)
+  K= 128 trivial kernels in one graph:   110.32 us ( 0.862 us/kernel)
+  K= 256 trivial kernels in one graph:   220.05 us ( 0.860 us/kernel)
+  least-squares slope: 0.8572 us per extra kernel
+
+=== tiny (B=1, S=64, tokens=64) ===
+  A. wall per forward       :   0.3356 ms
+  B. kernels per forward    :     62.0
+     summed kernel duration :   0.3356 ms (100.0% of wall)
+     inter-kernel gap       :   0.0001 ms (  0.0% of wall) -> 0.001 us/kernel
+  roofline:     2.47 GFLOP, TF32 floor 0.0299 ms, current = 7.3 TFLOPS (8.9% of peak)
+     top kernels by total time (per forward):
+         24x    219.14 us  ampere_sgemm_32x32_sliced1x4_tn
+          6x     64.22 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+         12x     17.49 us  void cublasLt::splitKreduce_kernel<32, 16, int, float, flo
+          6x      9.12 us  triton_per_fused_add_addmm_native_layer_norm_view_1
+          6x      7.58 us  triton_poi_fused_addmm_gelu_view_2
+
+=== default (B=8, S=128, tokens=1024) ===
+  A. wall per forward       :   1.4779 ms
+  B. kernels per forward    :     68.0
+     summed kernel duration :   1.4490 ms ( 98.0% of wall)
+     inter-kernel gap       :   0.0289 ms (  2.0% of wall) -> 0.425 us/kernel
+  roofline:    40.27 GFLOP, TF32 floor 0.4875 ms, current = 27.2 TFLOPS (33.0% of peak)
+     top kernels by total time (per forward):
+         12x    563.73 us  ampere_sgemm_128x64_tn
+          6x    495.88 us  ampere_sgemm_64x64_tn
+          6x    145.58 us  ampere_sgemm_32x128_tn
+          6x    134.54 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+          6x     32.48 us  triton_poi_fused_addmm_gelu_view_2
+
+=== large_batch (B=256, S=128, tokens=32768) ===
+  A. wall per forward       :  38.5843 ms
+  B. kernels per forward    :     50.0
+     summed kernel duration :  38.6365 ms (100.1% of wall)
+     inter-kernel gap       :  -0.0522 ms ( -0.1% of wall) -> -1.045 us/kernel
+  roofline:  1288.49 GFLOP, TF32 floor 15.5992 ms, current = 33.4 TFLOPS (40.4% of peak)
+     top kernels by total time (per forward):
+         12x  16446.92 us  ampere_sgemm_128x128_tn
+         12x  12223.41 us  ampere_sgemm_128x64_tn
+          6x   3406.21 us  triton_poi_fused_addmm_gelu_view_2
+          6x   3071.82 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+          4x   1371.57 us  triton_per_fused_add_addmm_native_layer_norm_view_4
+

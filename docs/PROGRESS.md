@@ -95,9 +95,27 @@ expects but doesn't exist yet (see "Current State" below).
   peak**, so the ~48 MB/forward of intermediate traffic that fusion removes
   is already overlapped behind compute. Reverted; `benchmark.py` is
   bit-identical to the `run27`-validated state.
+- **G4.0 (two-kernel form) checked for feasibility and not built** (step
+  20). The measurement it was gated on came back zero: with G2.4's CUDA
+  graph already in place, **summed GPU kernel duration equals wall-clock
+  forward time at every shape** (gap −0.7% to +0.0%), so there is no
+  GPU-side inter-kernel overhead left for hand-fusion to recover. A
+  no-op-kernel graph calibration says the same thing independently
+  (0.855 µs marginal per kernel, of which 0.979 µs is the kernel body →
+  dispatch gap ≈ 0). `docs/MEGAKERNEL.md`'s own gate — ">15% launch
+  overhead or GPU idle at tiny after CUDA Graphs, else stop here" — is
+  therefore not met. Pricing the build with step 19's already-measured
+  FFN kernel puts the **best case at 0.27x-0.93x**, a regression at every
+  shape, before the harder attention half costs anything.
 - **The archive numbers above are unchanged** — no candidate has improved
   on `results/g2_4b_sweep_run27.log` since G2.4b.
-- **Latest commit:** `0821c46` (G4 FP8 precheck, step 18); G3.1's write-up
+- **The `docs/CATALOGUE.md` ladder is now exhausted at this precision.**
+  G0/G1/G2.4/G2.4b shipped; G2.1/G2.1b/G2.6 closed on accuracy (steps 14,
+  17, 18); G2.3 closed on ctypes risk (step 16); G3.1 closed on the
+  roofline (step 19); G4.0 closed on the graph-gap measurement (step 20);
+  G4.1-G4.5 all sit on top of the FP8 pipeline step 18 measured at 65x
+  over budget.
+- **Latest commit:** `3e831d6` (steady-state ncu job); step 20's write-up
   follows in the next commit.
 
 ---
@@ -923,3 +941,187 @@ roofline (much smaller `ffn_dim`, or a precision that halves the compute
 time without halving the traffic — and precision reduction is closed by
 steps 14/17/18). Not a tuning problem; the roofline says the headroom
 isn't there.
+
+### 20. G4.0 (two-kernel form) — feasibility check first; measured to zero headroom, not built
+
+Step 19 rejected G3.1 on a roofline fact rather than a tuning failure, and
+G4.0 is a strictly larger version of the same bet (fuse *more* ops into
+*fewer* hand-written kernels). Before spending a build cycle on it, the
+cheap check: **measure the specific thing G4.0 is supposed to buy, and
+price it.**
+
+**What G4.0 actually has left to sell.** `docs/MEGAKERNEL.md` motivates the
+two-kernel form as "12 launches instead of ~60, captured in one CUDA graph
+⇒ effectively one launch." But G2.4 (step 12) *already* wraps the entire
+non-causal forward in one `torch.compile(mode="reduce-overhead")` CUDA
+graph, so the CPU-side dispatch cost of those ~60 launches is already
+banked. The only thing left for hand-fusion to take is the **GPU-side**
+per-kernel cost — the gap between consecutive kernels inside a graph
+replay (grid setup/teardown, tail effects). Step 15's `ncu` work couldn't
+answer this (noted in commit `3e831d6`: ncu measures kernel *execution*,
+not dispatch gaps). So the decisive quantity is:
+
+```
+gap_fraction = 1 - sum(kernel GPU durations) / wall-clock forward time
+```
+
+**Probe** (`probes/g4_0_headroom_probe.py`, `jobs/g4_0_headroom.sbatch`),
+three independent measurements: (A) wall time per forward via
+`torch.cuda.Event`, no profiler attached; (B) kernel count and summed
+kernel durations from CUPTI kernel tracing (`torch.profiler` → chrome
+trace, `cat=="kernel"`), which *does* see kernels launched from inside a
+CUDA graph replay; (C) a calibration — capture a graph containing K no-op
+kernels, sweep K, take the slope, i.e. the marginal price of one extra
+kernel in a graph replay on this GPU.
+
+**A methodology error was caught and corrected rather than shipped.** The
+first run (`results/g4_0_headroom_NOTF32_run44.log`) forgot that
+`benchmark.py`'s TF32 settings live in `main()`'s argparse defaults
+(`--matmul-precision high`, `--allow-tf32`), not in the model — so every
+GEMM landed on plain FP32 CUDA-core `ampere_sgemm_*` instead of the
+TF32 tensor-core `s1688gemm` path the shipped numbers were measured on.
+It showed up immediately as `default = 1.478 ms` against the sweep's
+0.8736 ms. Corrected run (`results/g4_0_headroom_run45.log`) reproduces
+`results/g2_4b_sweep_run27.log` at every shape, which is what makes the
+rest of the numbers trustworthy:
+
+| shape | run27 optimized | probe wall | match |
+|---|---|---|---|
+| tiny | 0.3164 ms | 0.3117 ms | 1.5% |
+| default | 0.8736 ms | 0.8712 ms | 0.3% |
+| long_seq | 10.5001 ms | 10.4809 ms | 0.2% |
+| large_batch | 26.0444 ms | 26.1204 ms | 0.3% |
+
+**Result 1 — the inter-kernel gap is zero. This is the whole answer.**
+
+| shape | wall | Σ kernel durations | gap | gap/kernel |
+|---|---|---|---|---|
+| tiny | 0.3117 ms | 0.3139 ms (100.7%) | −0.0021 ms (−0.7%) | −0.034 µs |
+| default | 0.8712 ms | 0.8710 ms (100.0%) | +0.0002 ms (0.0%) | +0.004 µs |
+| long_seq | 10.4809 ms | 10.4851 ms (100.0%) | −0.0042 ms (−0.0%) | −0.084 µs |
+| large_batch | 26.1204 ms | 26.1337 ms (100.1%) | −0.0133 ms (−0.1%) | −0.266 µs |
+
+Summed kernel time equals wall time to within measurement noise at every
+shape (the slight overshoots are CUPTI timestamp overlap between
+back-to-back kernels plus timer resolution, not negative idle). **There is
+no GPU idle time between kernels for fusion to recover.**
+
+**Result 2 — the calibration says the same thing independently, and
+explains why.** A chain of 256 no-op `add_` kernels in one graph costs
+**0.8554 µs marginal per kernel** (least-squares over K = 16/64/128/256,
+per-kernel cost flat at 0.902 → 0.858 µs). But the no-op kernel's *own*
+CUPTI device duration is **0.9794 µs**. The marginal cost is entirely the
+kernel body's minimum execution time; the true dispatch gap is
+**−0.124 µs ≈ 0**. A CUDA graph replay on Ada has essentially no
+per-kernel dispatch overhead — which is exactly what a graph is for, and
+G2.4 already bought it.
+
+**Result 3 — the launch census is already better than the doc assumes,
+and most of it is not deletable.** 50 kernels per forward (62 at tiny,
+which adds `splitKreduce` passes for its small-M GEMMs), not the ~60
+`docs/MEGAKERNEL.md` assumes:
+
+| shape | GEMM/attn kernels | everything else |
+|---|---|---|
+| tiny | 30 launches, 0.2654 ms (84.6%) | 32 launches, 0.0485 ms (15.4%) |
+| default | 30 launches, 0.7796 ms (89.5%) | 20 launches, 0.0914 ms (10.5%) |
+| long_seq | 30 launches, 9.3626 ms (89.3%) | 20 launches, 1.1225 ms (10.7%) |
+| large_batch | 30 launches, 19.4050 ms (74.3%) | 20 launches, 6.7287 ms (25.7%) |
+
+The 30 GEMM/attention launches (5 per layer: qkv, out_proj, ffn_in,
+ffn_out, `fmha_cutlassF_f32_aligned_64x64_rf_sm80`) are work a fused
+kernel **absorbs, not eliminates** — the FLOPs still happen, just under a
+hand-written tiling instead of CUTLASS's. Only the other 20 are candidates
+for deletion, and **inductor has already fused them**: the kernel names are
+literally `triton_per_fused_add_addmm_native_layer_norm_view_*` (LayerNorm
++ residual add + addmm epilogue, one kernel) and
+`triton_poi_fused_addmm_gelu_view_2`. The "modest" version of G4.0 — fuse
+LN + residual around the existing SDPA call rather than reimplementing
+SDPA — is targeting work that is already one kernel, worth 35.7 µs of
+871 µs (**4.1%**) at the default shape.
+
+**Result 4 — roofline, for the record.** Confirms step 19's finding at
+whole-model scale (step 19 measured the isolated FFN at 60-69% of peak):
+
+| shape | GFLOP/fwd | TF32 floor | current | % of 82.6 TFLOPS |
+|---|---|---|---|---|
+| tiny | 2.47 | 0.0299 ms | 0.3117 ms | 9.6% |
+| default | 40.27 | 0.4875 ms | 0.8712 ms | 56.0% |
+| long_seq | 412.32 | 4.9917 ms | 10.4809 ms | 47.6% |
+| large_batch | 1288.49 | 15.5992 ms | 26.1204 ms | 59.7% |
+
+**Pricing G4.0 with step 19's own measured kernel, which is the honest
+upper bound.** G4.0's FFN block is *exactly* the G3.1 kernel — same
+`LN → ffn_in → GELU → ffn_out → residual` shape, same token-parallel
+structure. Step 19 measured it per-FFN at `tf32`
+(`results/g3_1_pretransposed_run41.log`); this model runs six of them.
+Grant G4.0 a **perfect, free, zero-cost attention-block fusion** and
+substitute only the measured FFN half:
+
+| shape | M | torch FFN ×6 | fused FFN ×6 | projected total | vs current |
+|---|---|---|---|---|---|
+| default | 1024 | 0.518 ms | 2.879 ms | 3.23 ms | **0.27x** |
+| long_seq | 8192 | 3.531 ms | 4.307 ms | 11.26 ms | **0.93x** |
+| large_batch | 32768 | 14.385 ms | 16.548 ms | 28.28 ms | **0.92x** |
+
+(The `torch FFN ×6` column cross-checks against this probe's own trace: at
+large_batch the 12 `s1688gemm_256x128` launches + the GELU kernel are
+9.94 + 3.40 = 13.34 ms against step 19's isolated 14.385 ms — same number,
+the small difference being L2 state that isolation doesn't reproduce.)
+
+**Best case is a regression at every shape**, before the attention block
+has cost anything. And the attention block is the *harder* half, not the
+easier one: `fmha_cutlassF_f32_aligned_64x64_rf_sm80` is already a fused,
+hand-tuned CUTLASS flash kernel, and at long_seq it is **5.06 ms of the
+10.48 ms forward — 48% of the entire model**. Fusing "around" it wins 4%;
+fusing *through* it means hand-writing a replacement for the single
+largest kernel in the model, on the evidence that the last hand-written
+kernel came in at 0.18x.
+
+**Why tiny's 9.6%-of-peak is real headroom but not G4.0's headroom.** At
+64 tokens the forward reads the full 75.66 MB FP32 model against 128 KB of
+activations — arithmetic intensity 32.6 FLOP/byte, so the binding roofline
+is DRAM, not TF32: 75.66 MB at the 4090's ~1008 GB/s is a **75 µs** floor
+against 311.7 µs measured, i.e. ~243 GB/s effective. That corroborates
+step 15's independent `ncu` reading of 174 GB/s at tiny. Tiny is
+**weight-bandwidth bound**, and G4.0 does not remove one byte of weight
+traffic — the same 75.66 MB is read either way. Worse, it removes the
+parallelism that hides it: a token-parallel fused block at M=64 is
+`ceil(64/BLOCK_M) = 1` program, one CTA, which cannot keep enough memory
+requests in flight to approach DRAM peak, where cuBLAS's `s1688gemm_64x64`
+at least gets ~24 CTAs on the qkv GEMM. Step 19 already measured this
+exact failure mode: **0.18x at M=1024 with 16 blocks**; M=64 is one block.
+The levers that *would* address tiny's weight residency are G2.3 (pin the
+model in the 72 MB L2 — investigated and closed in step 16, unreachable
+from Python without raw-`ctypes` risk) and precision reduction (BF16 at
+37.83 MB fits L2 comfortably — closed by steps 14/17/18).
+
+**`docs/MEGAKERNEL.md`'s own gate, answered.** The doc states: *"Gate to
+proceed to G4.1: `nsys` still shows >15% launch overhead or GPU idle at
+the tiny regime after CUDA Graphs. If graphs already solved it, stop
+here."* Measured GPU idle at tiny after CUDA graphs: **−0.7%**, against a
+>15% threshold. CUPTI kernel tracing rather than `nsys`, but it answers
+the identical question and it answers it decisively. Since G2.4 already
+took the CPU-side dispatch, that gap *was* G4.0's entire remaining
+motivation — so the gate closes G4.0 as well as G4.1.
+
+**Decision: G4.0 not built.** The measurement it was gated on came back
+zero, and the one component of it that already exists in tree
+(`probes/g3_1_kernel.py`, step 19) prices the best case as a regression at
+every shape. `benchmark.py` is untouched — `git diff HEAD -- benchmark.py`
+is empty, so the shipped file remains bit-identical to the state
+`results/g2_4b_sweep_run27.log` validated, and `tools/check_validity.py`
+passes. No sweep was re-run, because nothing changed; no archive cell was
+touched, because nothing improved. This is the outcome
+`docs/MEGAKERNEL.md` explicitly sanctions: *"G4.0 winning is a result, not
+a failure."*
+
+**What would have to change for G4.0 to be worth revisiting:** a
+measurable GPU-side inter-kernel gap (there is none — graphs closed it),
+or a hand-written GEMM that beats CUTLASS's `s1688gemm` tiling on this
+shape rather than losing to it by 13-82% (step 19). Neither is a tuning
+problem. With G0/G1/G2 shipped, G2.3 closed on risk, G2.1/G2.6 closed on
+accuracy, G3.1 closed on the roofline and G4.0 closed on the graph-gap
+measurement, **the `docs/CATALOGUE.md` ladder is exhausted at this
+precision.** Every remaining item above G4.0 (G4.1-G4.5) is built on the
+FP8 pipeline step 18 measured at 65x over the accuracy budget.

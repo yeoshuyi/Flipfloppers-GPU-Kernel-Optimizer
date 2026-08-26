@@ -1,0 +1,86 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+USDT:2026-08-26 13:27:31 34480:34480 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:27:31 34480:34480 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:27:34 34480:34480 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:27:34 34480:34480 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:27:37 34480:34480 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:27:37 34480:34480 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:27:40 34480:34480 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:27:41 34480:34480 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-26 13:27:48 34480:34480 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-26 13:27:49 34480:34480 SyncActivityProfilerHandler.cpp:59] profiler_stop
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+=== C. CUDA-graph marginal cost per kernel ===
+  K=  16 trivial kernels in one graph:    14.44 us ( 0.902 us/kernel)
+  K=  64 trivial kernels in one graph:    55.37 us ( 0.865 us/kernel)
+  K= 128 trivial kernels in one graph:   110.20 us ( 0.861 us/kernel)
+  K= 256 trivial kernels in one graph:   219.69 us ( 0.858 us/kernel)
+  least-squares slope: 0.8554 us per extra kernel
+  of which the kernel BODY itself (CUPTI device duration of one no-op add_): 0.9794 us
+  => true dispatch gap per kernel in a graph replay: -0.1240 us
+
+=== tiny (B=1, S=64, tokens=64) ===
+  A. wall per forward       :   0.3117 ms
+  B. kernels per forward    :     62.0
+     summed kernel duration :   0.3139 ms (100.7% of wall)
+     inter-kernel gap       :  -0.0021 ms ( -0.7% of wall) -> -0.034 us/kernel
+  roofline:     2.47 GFLOP, TF32 floor 0.0299 ms, current = 7.9 TFLOPS (9.6% of peak)
+  D. GEMM/attn kernels      :  30.0 launches,   0.2654 ms ( 84.6% of kernel time)
+     everything else        :  32.0 launches,   0.0485 ms ( 15.4% of kernel time)  <- the only part fusion can delete
+     top kernels by total time (per forward):
+         12x    119.48 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_
+         12x     81.06 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_
+          6x     64.85 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+         12x     15.79 us  void cublasLt::splitKreduce_kernel<32, 16, int, float, flo
+          6x      9.28 us  triton_per_fused_add_addmm_native_layer_norm_view_1
+          6x      7.57 us  triton_poi_fused_addmm_gelu_view_2
+
+=== default (B=8, S=128, tokens=1024) ===
+  A. wall per forward       :   0.8712 ms
+  B. kernels per forward    :     50.0
+     summed kernel duration :   0.8710 ms (100.0% of wall)
+     inter-kernel gap       :   0.0002 ms (  0.0% of wall) -> 0.004 us/kernel
+  roofline:    40.27 GFLOP, TF32 floor 0.4875 ms, current = 46.2 TFLOPS (56.0% of peak)
+  D. GEMM/attn kernels      :  30.0 launches,   0.7796 ms ( 89.5% of kernel time)
+     everything else        :  20.0 launches,   0.0914 ms ( 10.5% of kernel time)  <- the only part fusion can delete
+     top kernels by total time (per forward):
+         12x    383.16 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x12
+         12x    259.71 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_
+          6x    136.72 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+          6x     32.94 us  triton_poi_fused_addmm_gelu_view_2
+          4x     18.25 us  triton_per_fused_add_addmm_native_layer_norm_view_4
+          6x     17.43 us  triton_per_fused_add_addmm_native_layer_norm_view_1
+
+=== long_seq (B=8, S=1024, tokens=8192) ===
+  A. wall per forward       :  10.4809 ms
+  B. kernels per forward    :     50.0
+     summed kernel duration :  10.4851 ms (100.0% of wall)
+     inter-kernel gap       :  -0.0042 ms ( -0.0% of wall) -> -0.084 us/kernel
+  roofline:   412.32 GFLOP, TF32 floor 4.9917 ms, current = 39.3 TFLOPS (47.6% of peak)
+  D. GEMM/attn kernels      :  30.0 launches,   9.3626 ms ( 89.3% of kernel time)
+     everything else        :  20.0 launches,   1.1225 ms ( 10.7% of kernel time)  <- the only part fusion can delete
+     top kernels by total time (per forward):
+          6x   5056.25 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+         12x   1708.46 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x25
+          6x   1470.12 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x12
+          6x   1127.77 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x12
+          6x    528.36 us  triton_poi_fused_addmm_gelu_view_2
+          4x    263.66 us  triton_per_fused_add_addmm_native_layer_norm_view_4
+
+=== large_batch (B=256, S=128, tokens=32768) ===
+  A. wall per forward       :  26.1204 ms
+  B. kernels per forward    :     50.0
+     summed kernel duration :  26.1337 ms (100.1% of wall)
+     inter-kernel gap       :  -0.0133 ms ( -0.1% of wall) -> -0.266 us/kernel
+  roofline:  1288.49 GFLOP, TF32 floor 15.5992 ms, current = 49.3 TFLOPS (59.7% of peak)
+  D. GEMM/attn kernels      :  30.0 launches,  19.4050 ms ( 74.3% of kernel time)
+     everything else        :  20.0 launches,   6.7287 ms ( 25.7% of kernel time)  <- the only part fusion can delete
+     top kernels by total time (per forward):
+         12x   9939.53 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x12
+          6x   5234.30 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x25
+          6x   3400.05 us  triton_poi_fused_addmm_gelu_view_2
+          6x   2756.40 us  fmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEffAtten
+          6x   1474.76 us  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x12
+          4x   1345.63 us  triton_per_fused_add_addmm_native_layer_norm_view_4
+
