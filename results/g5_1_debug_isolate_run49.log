@@ -1,0 +1,20 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== single-layer FFN quantization error (real weights, real input) ===
+  m= 8  full_ffn_err=0.00199463  weight_only_err(layer1)=0.00287211
+  m= 9  full_ffn_err=0.00107101  weight_only_err(layer1)=0.00161614
+  m=10  full_ffn_err=0.00013863  weight_only_err(layer1)=0.00013059
+  m=11  full_ffn_err=0.00100619  weight_only_err(layer1)=0.00116122
+  m=12  full_ffn_err=0.00061119  weight_only_err(layer1)=0.00079566
+  m=13  full_ffn_err=0.00047818  weight_only_err(layer1)=0.00060654
+  m=14  full_ffn_err=0.00040562  weight_only_err(layer1)=0.00043130
+  m=16  full_ffn_err=0.00027323  weight_only_err(layer1)=0.00030786
+  m=20  full_ffn_err=0.00016198  weight_only_err(layer1)=0.00019312
+  m=22  full_ffn_err=0.00012657  weight_only_err(layer1)=0.00014794
+
+=== does quantizing weights ALONE (no activation quant) stay monotonic? ===
+  m= 8  weight-quant-only err=0.00287813
+  m= 9  weight-quant-only err=0.00161539
+  m=10  weight-quant-only err=0.00012898
+  m=11  weight-quant-only err=0.00115740
+  m=12  weight-quant-only err=0.00079578
+  m=13  weight-quant-only err=0.00060499

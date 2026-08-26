@@ -1,0 +1,35 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== tiny: ANCHOR VALIDATION (whole-model quant, matches steps 14/17 scope) ===
+  m=8  whole-model: max=0.004417 mean=0.003848 (expect ~1.1e-2, ratio=0.40x)
+  m=11 whole-model: max=0.002522 mean=0.002177 (expect ~7e-4, ratio=3.60x)
+  ANCHOR GATE: FAIL
+
+=== tiny: FFN-ONLY sweep (feeds Stage 1c's split-precision design) ===
+  m= 3  max_abs_max=0.118021  max_abs_mean=0.105345  true_failures=20/20
+  m= 4  max_abs_max=0.060463  max_abs_mean=0.054112  true_failures=20/20
+  m= 5  max_abs_max=0.030911  max_abs_mean=0.027275  true_failures=20/20
+  m= 6  max_abs_max=0.015747  max_abs_mean=0.013682  true_failures=20/20
+  m= 7  max_abs_max=0.007216  max_abs_mean=0.006775  true_failures=20/20
+  m= 8  max_abs_max=0.004152  max_abs_mean=0.003626  true_failures=20/20
+  m= 9  max_abs_max=0.002305  max_abs_mean=0.002018  true_failures=20/20
+  m=10  max_abs_max=0.000705  max_abs_mean=0.000575  true_failures=0/20
+  m=11  max_abs_max=0.002008  max_abs_mean=0.001893  true_failures=20/20
+  m=12  max_abs_max=0.001512  max_abs_mean=0.001293  true_failures=20/20
+
+=== default: ANCHOR VALIDATION (whole-model quant, matches steps 14/17 scope) ===
+  m=8  whole-model: max=0.004993 mean=0.004154 (expect ~1.1e-2, ratio=0.45x)
+  m=11 whole-model: max=0.002631 mean=0.002364 (expect ~7e-4, ratio=3.76x)
+  ANCHOR GATE: FAIL
+
+=== default: FFN-ONLY sweep (feeds Stage 1c's split-precision design) ===
+  m= 3  max_abs_max=0.131824  max_abs_mean=0.122085  true_failures=20/20
+  m= 4  max_abs_max=0.073015  max_abs_mean=0.063953  true_failures=20/20
+  m= 5  max_abs_max=0.035046  max_abs_mean=0.030870  true_failures=20/20
+  m= 6  max_abs_max=0.016961  max_abs_mean=0.015545  true_failures=20/20
+  m= 7  max_abs_max=0.008666  max_abs_mean=0.007887  true_failures=20/20
+  m= 8  max_abs_max=0.004461  max_abs_mean=0.004134  true_failures=20/20
+  m= 9  max_abs_max=0.002540  max_abs_mean=0.002338  true_failures=20/20
+  m=10  max_abs_max=0.000715  max_abs_mean=0.000625  true_failures=0/20
+  m=11  max_abs_max=0.002330  max_abs_mean=0.002169  true_failures=20/20
+  m=12  max_abs_max=0.001638  max_abs_mean=0.001473  true_failures=20/20
+

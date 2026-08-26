@@ -1125,3 +1125,107 @@ accuracy, G3.1 closed on the roofline and G4.0 closed on the graph-gap
 measurement, **the `docs/CATALOGUE.md` ladder is exhausted at this
 precision.** Every remaining item above G4.0 (G4.1-G4.5) is built on the
 FP8 pipeline step 18 measured at 65x over the accuracy budget.
+
+## Re-investigation: regime arbiter + FP8 re-visit
+
+User asked to (a) add a shape-detection arbiter (not yet built anywhere —
+confirmed by a read-only Explore pass) and (b) revisit FP8 with hand-written
+CUDA, citing real production techniques. Researched deeply (DeepSeek-V3's
+fine-grained block quantization + FP32 accumulation promotion, QuaRot/
+SpinQuant Hadamard rotation, confirmed Ada has no native MXFP8 hardware —
+Blackwell only). A Plan-mode pass produced a staged, gate-driven
+investigation plan (`/home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md`,
+approved) built around one key finding: `CLAUDE.md`'s `eps/√K` claim for
+why FP8 "survives" appears arithmetically wrong for this model's random-sign
+reductions (relative error doesn't shrink with K the way the doc assumes) —
+and the one technique that actually attacks mantissa width, split/residual
+precision (G2.8), was never tried. Plan approved with three decisions
+confirmed: cheap FP8 probes run before the arbiter (built only if FP8 ends
+up needing per-regime routing), arbiter is shell-only if built, and an
+exactly-4-GEMM Stage 1c result is treated as closure.
+
+### 21. Stage 1.5(i) + Stage 1a — capability check clean; precision-ladder simulator debugged, partially calibrated
+
+**Stage 1.5(i)** (`probes/g6_0_capability_check.py`, job 46,
+`results/g6_0_capability_run46.log`): confirmed on this stack (torch
+2.13.0+cu130, Triton 3.7.1, sm_89) — `torch._scaled_mm` works with both
+per-tensor scalar AND per-row (RowWise) scales; Triton's
+`tl.dot(float8e4nv)` also works. If Stage 2 (hand-written kernel) is ever
+reached, it's Triton-viable (days), not raw-PTX-only (weeks, no established
+`cpp_extension` build path in this repo). Committed `f831b39`.
+
+**Stage 1a** (`probes/g5_1_precision_ladder.py`) hit a real debugging
+detour worth recording in full, since the anchor-gate discipline the plan
+specified is exactly what caught it.
+
+*First attempt* (job 47): swept mantissa width `m∈{3..12}` on the FFN only
+(weights + activations mantissa-truncated in place, full `BaselineTransformer`
+with real weights, `compare_outputs`' actual criterion, 20 seeds, tiny +
+default). Result was **non-monotonic** — `m=10` showed *lower* error than
+`m=11` and `m=12`, which is impossible for a correct simulator (more
+precision can't make things worse), and the `m=8`/`m=11` anchors didn't
+reproduce steps 14/17's real BF16/TF32 numbers within 2x.
+(`results/g5_1_ladder_v1_FAILED_anchor_run47.log`)
+
+*Debug 1* (`probes/g5_1_debug_determinism.py`, job 48): tested the
+hypothesis that re-invoking `layer.attention(...)` separately for the
+reference and quantized forward passes introduces TF32-matmul
+non-determinism that would show up as an m-independent noise floor,
+dominant exactly where quantization error itself is small (high m).
+**Ruled out** — calling the same deterministic module twice on identical
+CUDA input gave bit-identical output (`max_abs_diff=0.0` over 524288
+elements, both for attention alone and the full model).
+(`results/g5_1_debug_determinism_run48.log`)
+
+*Debug 2* (`probes/g5_1_debug_isolate.py`, job 49): isolated the mantissa-
+rounding function itself — verified monotonic and correct on synthetic
+tensors both at moderate magnitude and at real weight-init scale
+(`U(±1/√fan_in)≈±0.044`), on CPU, outside the full pipeline. Then tested
+it on the model's *actual* `ffn_in.weight` tensor for a single layer,
+single seed — **the same `m=10` dip reproduced**, even in a weight-
+quantization-only test with no activation quantization and no multi-layer
+compounding. Conclusion: not a bug in the rounding arithmetic itself, but
+an **order-statistic artifact of measuring `max()` error on one fixed,
+deterministic tensor across different quantization grids** — grid points
+at adjacent bit-widths aren't nested, so which single element becomes the
+"worst case" isn't smooth in `m` for a fixed (non-re-randomized) weight
+tensor, even though the *mean* error is smooth. `max_abs_mean` in every
+run is in fact cleanly monotonic; only `max_abs_max` shows the wobble.
+(`results/g5_1_debug_isolate_run49.log`)
+
+*Second finding, orthogonal to the above*: the anchor comparison itself
+was scope-mismatched — the first attempt quantized only the FFN and
+compared against steps 14/17's numbers, which quantized the **whole
+model** (attention included). Quantizing less of the model necessarily
+shows less error; these were never going to match. Fixed by adding
+`whole_model_quantized_forward` (mirrors `BaselineSelfAttention.forward`
+exactly, quantizing Q/K/V/out_proj too) used only for anchor validation,
+keeping `ffn_quantized_forward` (FFN-only, what actually matters for
+Stage 1c) as the main sweep.
+
+*Second attempt* (job 50, `results/g5_1_ladder_v2_run50.log`): FFN-only
+sweep numbers were **bit-for-bit identical** to the first attempt
+(confirms the simulator itself is deterministic/stable — nothing about
+the fix changed those numbers, as expected, since scope-matching only
+touches the anchor path). But the whole-model anchor **still didn't
+reproduce** even after the scope fix: `m=8` still reads 0.40-0.45x of the
+expected ~0.011 (simulated version is *more* accurate than real BF16),
+`m=11` still reads 3.6-3.76x the expected ~0.0007 (simulated version is
+*less* accurate than real TF32) — in opposite directions, which doesn't
+fit a single consistent explanation like an off-by-one in the mantissa-
+bit-counting convention (that would push both anchors the same way).
+
+**Decision: stop calibrating this simulator further, don't block on it.**
+The anchor gate's whole purpose was to earn trust in an *approximate*
+tool before relying on it. Stage 1c — the experiment that actually
+decides whether to proceed — uses **real** `float8_e4m3fn` hardware
+casts, not this simulated mantissa truncation, which sidesteps the
+bit-counting-convention ambiguity entirely and needs no calibration
+against a proxy. Stage 1a's FFN-only sweep is kept as a rough, directional
+data point (order-of-magnitude behavior is sane: `m=3`→~0.12, decreasing
+smoothly in `max_abs_mean` down to `m=12`→~0.0013), not as a hard
+precision requirement.
+
+Committed (all of the above, full investigative trail kept per this
+project's practice) alongside this write-up. `benchmark.py` untouched, no
+archive cell touched — this is investigation, not yet a candidate.
