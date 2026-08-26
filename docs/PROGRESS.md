@@ -14,12 +14,10 @@ can lag by one iteration if a crash happened mid-step).
 
 ## Current State (updated after each iteration)
 
-- **Day:** 1-2 (G0 structural items essentially done, starting G1)
-- **Track A progress:** G0.1, G0.2, G0.3, G0.5 done. G0.4 skipped (not
-  applicable yet). G0.6 (128-bit vector loads) deferred/likely-skip — it's
-  a hand-written-kernel-level micro-opt not really expressible at the
-  torch level in this file; revisit if we drop to Triton/CUDA for other
-  reasons. Starting G1 (constant folding), G1.2 in progress.
+- **Day:** 1-2 (G0 done, G1 in progress)
+- **Track A progress:** G0.1, G0.2, G0.3, G0.5 done. G0.4/G0.6 skipped (not
+  applicable / not torch-level). G1.2 done (exact, but ~0 speedup under
+  SDPA — kept as G4 prerequisite infra). G1.1 in progress.
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
@@ -27,13 +25,15 @@ can lag by one iteration if a crash happened mid-step).
   | default | 1.40x |
   | long-seq | 2.30x |
   | large-batch | 1.55x |
-  | padded | 1.21x |
+  | padded | 1.22x |
   | causal | 1.00x (fallback to exact baseline, not yet improved) |
 - **Known open gap:** causal regime has no speedup yet. Root cause: even
   SDPA's MATH backend drifts past the 1e-3 accuracy threshold on ~half of
-  random seeds at B8_S128 causal (see step 5 below). G1.2 (in progress) is
-  the attempt to unblock it.
-- **Latest commit:** `542c35a` (G0.5 archive: padded/trackA)
+  random seeds at B8_S128 causal (step 5). G1.2's scale-folding does NOT
+  fix this (proven bit-identical to the unfolded version, see step 11) —
+  the real lever is still unidentified. Not currently blocking Track A
+  progress elsewhere.
+- **Latest commit:** `1d9b585` (G1.2 implementation)
 
 ---
 
@@ -273,19 +273,67 @@ expressible at the `torch`/`F.*` level this file operates at; would only
 become relevant if/when this drops to Triton or CUDA for other reasons
 (G3/G4 territory).
 
-### 11. (in progress) G1.2 — fold attention scale into `W_Q`
-Moving to G1 (constant folding). Prioritising G1.2 first, out of the
-`docs/CATALOGUE.md` order (G1.1 → G1.2 → ...), because it's the one item
-already flagged (step 5) as a possible way to unblock the causal regime's
-accuracy gap — folding `scale` into `W_Q` and passing `scale=1.0` to SDPA
-removes one elementwise multiply over the full `[B,H,S,S]` score matrix,
-which changes the floating-point operation sequence and might shift the
-causal MATH-backend drift enough to clear the 1e-3 threshold reliably (or
-might not — this needs to be measured, not assumed).
+### 11. G1.2 — fold attention scale into `W_Q`
+Moved to G1 (constant folding), prioritising G1.2 first out of
+`docs/CATALOGUE.md`'s order (G1.1 → G1.2 → ...) because it was flagged
+(step 5) as a possible way to unblock the causal regime's accuracy gap.
 
-G1 folds are claimed **exact** — per CLAUDE.md invariant 5, `max_abs` must
-be verified **unchanged (bit-identical)** against the pre-fold version, not
-merely "still under the accuracy threshold." Will check this specifically,
-not just read the PASS/FAIL summary.
+**What changed:** in `_fused_qkv`, the Q-rows of the fused weight/bias are
+pre-multiplied by `attn.scale` (in-place on the freshly-`cat`'d tensor, so
+`attn.q_proj.weight` itself is never touched), and both SDPA calls pass
+`scale=1.0` instead of relying on the default `1/sqrt(head_dim)`.
 
-Results will land here once verified.
+**Why this is provably exact, not just "should be close":** this model's
+`head_dim` is always a power of two (64, from `d_model=512 / num_heads=8`),
+so `scale = head_dim**-0.5 = 0.125 = 2^-3` is an *exact* power of two. IEEE
+float multiplication by a power of two never rounds (it's purely an
+exponent shift), so `sum_k(a_k * b_k * s) == sum_k(a_k*b_k) * s` bit-for-bit
+when `s` is a power of two — pre-scaling Q and using `scale=1.0` is
+bit-identical to SDPA's default (scaling the `[B,H,S,S]` score matrix by
+`0.125` after the matmul), not merely mathematically equivalent.
+
+**Verified per CLAUDE.md invariant 5** (must be bit-identical, not just
+under threshold): diffed every per-trial `max_abs`/`max_rel`/`failed`
+line (sbatch job id 20, `results/g1_2_sweep_run20.log`) against G0.5's run
+(`results/g0_5_sweep_run19.log`) — **identical across all 8 shapes × 5
+trials**, confirming the proof empirically. Only the `speedup` numbers
+differ.
+
+**Speedup: flat, within noise** (tiny 2.640x→2.585x, default 1.397x→1.392x,
+long_seq 2.300x→2.301x, others similar). SDPA's MATH backend apparently
+performs the scale-multiply on the score matrix regardless of whether
+`scale` is `1.0` or `0.125` — pre-scaling the much smaller `[B,S,d_model]`
+Q tensor doesn't remove that cost, it just relocates a multiply from one
+place to another of similar total size. **This contradicts
+`docs/CATALOGUE.md`'s general framing of G1.2** ("removes elementwise
+multiply over all `[B,H,S,S]`") — that estimate was written with a manual
+matmul-based implementation in mind (like baseline's own), where the
+`[B,H,S,S]`-sized multiply really is removable; it doesn't hold for an
+SDPA-based implementation where SDPA owns that step internally.
+
+**Kept anyway:** it's free (verified exact, no regression) and
+`docs/CATALOGUE.md` states G1 folds are a hard prerequisite for G4 ("a
+megakernel cannot fold affines at runtime... G1 is a prerequisite of G4,
+not a stepping stone to it") — legitimate infrastructure work for later
+even without an immediate payoff.
+
+Committed `1d9b585`. Archived per cell (mostly near-misses vs G0.5's
+numbers, i.e. correctly recognized as flat, not regressions; long-seq and
+padded ticked up marginally — noise, not attributable to the fold itself
+per the bit-identical accuracy proof above).
+
+**Did NOT attempt un-gating causal with the scale-folded machinery** (this
+was the planned next step). Reasoning: the bit-exactness proof above
+applies unconditionally, independent of causal masking (masking happens
+*after* the `QK^T * scale` step) — so a causal path built on the same
+fold would produce the *exact same floating-point numbers* as an unfolded
+one, and therefore the *exact same* ~50%-of-seeds failure rate already
+measured in `probes/g0_1_causal_backend_probe.py`. Running that experiment
+on the GPU would have re-confirmed something the math already establishes
+— skipped to avoid burning a job on a predictable null result (the user
+asked to be token/resource-conscious). Causal remains gated to the exact
+baseline fallback; unblocking it needs a genuinely different lever than
+scale-folding (open question, not yet identified — candidates to consider
+later: accepting a BF16 walk-down for causal specifically, or revisiting
+whether the accuracy budget is actually the binding constraint the grader
+enforces vs. this benchmark script's own defaults).
