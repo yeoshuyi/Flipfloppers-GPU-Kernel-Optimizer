@@ -179,7 +179,7 @@ class UserOptimizedTransformer(BaselineTransformer):
       2. Return a tensor with shape [batch_size, seq_len, d_model].
       3. Keep compatible parameter names, or customize copy_model_weights().
 
-    G0.1 (this diff): replace the baseline's manual
+    G0.1: replace the baseline's manual
     matmul -> mask -> softmax -> matmul attention with
     F.scaled_dot_product_attention. When there is no padding, the fast path
     uses is_causal only (attn_mask=None) so SDPA can pick its flash/efficient
@@ -200,7 +200,7 @@ class UserOptimizedTransformer(BaselineTransformer):
     for causal until G1.2 (scale folding into W_Q) is in and the gap is
     re-measured.
 
-    G0.2 (this diff): fuse q_proj/k_proj/v_proj into one [d,3d] matmul
+    G0.2: fuse q_proj/k_proj/v_proj into one [d,3d] matmul
     instead of three separate [d,d] matmuls -- one GEMM launch instead of
     three, and a bigger GEMM has better arithmetic intensity than three small
     ones. The fused weight is built lazily on first forward (after
@@ -212,6 +212,16 @@ class UserOptimizedTransformer(BaselineTransformer):
     the input x or the output -- weights never change between calls, so
     there's nothing stale to return (CLAUDE.md invariant 1 is about caching
     on x.data_ptr()/output, not about this).
+
+    G0.3: _split_heads_view() below skips the .contiguous() copy that
+    BaselineSelfAttention._split_heads() does after view+transpose.
+    Baseline needs that copy because its own torch.matmul calls want
+    contiguous inputs; SDPA's fused kernels are designed to accept the
+    strided [B,H,S,D] view directly (that view+transpose pattern is the
+    standard MHA idiom SDPA is built around). Saves ~3 copies of
+    [B,S,d_model] per layer on the way in. The baseline's own
+    _split_heads is left untouched since it's shared with the frozen
+    reference's manual-matmul forward, which genuinely needs the copy.
     """
 
     @staticmethod
@@ -228,6 +238,16 @@ class UserOptimizedTransformer(BaselineTransformer):
             attn._qkv_bias = b
         return F.linear(h, attn._qkv_weight, attn._qkv_bias)
 
+    @staticmethod
+    def _split_heads_view(x: torch.Tensor, num_heads: int, head_dim: int) -> torch.Tensor:
+        # G0.3: no .contiguous() -- unlike baseline's own torch.matmul,
+        # SDPA's fused kernels accept the strided [B,H,S,D] view directly.
+        # (BaselineSelfAttention._split_heads is left untouched: it's shared
+        # with the frozen baseline's own manual-matmul forward, which does
+        # need the copy for its plain torch.matmul calls.)
+        batch, seq_len, _ = x.shape
+        return x.view(batch, seq_len, num_heads, head_dim).transpose(1, 2)
+
     def forward(
         self,
         x: torch.Tensor,
@@ -241,9 +261,9 @@ class UserOptimizedTransformer(BaselineTransformer):
             h = layer.norm1(x)
             qkv = self._fused_qkv(attn, h)
             q, k, v = qkv.split(attn.d_model, dim=-1)
-            q = attn._split_heads(q)
-            k = attn._split_heads(k)
-            v = attn._split_heads(v)
+            q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
+            k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
+            v = self._split_heads_view(v, attn.num_heads, attn.head_dim)
 
             if valid_token_mask is None:
                 context = F.scaled_dot_product_attention(
