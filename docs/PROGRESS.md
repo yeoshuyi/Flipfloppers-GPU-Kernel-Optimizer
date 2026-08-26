@@ -14,22 +14,26 @@ can lag by one iteration if a crash happened mid-step).
 
 ## Current State (updated after each iteration)
 
-- **Day:** 1-2 (Track A in progress)
-- **Track A progress:** G0.1, G0.2, G0.3 done. G0.4 skipped (not applicable
-  yet, see step 9). G0.5 in progress.
+- **Day:** 1-2 (G0 structural items essentially done, starting G1)
+- **Track A progress:** G0.1, G0.2, G0.3, G0.5 done. G0.4 skipped (not
+  applicable yet). G0.6 (128-bit vector loads) deferred/likely-skip — it's
+  a hand-written-kernel-level micro-opt not really expressible at the
+  torch level in this file; revisit if we drop to Triton/CUDA for other
+  reasons. Starting G1 (constant folding), G1.2 in progress.
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
-  | tiny | 1.50x |
-  | default | 1.21x |
-  | long-seq | 2.19x |
-  | large-batch | 1.36x |
+  | tiny | 2.64x |
+  | default | 1.40x |
+  | long-seq | 2.30x |
+  | large-batch | 1.55x |
   | padded | 1.21x |
   | causal | 1.00x (fallback to exact baseline, not yet improved) |
 - **Known open gap:** causal regime has no speedup yet. Root cause: even
   SDPA's MATH backend drifts past the 1e-3 accuracy threshold on ~half of
-  random seeds at B8_S128 causal (see step 5 below). Deferred to G1.2.
-- **Latest commit:** `2635e0a` (G0.3 archive: padded/trackA)
+  random seeds at B8_S128 causal (see step 5 below). G1.2 (in progress) is
+  the attempt to unblock it.
+- **Latest commit:** `542c35a` (G0.5 archive: padded/trackA)
 
 ---
 
@@ -237,6 +241,51 @@ elementwise pass over the tensor if not skipped.
 
 **Verification:** in progress, sbatch job id 19.
 
-### 10. (in progress) G0.5 — see step 9
-Full sweep results and archive/commit will land here once job 19
-completes.
+### 10. G0.5 — all-ones-mask fast path
+**Verification:** full 8-shape sweep (sbatch job id 19, log in
+`results/g0_5_sweep_run19.log`), all PASS, `max_abs` unchanged from G0.3's
+run per shape (as expected — G0.5 doesn't change any math, just which
+already-equivalent path runs). vs G0.3:
+
+| shape | G0.3 | G0.5 | note |
+|---|---|---|---|
+| tiny | 1.496x | **2.640x** | the dead fast path, unlocked |
+| default | 1.205x | 1.397x | |
+| long_seq | 2.193x | 2.300x | |
+| large_batch | 1.362x | 1.547x | |
+| default_padded | 1.208x | 1.211x | genuinely padded, same path as before |
+| long_seq_padded | 2.194x | 2.194x | genuinely padded, same path as before |
+
+The padded shapes staying flat is itself a good sign — it confirms `no_pad`
+is correctly `False` for them (the real-padding path is untouched) and
+`True` only for the genuinely-unpadded ones, i.e. the fast-path detection
+is working as intended, not just "faster because something got skipped
+incorrectly."
+
+Committed `7530cc8`. Archived: new elites in every non-causal cell (tiny
+**2.64x**, default 1.40x, long-seq 2.30x, large-batch 1.55x, padded 1.21x
+— tied with G0.3's number since padded takes the same path, logged
+correctly as tied/near-miss-equal); causal stayed at 1.00x.
+
+**G0 is now essentially done for Track A.** G0.6 (128-bit vector loads) is
+deferred — it's a hand-written-kernel-level micro-optimisation not really
+expressible at the `torch`/`F.*` level this file operates at; would only
+become relevant if/when this drops to Triton or CUDA for other reasons
+(G3/G4 territory).
+
+### 11. (in progress) G1.2 — fold attention scale into `W_Q`
+Moving to G1 (constant folding). Prioritising G1.2 first, out of the
+`docs/CATALOGUE.md` order (G1.1 → G1.2 → ...), because it's the one item
+already flagged (step 5) as a possible way to unblock the causal regime's
+accuracy gap — folding `scale` into `W_Q` and passing `scale=1.0` to SDPA
+removes one elementwise multiply over the full `[B,H,S,S]` score matrix,
+which changes the floating-point operation sequence and might shift the
+causal MATH-backend drift enough to clear the 1e-3 threshold reliably (or
+might not — this needs to be measured, not assumed).
+
+G1 folds are claimed **exact** — per CLAUDE.md invariant 5, `max_abs` must
+be verified **unchanged (bit-identical)** against the pre-fold version, not
+merely "still under the accuracy threshold." Will check this specifically,
+not just read the PASS/FAIL summary.
+
+Results will land here once verified.
