@@ -229,6 +229,12 @@ class UserOptimizedTransformer(BaselineTransformer):
     tensor when there's no real padding, never a literal None, so the
     unpadded shapes were silently going through the masked SDPA branch (and
     the now-provably-no-op masked_fill calls) the whole time. See forward().
+
+    G1.2: scale folded into W_Q/b_Q inside _fused_qkv() (see the comment
+    there for why it's bit-exact for this model), SDPA called with
+    scale=1.0. Note this only covers the non-causal path -- the causal
+    fallback still uses baseline's own unscaled q_proj/k_proj/v_proj via
+    super().forward(), untouched by this fold.
     """
 
     def __init__(self, config: TransformerConfig) -> None:
@@ -245,6 +251,20 @@ class UserOptimizedTransformer(BaselineTransformer):
             b = torch.cat(
                 [attn.q_proj.bias, attn.k_proj.bias, attn.v_proj.bias], dim=0
             )
+            # G1.2: fold the attention scale into W_Q/b_Q (only Q's rows of
+            # the fused weight -- torch.cat already returns fresh storage,
+            # so this in-place scale can't touch attn.q_proj.weight itself).
+            # Exact: this model's head_dim is always a power of two (64
+            # here), so scale = head_dim**-0.5 is an exact power of two
+            # (0.125 = 2^-3) -- IEEE float multiplication by a power of two
+            # never rounds, so pre-scaling Q here and passing scale=1.0 to
+            # SDPA is bit-identical to SDPA's default (scaling the [B,H,S,S]
+            # score matrix by 0.125 after the matmul), not merely
+            # "close enough." Verified empirically in PROGRESS.md step 12
+            # regardless, per CLAUDE.md invariant 5.
+            d = attn.d_model
+            w[:d].mul_(attn.scale)
+            b[:d].mul_(attn.scale)
             attn._qkv_weight = w
             attn._qkv_bias = b
         return F.linear(h, attn._qkv_weight, attn._qkv_bias)
@@ -303,12 +323,12 @@ class UserOptimizedTransformer(BaselineTransformer):
 
             if no_pad:
                 context = F.scaled_dot_product_attention(
-                    q, k, v, attn_mask=None, is_causal=False
+                    q, k, v, attn_mask=None, is_causal=False, scale=1.0
                 )
             else:
                 key_keep = valid_token_mask[:, None, None, :]
                 context = F.scaled_dot_product_attention(
-                    q, k, v, attn_mask=key_keep, is_causal=False
+                    q, k, v, attn_mask=key_keep, is_causal=False, scale=1.0
                 )
 
             context = (
