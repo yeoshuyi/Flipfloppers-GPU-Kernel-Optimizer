@@ -36,17 +36,22 @@ def commit(a):
              "applied": a.applied.split(",") if a.applied else [],
              "ts": datetime.datetime.now().isoformat(timespec="seconds")}
     prev = d["elite"]["speedup"] if d["elite"] else 0
-    if a.speedup > prev:
+    is_new_elite = a.speedup > prev
+    if is_new_elite:
         d["elite"] = entry
         print(f"NEW ELITE {a.cell}: {a.speedup:.2f}x (was {prev:.2f}x)")
-        subprocess.run(["git", "add", "-A"], check=False)
-        subprocess.run(["git", "commit", "-m",
-                        f"[{a.cell}] {a.id} {a.speedup:.2f}x {a.applied or ''}"],
-                       check=False)
     else:
         print(f"near-miss {a.cell}: {a.speedup:.2f}x vs elite {prev:.2f}x")
     d["log"].append(entry)
     _save(a.cell, d)
+    if is_new_elite:
+        # _save() above must run first -- committing before the cell's own
+        # file is written on disk stages whatever leftover file the PREVIOUS
+        # invocation wrote instead, under THIS invocation's commit message.
+        subprocess.run(["git", "add", "-A"], check=False)
+        subprocess.run(["git", "commit", "-m",
+                        f"[{a.cell}] {a.id} {a.speedup:.2f}x {a.applied or ''}"],
+                       check=False)
 
 
 def fail(a):
