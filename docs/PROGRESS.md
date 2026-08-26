@@ -1349,3 +1349,76 @@ No `benchmark.py` changes this investigation; no archive cell touched.
 Current shipped state remains: tiny 4.65x, default 1.61x, long-seq 2.35x,
 large-batch 1.61x, padded 1.60x, causal 1.75x (unchanged from the G0-G4
 investigation's conclusion).
+
+### 24. Re-opened by request: does k=3 hold up under a real implementation? No — confirms closure with real hardware evidence
+
+User explicitly asked to try k=3 anyway and see if it holds up, rather than
+stop at step 22's simulated result. Good call to push on — it surfaced a
+real ambiguity step 22 glossed over, and the real-hardware answer is more
+decisive (and less favorable) than the simulation suggested.
+
+**The ambiguity:** step 22 measured "k=3 terms per operand" via full
+dequant-recombine (implicitly capturing all 3×3=9 cross-terms' worth of
+accuracy in one fp32 matmul), then read the plan's GEMM-count table as
+"3 terms → 3 GEMMs." But `CLAUDE.md`'s own G2.8 example (2 terms/operand →
+3 GEMMs, `A_hi·B_hi + A_hi·B_lo + A_lo·B_hi`, dropping only the doubly-low
+`A_lo·B_lo` term) is a **triangular** truncation, not literal term-count.
+Generalized to 3 terms/operand, that's 6 GEMMs (keep `i+j<3` out of 9
+possible cross-terms), not 3 — the plan's table conflated these two
+things.
+
+**Real implementation, real API constraints found and fixed along the
+way** (`probes/g5_5_k3_real_gemm_count.py`, jobs 53-55, real
+`torch._scaled_mm` calls, not simulation):
+- Row-wise-scaled `_scaled_mm` only supports bf16/fp16 output, not fp32
+  (`results/g5_5_attempt1_dtype_error_run53.log`). Fixed by requesting
+  bf16 and upcasting to fp32 immediately per-term, before summing (so
+  multi-term summation itself happens in fp32).
+- `_scaled_mm`'s weight operand must stay a transposed *view* of the
+  original row-major tensor (`stride(0)==1`); calling `.contiguous()` on
+  it (materializing an actual transposed copy) breaks that requirement
+  (`results/g5_5_attempt2_stride_error_run54.log`). Fixed by removing the
+  `.contiguous()` call.
+
+**Result** (`results/g5_5_real_gemm_result_run55.log`, default shape, 20
+seeds, per-channel scales — the finest granularity `_scaled_mm` actually
+supports on Ada, no native per-128-tile microscaling):
+
+| design | real GEMMs | max_abs_max | true_failures |
+|---|---|---|---|
+| A: weight 3-term, activation 1-term | 3 | 0.0987 | 20/20 |
+| B: activation 3-term, weight 1-term | 3 | 0.0909 | 20/20 |
+| C: triangular (both 3-term, keep i+j<3) | 6 | 0.0072 | 20/20 |
+
+**Neither 3-GEMM asymmetric design works** — confirms the reasoning from
+when this was first considered: whichever operand is left at 1-term FP8
+dominates the error (both land close to the plain k=1 result, ~0.09-0.10,
+not anywhere near k=3's simulated 0.0008-0.0009). Both operands need
+multi-term precision, not just one — there's no way to get real 3-GEMM
+split-precision to work here.
+
+**The 6-GEMM triangular design — the "correct" generalization of
+`CLAUDE.md`'s own G2.8 example — also fails**, at 0.0072 (7x over the
+0.001 budget), a full order of magnitude worse than step 22's simulated
+"k=3, 9-term-equivalent" result of 0.0008-0.0009. Two real-hardware
+effects the fp32-recombine simulation didn't capture: bf16 rounding on
+each of the 6 GEMM outputs (row-wise scaling forces bf16/fp16 output,
+adding ~0.4% relative noise per term, compounding across 6 terms), and
+the 3 dropped highest-order cross-terms mattering more than assumed.
+
+**This closes the question more decisively than step 22 did, not less.**
+6 real GEMMs already gives only `330.3/6 = 55` TFLOPS ideal — *below*
+torch's own measured 57.3 TFLOPS TF32 FFN baseline, meaning it loses
+arithmetically even at 100% kernel efficiency, before accuracy is even
+back in budget. Whatever GEMM count would actually clear accuracy (more
+than 6, given 6 already misses by 7x) only pushes the ideal TFLOPS lower
+still. There's no real-implementation path from here to a viable
+candidate — not a matter of more tuning, the arithmetic is upside-down
+regardless of accuracy.
+
+**Answer to "does it hold up": no.** Confirms step 22's closure decision,
+now with real hardware measurement instead of a plan-table estimate that
+turned out to understate the true GEMM cost. Committed alongside this
+write-up (probe, job script, all three run logs including both API-error
+attempts, full trail preserved). `benchmark.py` untouched, no archive
+cell touched.

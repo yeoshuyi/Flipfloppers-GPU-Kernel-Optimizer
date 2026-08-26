@@ -1,0 +1,8 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== real torch._scaled_mm k-term GEMM-count resolution (default shape, 20 seeds) ===
+  A: asym-weight (3 terms weight, 1 activation)  [3 real GEMMs]
+    max_abs_max=0.098668  max_abs_mean=0.087312  true_failures=20/20
+  B: asym-activation (3 terms activation, 1 weight)  [3 real GEMMs]
+    max_abs_max=0.090925  max_abs_mean=0.082518  true_failures=20/20
+  C: triangular (3 terms both, i+j<3)  [6 real GEMMs]
+    max_abs_max=0.007188  max_abs_mean=0.006261  true_failures=20/20

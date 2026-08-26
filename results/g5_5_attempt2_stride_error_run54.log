@@ -1,0 +1,19 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== real torch._scaled_mm k-term GEMM-count resolution (default shape, 20 seeds) ===
+Traceback (most recent call last):
+  File "/work/probes/g5_5_k3_real_gemm_count.py", line 170, in <module>
+    r = run(shapes["default"], k, mode, n_seeds=20)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_5_k3_real_gemm_count.py", line 150, in run
+    opt = ffn_real_gemm_forward(model, x, mask, k_terms, mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_5_k3_real_gemm_count.py", line 117, in ffn_real_gemm_forward
+    hidden_2d = linear_via_scaled_mm(n2_2d, n2_terms, w1_terms, mode)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_5_k3_real_gemm_count.py", line 84, in linear_via_scaled_mm
+    r = scaled_mm_2d(xq, xs, wq_T, ws)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_5_k3_real_gemm_count.py", line 69, in scaled_mm_2d
+    out = torch._scaled_mm(a_fp8, b_fp8_T, scale_a=a_scale,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Expected b.stride(0) == 1 to be true, but got false.  (Could this error message be improved?  If so, please report an enhancement request to PyTorch.)
