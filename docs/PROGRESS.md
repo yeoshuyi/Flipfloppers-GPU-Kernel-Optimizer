@@ -1229,3 +1229,123 @@ precision requirement.
 Committed (all of the above, full investigative trail kept per this
 project's practice) alongside this write-up. `benchmark.py` untouched, no
 archive cell touched — this is investigation, not yet a candidate.
+
+### 22. Stage 1b + 1c — split-precision FP8 (G2.8) genuinely passes accuracy; closed on the arithmetic anyway
+
+The decisive experiment. `probes/g5_3_fp8_split.py`, real
+`float8_e4m3fn` hardware casts throughout (no simulated mantissa
+truncation this time — sidesteps step 21's calibration trouble entirely).
+Tests G2.8, split/residual precision (`CLAUDE.md`'s own recommended
+fallback, `docs/CATALOGUE.md`'s own item, never tried until now):
+`W ≈ s0·Q0 + s1·Q1 + ...`, a greedy residual FP8 split with per-128-tile
+dynamic scales, same for activations; `k` terms per operand.
+
+**Stage 1b (folded in) — granularity check, confirmed the prediction:**
+at `k=1`, sweeping tile size 512→32 moved `max_abs_mean` from 0.1208 to
+only 0.1072 — under 12% improvement across a 16x finer granularity range.
+Matches step-21-adjacent reasoning: this model's freshly-initialized
+weights have no outliers for fine-grained scaling to help with. Finer
+granularity alone was never going to close a gap this large, confirmed
+directly rather than assumed.
+
+**Stage 1c — the k-term sweep, real numbers (`results/g5_3_fp8_split_run51.log`):**
+
+| k | tiny max_abs | default max_abs | long_seq max_abs | true_failures (of 60 = 20×3 shapes) |
+|---|---|---|---|---|
+| 1 | 0.1108 | 0.1241 | 0.1365 | 60/60 |
+| 2 | 0.00308 | 0.00348 | 0.00384 | 60/60 |
+| **3** | **0.00078** | **0.000896** | **0.000887** | **0/60** |
+| 4 | 0.000631 | 0.000671 | 0.000690 | 0/60 |
+| 5 | 0.000664 | 0.000662 | 0.000662 | 0/60 |
+| 6 | 0.000628 | 0.000665 | 0.000669 | 0/60 |
+
+**k=3 already passes the real criterion everywhere — 0 failures out of
+60 seed×shape combinations, at every shape tested.** This is a genuinely
+different outcome than every prior precision investigation this session
+(BF16 twice, naive FP8 once): split-precision actually works
+numerically. Worth stating plainly since it partially vindicates the
+premise of revisiting FP8 at all.
+
+**But k=3 doesn't clear the plan's pre-committed `≤8e-4` gate** at
+default (0.000896) and long_seq (0.000887) — both exceed it, even though
+both are still comfortably under the *real* 0.001 atol (default sits at
+~90% of budget, thinner than the shipped TF32 path's own ~65-79% margin
+but not a knife-edge pass like causal's G2.4b situation). **k=4 clears
+the gate comfortably everywhere** (0.00063-0.00069, all real failures
+0/60). So by the pre-committed, exact gate — not loosened after seeing
+the result — **the smallest k that clears both the accuracy bar and the
+stated safety margin is 4, landing exactly on the plan's pre-identified
+marginal case.**
+
+**The arithmetic for k=4:** `330.3/4 = 82.6` TFLOPS ideal — which is
+*exactly* TF32's own peak. A hand-written 4-term FP8 kernel would need to
+reach close to its own 100% efficiency just to match torch's *already
+83% efficiency* number... more precisely: torch's measured FFN TF32
+performance is 57.3 TFLOPS (69% of TF32's 82.6 peak, step 19/20). A
+4-term FP8 kernel needs `57.3/82.6 = 69.4%` of *its own* peak just to
+break even — and the one hand-written kernel actually built this session
+(G3.1, step 19) achieved 13-87% of cuBLAS's efficiency depending on
+shape, well capable of landing under that bar.
+
+**Per the user's pre-confirmed decision (recorded in the approved plan's
+"Decisions confirmed" section): treat this as closure, do not proceed to
+Stage 1.5(ii) or Stage 2.** Not because FP8 doesn't work — it does, for
+the first time this session — but because the GEMM count required to
+make it work reliably eliminates the theoretical speed advantage before
+kernel-quality is even a factor, and the prior kernel-writing attempt's
+demonstrated efficiency range doesn't clear that bar with confidence.
+
+**What would change this:** a k=3 result with more margin (e.g. if the
+`≤8e-4` threshold had been set at `≤9e-4`, k=3 would qualify outright —
+this is a genuinely close call, not an order-of-magnitude miss like BF16
+or naive FP8 were). Revisiting with a tighter per-tile scale search, a
+smarter greedy-split variant, or accepting k=3 with its thinner-but-real
+margin are all legitimate future directions if this gets revisited —
+recorded here rather than re-litigated now, per the pre-committed
+decision.
+
+Committed alongside this write-up. `benchmark.py` untouched, no archive
+cell touched.
+
+### 23. Regime arbiter (Part A) — not built, per the pre-confirmed plan
+
+Per the approved plan's confirmed sequencing decision ("the arbiter is
+built only if [the FP8] investigation turns out to need it — some
+regimes win with FP8, others don't"): Stage 1 closed without a shipped
+FP8 candidate at any regime, so there is nothing for the arbiter to
+route between. Not building it this round, consistent with the decision
+the user already confirmed before this investigation ran (not a new
+unilateral call). The design itself (host-side `B,S=x.shape` dispatch,
+computed and quantified as ~0.16% of tiny's wall time — 8x below this
+project's own measurement noise floor — a `{regime: compiled_fn}`
+registry memoized by implementation identity, boundary-shape sweep,
+multi-regime CUDA-graph-pool safety probe) is fully specified in
+`/home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md` if a
+future candidate ever needs it.
+
+## Investigation summary: regime arbiter + FP8 re-visit
+
+**FP8 re-investigation (steps 21-22):** found and fixed real bugs in the
+diagnostic tooling along the way (an order-statistic artifact in max-error
+measurement, a scope-mismatched anchor comparison), then ran the decisive
+experiment cleanly. **Split-precision FP8 (G2.8) genuinely passes this
+model's accuracy bar for the first time this session** — a real, different
+outcome from BF16 (steps 14, 17) and naive per-channel FP8 (step 18), both
+of which failed by an order of magnitude or more. It's closed anyway,
+because the GEMM count needed (4 terms, to clear the stated margin) prices
+out the theoretical speed advantage before any kernel is even written —
+matching TF32's own peak throughput at best, and needing better efficiency
+than the prior hand-written-kernel attempt demonstrated. This is a more
+nuanced, more informative closure than the earlier BF16/FP8 dead ends: not
+"this doesn't work," but "this works, and isn't worth it at this
+precision's required term count."
+
+**Regime arbiter:** not built, per the sequencing the user already
+confirmed — it had no FP8 candidate to route to. Fully designed and ready
+to build (see the plan file) if a future precision or kernel investigation
+ever produces a regime-specific winner.
+
+No `benchmark.py` changes this investigation; no archive cell touched.
+Current shipped state remains: tiny 4.65x, default 1.61x, long-seq 2.35x,
+large-batch 1.61x, padded 1.60x, causal 1.75x (unchanged from the G0-G4
+investigation's conclusion).

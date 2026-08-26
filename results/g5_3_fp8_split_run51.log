@@ -1,0 +1,32 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Stage 1b (folded in): granularity check, k=1, default shape ===
+  tile= 512  max_abs_max=0.132535  max_abs_mean=0.120848  true_failures=20/20
+  tile= 128  max_abs_max=0.124094  max_abs_mean=0.114770  true_failures=20/20
+  tile=  64  max_abs_max=0.120469  max_abs_mean=0.112310  true_failures=20/20
+  tile=  32  max_abs_max=0.121117  max_abs_mean=0.107190  true_failures=20/20
+
+=== Stage 1c: k-term split-precision (the decisive experiment), tile=128 ===
+--- tiny ---
+  k=1  max_abs_max=0.110820  max_abs_mean=0.100997  true_failures=20/20
+  k=2  max_abs_max=0.003082  max_abs_mean=0.002715  true_failures=20/20
+  k=3  max_abs_max=0.000780  max_abs_mean=0.000698  true_failures=0/20
+  k=4  max_abs_max=0.000631  max_abs_mean=0.000564  true_failures=0/20
+  k=5  max_abs_max=0.000664  max_abs_mean=0.000562  true_failures=0/20
+  k=6  max_abs_max=0.000628  max_abs_mean=0.000547  true_failures=0/20
+
+--- default ---
+  k=1  max_abs_max=0.124094  max_abs_mean=0.114770  true_failures=20/20
+  k=2  max_abs_max=0.003480  max_abs_mean=0.003113  true_failures=20/20
+  k=3  max_abs_max=0.000896  max_abs_mean=0.000788  true_failures=0/20
+  k=4  max_abs_max=0.000671  max_abs_mean=0.000618  true_failures=0/20
+  k=5  max_abs_max=0.000662  max_abs_mean=0.000608  true_failures=0/20
+  k=6  max_abs_max=0.000665  max_abs_mean=0.000600  true_failures=0/20
+
+--- long_seq ---
+  k=1  max_abs_max=0.136547  max_abs_mean=0.124469  true_failures=20/20
+  k=2  max_abs_max=0.003836  max_abs_mean=0.003400  true_failures=20/20
+  k=3  max_abs_max=0.000887  max_abs_mean=0.000804  true_failures=0/20
+  k=4  max_abs_max=0.000690  max_abs_mean=0.000640  true_failures=0/20
+  k=5  max_abs_max=0.000662  max_abs_mean=0.000607  true_failures=0/20
+  k=6  max_abs_max=0.000669  max_abs_mean=0.000614  true_failures=0/20
+
