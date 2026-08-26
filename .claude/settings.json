@@ -1,0 +1,17 @@
+{
+  "theme": "dark",
+  "permissions": {
+    "allow": [
+      "Read", "Glob", "Grep", "Edit", "Write",
+      "Bash(sbatch:*)", "Bash(squeue:*)", "Bash(sacct:*)", "Bash(scancel:*)",
+      "Bash(git diff:*)", "Bash(git log:*)", "Bash(git add:*)",
+      "Bash(git commit:*)", "Bash(python3 tools/*)", "Bash(python3 probes/*)",
+      "Bash(nvidia-smi --query-gpu*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)", "Bash(sudo:*)",
+      "Bash(nvidia-smi -r*)", "Bash(nvidia-smi -lgc*)", "Bash(nvidia-smi -pl*)",
+      "Read(./.env)", "Read(./**/*.key)"
+    ]
+  }
+}
