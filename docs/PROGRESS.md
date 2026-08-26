@@ -15,20 +15,21 @@ can lag by one iteration if a crash happened mid-step).
 ## Current State (updated after each iteration)
 
 - **Day:** 1-2 (Track A in progress)
-- **Track A progress:** G0.1 done, G0.2 done. G0.3 in progress.
+- **Track A progress:** G0.1, G0.2, G0.3 done. G0.4 skipped (not applicable
+  yet, see step 9). G0.5 in progress.
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
-  | tiny | 1.38x |
-  | default | 1.15x |
-  | long-seq | 2.15x (G0.1's number; G0.2 landed 2.10x here, near-miss, kept the better one) |
-  | large-batch | 1.25x |
-  | padded | 1.16x |
+  | tiny | 1.50x |
+  | default | 1.21x |
+  | long-seq | 2.19x |
+  | large-batch | 1.36x |
+  | padded | 1.21x |
   | causal | 1.00x (fallback to exact baseline, not yet improved) |
 - **Known open gap:** causal regime has no speedup yet. Root cause: even
   SDPA's MATH backend drifts past the 1e-3 accuracy threshold on ~half of
   random seeds at B8_S128 causal (see step 5 below). Deferred to G1.2.
-- **Latest commit:** `69845c0` (G0.2 archive: causal/trackA)
+- **Latest commit:** `2635e0a` (G0.3 archive: padded/trackA)
 
 ---
 
@@ -179,6 +180,63 @@ Committed `8f48d13`. Archived: `tiny/trackA` 1.38x (new elite),
 step-6 archive.py fix works correctly this time — every commit's diff now
 matches its own message's cell.
 
-### 8. (in progress) G0.3 — kill `_split_heads` `.contiguous()`
-See "Current State" above for live status; this section will be filled in
-once verified.
+### 8. G0.3 — kill `_split_heads` `.contiguous()`
+**Fact cited:** `docs/CATALOGUE.md` G0.3, "baseline burns ~96MB/forward"
+copying q/k/v into contiguous `[B,H,S,D]` layout before attention.
+
+**What changed:** added `_split_heads_view()` — same `view` +
+`transpose(1,2)` as baseline's `_split_heads`, minus the `.contiguous()`.
+SDPA's fused kernels accept the resulting strided view directly (this is
+the standard MHA idiom SDPA is built around); baseline's own `_split_heads`
+is untouched since baseline's plain `torch.matmul` calls genuinely need the
+copy. Verified the `qkv.split()` → `.view()` → `.transpose()` chain doesn't
+throw a view-compatibility `RuntimeError`: splitting the *last* dim of a
+contiguous `[B,S,3D]` tensor keeps that dim stride-1 internally, so
+splitting it further into `(num_heads, head_dim)` is a valid view
+regardless of the outer dims' strides.
+
+**Verification:** full 8-shape sweep (sbatch job id 18, log in
+`results/g0_3_sweep_run18.log`), all PASS, uniform gains, no regressions:
+tiny 1.378→1.496x, default 1.150→1.205x, long_seq 2.095→2.193x (now beats
+G0.1's number too), large_batch 1.255→1.362x, padded 1.161→1.208x. Causal
+unaffected (still on the exact baseline fallback).
+
+Committed `761578c`. Archived: new elites in every non-causal cell (tiny
+1.50x, default 1.21x, long-seq 2.19x, large-batch 1.36x, padded 1.21x);
+causal stayed at 1.00x (near-miss, correctly not overwritten).
+
+### 9. G0.4 skipped, G0.5 implemented instead
+**Reasoning for skipping G0.4** ("cache the causal mask by seq_len"): the
+causal regime is currently fully gated to `super().forward()` (the exact
+baseline fallback, see step 5) — there is no custom causal attention path
+in `UserOptimizedTransformer` yet for a cached mask to attach to. Revisit
+once G1.2 unblocks a real optimized causal path.
+
+**Why G0.5 was promoted instead — an important finding:** checked how
+`main()` actually calls the model (`benchmark.py` L480-489, L626-637) and
+`generate_random_case()` (L353-356): when `padding_ratio<=0` it returns a
+**concrete all-ones tensor**, never a literal `None`. That means every
+"unpadded" shape tested so far (tiny, default, long_seq, large_batch) was
+silently going through the `attn_mask=key_keep` branch on every one of
+G0.1/G0.2/G0.3's sweeps — the `attn_mask=None` fast path was dead code the
+whole time. The speedups already measured are real (verified by the
+accuracy+timing harness regardless of which branch ran), but they were
+left on the table relative to what SDPA can actually do when it knows
+there's no mask at all.
+
+**What changed:** implemented `docs/CATALOGUE.md` G0.5 using the exact
+`_mask_is_all_ones()` pattern CLAUDE.md sanctions (the one legitimate
+`data_ptr()` use — caches whether a mask is all-ones, never a result).
+Added `__init__` to give `UserOptimizedTransformer` its own `_mask_cache`
+dict (plain attribute, not part of `state_dict`). `forward()` now computes
+`no_pad` once per call (not per layer) and uses it to: (a) pick
+`attn_mask=None` for SDPA when there's no real padding, and (b) skip the
+three `masked_fill` calls per layer plus the final one, which are
+provably no-ops when the mask is all-ones but still cost a full
+elementwise pass over the tensor if not skipped.
+
+**Verification:** in progress, sbatch job id 19.
+
+### 10. (in progress) G0.5 — see step 9
+Full sweep results and archive/commit will land here once job 19
+completes.
