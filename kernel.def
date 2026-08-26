@@ -1,0 +1,17 @@
+Bootstrap: docker
+From: nvidia/cuda:13.1.0-devel-ubuntu24.04
+
+%post
+    apt-get update && apt-get install -y python3-pip git cmake ninja-build
+    pip3 install --break-system-packages \
+        torch --index-url https://download.pytorch.org/whl/cu130
+    pip3 install --break-system-packages triton numpy pandas
+    apt-get install -y cuda-nsight-compute-13-1 cuda-nsight-systems-13-1
+
+%environment
+    export CUDA_DEVICE_ORDER=PCI_BUS_ID
+    export TORCH_CUDA_ARCH_LIST="8.9"      # sm_89 only -- much faster JIT builds
+    export CUDA_MODULE_LOADING=LAZY
+
+%runscript
+    exec python3 "$@"
