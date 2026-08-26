@@ -1,0 +1,7 @@
+shape,regime,batch_size,seq_len,causal,padding_ratio,median_ms,mean_ms,p90_ms,min_ms,throughput_tok_s
+tiny,TINY,1,64,False,0.0,1.4388,1.4407,1.4564,1.4162,44481.51
+default,DEFAULT,8,128,False,0.0,1.4152,1.4189,1.4358,1.3967,723588.98
+long_seq,LONG-SEQ,8,1024,False,0.0,24.7226,24.7222,24.7308,24.6980,331356.63
+large_batch,LARGE-BATCH,256,128,False,0.0,41.9625,41.9616,41.9748,41.9310,780887.74
+default_padded,DEFAULT+PADDED,8,128,False,0.3,1.4029,1.4156,1.4643,1.3783,729927.03
+default_causal,DEFAULT+CAUSAL,8,128,True,0.0,1.5319,1.5341,1.5515,1.5063,668449.21
