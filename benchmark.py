@@ -235,6 +235,17 @@ class UserOptimizedTransformer(BaselineTransformer):
     scale=1.0. Note this only covers the non-causal path -- the causal
     fallback still uses baseline's own unscaled q_proj/k_proj/v_proj via
     super().forward(), untouched by this fold.
+
+    G1.1: norm1's and norm2's affine (gamma/beta) are folded into the
+    linears that consume their output (_fused_qkv, _fused_ffn_in) --
+    LayerNorm itself only ever computes the pure reduction now
+    (F.layer_norm with weight=None, bias=None). final_norm is left alone:
+    its output is the model's return value, there's no downstream linear to
+    fold into (docs/CATALOGUE.md's own note on this). Unlike G1.2's
+    power-of-two scale, gamma/beta are arbitrary learned floats, so this
+    fold is exact in real arithmetic but not provably bit-identical in
+    floating point -- verified empirically (max_abs comparison) instead,
+    see PROGRESS.md.
     """
 
     def __init__(self, config: TransformerConfig) -> None:
@@ -242,9 +253,12 @@ class UserOptimizedTransformer(BaselineTransformer):
         self._mask_cache: dict = {}
 
     @staticmethod
-    def _fused_qkv(attn: "BaselineSelfAttention", h: torch.Tensor) -> torch.Tensor:
+    def _fused_qkv(
+        attn: "BaselineSelfAttention", norm1: nn.LayerNorm, n: torch.Tensor
+    ) -> torch.Tensor:
+        # n is norm1's PURE REDUCTION output (no affine) -- see forward().
         w = getattr(attn, "_qkv_weight", None)
-        if w is None or w.device != h.device or w.dtype != h.dtype:
+        if w is None or w.device != n.device or w.dtype != n.dtype:
             w = torch.cat(
                 [attn.q_proj.weight, attn.k_proj.weight, attn.v_proj.weight], dim=0
             )
@@ -260,14 +274,34 @@ class UserOptimizedTransformer(BaselineTransformer):
             # never rounds, so pre-scaling Q here and passing scale=1.0 to
             # SDPA is bit-identical to SDPA's default (scaling the [B,H,S,S]
             # score matrix by 0.125 after the matmul), not merely
-            # "close enough." Verified empirically in PROGRESS.md step 12
-            # regardless, per CLAUDE.md invariant 5.
+            # "close enough." Verified empirically in PROGRESS.md step 12.
             d = attn.d_model
             w[:d].mul_(attn.scale)
             b[:d].mul_(attn.scale)
+            # G1.1: absorb norm1's affine (gamma=weight, beta=bias) into
+            # this (already scale-folded) weight/bias, so norm1 itself only
+            # ever needs to do the mean/var reduction. y = n*gamma+beta,
+            # z = y@W^T+b = n@(W*gamma)^T + (b + W@beta) -- the bias-absorb
+            # must happen BEFORE the column-scale below, using this W (the
+            # W@beta term doesn't involve gamma at all).
+            b = b + w @ norm1.bias
+            w = w * norm1.weight[None, :]
             attn._qkv_weight = w
             attn._qkv_bias = b
-        return F.linear(h, attn._qkv_weight, attn._qkv_bias)
+        return F.linear(n, attn._qkv_weight, attn._qkv_bias)
+
+    @staticmethod
+    def _fused_ffn_in(layer: "BaselineTransformerBlock", n: torch.Tensor) -> torch.Tensor:
+        # G1.1, the norm2 -> ffn_in half. Same fold as above, no scale
+        # involved here (that was attention-specific).
+        w = getattr(layer, "_ffn_in_weight", None)
+        if w is None or w.device != n.device or w.dtype != n.dtype:
+            ffn_in = layer.ffn_in
+            b = ffn_in.bias + ffn_in.weight @ layer.norm2.bias
+            w = ffn_in.weight * layer.norm2.weight[None, :]
+            layer._ffn_in_weight = w
+            layer._ffn_in_bias = b
+        return F.linear(n, layer._ffn_in_weight, layer._ffn_in_bias)
 
     @staticmethod
     def _split_heads_view(x: torch.Tensor, num_heads: int, head_dim: int) -> torch.Tensor:
@@ -314,8 +348,15 @@ class UserOptimizedTransformer(BaselineTransformer):
 
         for layer in self.layers:
             attn = layer.attention
-            h = layer.norm1(x)
-            qkv = self._fused_qkv(attn, h)
+            # G1.1: norm1's affine is folded into _fused_qkv's weight/bias
+            # below, so here we only need the pure reduction (no
+            # weight=gamma/bias=beta) -- F.layer_norm(weight=None,
+            # bias=None) computes exactly (x-mean)/sqrt(var+eps), PyTorch's
+            # own fused kernel, not a hand-rolled reimplementation.
+            n1 = F.layer_norm(
+                x, layer.norm1.normalized_shape, eps=layer.norm1.eps
+            )
+            qkv = self._fused_qkv(attn, layer.norm1, n1)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
@@ -341,8 +382,10 @@ class UserOptimizedTransformer(BaselineTransformer):
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
 
-            h2 = layer.norm2(x)
-            ffn = layer.ffn_out(F.gelu(layer.ffn_in(h2), approximate="none"))
+            n2 = F.layer_norm(
+                x, layer.norm2.normalized_shape, eps=layer.norm2.eps
+            )
+            ffn = layer.ffn_out(F.gelu(self._fused_ffn_in(layer, n2), approximate="none"))
             x = x + ffn
             if not no_pad:
                 x = x.masked_fill(~valid_token_mask[..., None], 0)
