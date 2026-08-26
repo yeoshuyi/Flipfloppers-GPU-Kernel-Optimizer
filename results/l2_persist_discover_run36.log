@@ -1,0 +1,78 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== cudaLimit enum (driver_types.h) ===
+enum __device_builtin__ cudaLimit
+{
+    cudaLimitStackSize                    = 0x00, /**< GPU thread stack size */
+    cudaLimitPrintfFifoSize               = 0x01, /**< GPU printf FIFO size */
+    cudaLimitMallocHeapSize               = 0x02, /**< GPU malloc heap size */
+    cudaLimitDevRuntimeSyncDepth          = 0x03, /**< GPU device runtime synchronize depth */
+    cudaLimitDevRuntimePendingLaunchCount = 0x04, /**< GPU device runtime pending launch count */
+    cudaLimitMaxL2FetchGranularity        = 0x05, /**< A value between 0 and 128 that indicates the maximum fetch granularity of L2 (in Bytes). This is a hint */
+    cudaLimitPersistingL2CacheSize        = 0x06  /**< A size in bytes for L2 persisting lines cache size */
+};
+
+/**
+ * CUDA Memory Advise values
+
+=== cudaStreamAttrID enum ===
+} cudaLaunchConfig_t;
+
+#define cudaStreamAttrID cudaLaunchAttributeID
+#define cudaStreamAttributeAccessPolicyWindow    cudaLaunchAttributeAccessPolicyWindow
+#define cudaStreamAttributeSynchronizationPolicy cudaLaunchAttributeSynchronizationPolicy
+#define cudaStreamAttributeMemSyncDomainMap      cudaLaunchAttributeMemSyncDomainMap
+#define cudaStreamAttributeMemSyncDomain         cudaLaunchAttributeMemSyncDomain
+#define cudaStreamAttributePriority cudaLaunchAttributePriority
+
+#define cudaStreamAttrValue cudaLaunchAttributeValue
+
+#define cudaKernelNodeAttrID cudaLaunchAttributeID
+#define cudaKernelNodeAttributeAccessPolicyWindow cudaLaunchAttributeAccessPolicyWindow
+#define cudaKernelNodeAttributeCooperative        cudaLaunchAttributeCooperative
+#define cudaKernelNodeAttributePriority           cudaLaunchAttributePriority
+
+=== cudaAccessProperty / cudaAccessPolicyWindow ===
+ * Specifies performance hint with ::cudaAccessPolicyWindow for hitProp and missProp members.
+ */
+enum __device_builtin__  cudaAccessProperty {
+    cudaAccessPropertyNormal = 0,       /**< Normal cache persistence. */
+    cudaAccessPropertyStreaming = 1,    /**< Streaming access is less likely to persit from cache. */
+    cudaAccessPropertyPersisting = 2    /**< Persisting access is more likely to persist in cache.*/
+};
+
+/**
+ * Specifies an access policy for a window, a contiguous extent of memory
+ * beginning at base_ptr and ending at base_ptr + num_bytes.
+ * Partition into many segments and assign segments such that.
+ * sum of "hit segments" / window == approx. ratio.
+--
+ * Accesses in a miss segment apply the missProp access policy.
+ */
+struct __device_builtin__ cudaAccessPolicyWindow {
+    void *base_ptr;                     /**< Starting address of the access policy window. CUDA driver may align it. */
+    size_t num_bytes;                   /**< Size in bytes of the window policy. CUDA driver may restrict the maximum size and alignment. */
+    float hitRatio;                     /**< hitRatio specifies percentage of lines assigned hitProp, rest are assigned missProp. */
+    enum cudaAccessProperty hitProp;    /**< ::CUaccessProperty set for hit. */
+    enum cudaAccessProperty missProp;   /**< ::CUaccessProperty set for miss. Must be either NORMAL or STREAMING. */
+};
+
+#ifdef _WIN32
+#define CUDART_CB __stdcall
+#else
+#define CUDART_CB
+#endif
+
+/**
+ * CUDA host function
+--
+typedef __device_builtin__ union cudaLaunchAttributeValue {
+    char pad[64]; /* Pad to 64 bytes */
+    struct cudaAccessPolicyWindow accessPolicyWindow; /**< Value of launch attribute ::cudaLaunchAttributeAccessPolicyWindow. */
+    int cooperative; /**< Value of launch attribute ::cudaLaunchAttributeCooperative. Nonzero indicates a cooperative
+                        kernel (see ::cudaLaunchCooperativeKernel). */
+    enum cudaSynchronizationPolicy syncPolicy; /**< Value of launch attribute
+                                                  ::cudaLaunchAttributeSynchronizationPolicy. ::cudaSynchronizationPolicy
+
+=== python: torch.cuda.cudart() availability ===
+<class 'module'>
+[]

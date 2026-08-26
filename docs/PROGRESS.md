@@ -606,3 +606,75 @@ lower-risk, clearly-valuable work instead (the `ncu` profiling
 infrastructure gap, flagged repeatedly since step 12) rather than
 immediately re-attempting a narrower slice of a direction that just
 failed hard, without profiler data to justify the investment.
+
+### 15. `ncu` profiling infrastructure — built, closes the step-12 gap
+See commit `eb884e7` for the full story (kept concise here, the commit
+message has the detail): `.claude/agents/profiler.md` expected
+`tools/`-based ncu-to-JSON parsing that never existed. Built
+`tools/parse_ncu.py` + `jobs/profile.sbatch` (runs a **minimal** invocation
+— 1 accuracy trial, 1 warmup, 1 repeat/round — since `ncu`'s per-kernel
+overhead makes profiling the full timing sweep impractical; `--launch-count
+120` caps it to roughly one forward pass). Two real format issues found
+and fixed along the way (`jobs/ncu_header_check*.sbatch`): ncu's banner and
+the profiled program's own prints share the CSV's stdout stream ahead of
+it, and the actual `--csv` output is **long format** (one row per
+kernel-launch-ID per metric, not one row per kernel with a metric per
+column) — both discovered by capping output size at every step so nothing
+large ever hit context.
+
+**Real facts learned** (`results/ncu_profile_{default,tiny}_run{34,35}.json`):
+
+| | default (B8_S128) | tiny (B1_S64) |
+|---|---|---|
+| pct_of_peak (SM, TF32) | 23.64% | 3.79% |
+| occupancy | 25.73% | 11.48% |
+| dram_gbps | 355.77 | 174.49 |
+| top-3 kernels | real CUTLASS TF32 GEMMs (`s1688gemm_128x64_16x6`), none >4.4% of total | same kernel family (`s1688gemm_64x64_32x6`), none >2.7% |
+| bank_conflicts | 40,030 | 2,002 |
+
+Both compute and occupancy are low with **no single dominant kernel** —
+death by many small, individually-underutilized launches, not one
+bottleneck. `dram_gbps` is the same order of magnitude for tiny and
+default despite tiny doing far less work, consistent with **per-call
+weight re-fetching** rather than per-token traffic: this model is 75.66MB
+in FP32, just over the 72MB L2 capacity (`CLAUDE.md`'s own ground truth —
+BF16's 37.83MB would fit, FP32 doesn't), so weights don't stay L2-resident
+across calls without explicit pinning. This is the fact that motivated
+step 16's G2.3 investigation below. `bank_conflicts` are real but live
+inside library CUTLASS kernels I don't control from `torch`-level code —
+not actionable without hand-writing the GEMM (G3/G4 territory).
+
+### 16. G2.3 (L2 persistence) investigated — not reachable without real risk
+Motivated directly by step 15's DRAM-traffic finding.
+`docs/CATALOGUE.md`'s G2.3 snippet calls `cudaDeviceSetLimit` and
+`cudaStreamSetAttribute` — checked whether these are reachable from
+Python without writing a C++ extension.
+
+Verified the exact values from this container's real CUDA 13.1 headers
+(never guessed — a wrong enum value here risks silent misbehavior, a wrong
+struct layout risks an actual crash):
+`cudaLimitPersistingL2CacheSize = 0x06`; `struct cudaAccessPolicyWindow {
+void *base_ptr; size_t num_bytes; float hitRatio; enum cudaAccessProperty
+hitProp; enum cudaAccessProperty missProp; }`; and confirmed CUDA 13.1 has
+folded the old `cudaStreamAttrID`/`cudaStreamAttrValue` into a newer
+unified `cudaLaunchAttributeID`/`cudaLaunchAttributeValue` (the old names
+are now `#define` aliases). Full excerpt: `results/l2_persist_discover_run36.log`.
+
+**`torch.cuda.cudart()` does not expose either function** — its filtered
+`dir()` came back empty for `Limit`/`Attribute`/`StreamSet`. It's a small,
+curated set of bindings (profiler start/stop and similar), not a general
+cudart passthrough. Reaching these functions would mean `ctypes.CDLL`-ing
+`libcudart.so` directly, bypassing torch's own binding — with a real,
+non-hypothetical risk: a separately-`dlopen`'d instance of the runtime
+could operate on a different loaded-library state than the one torch's own
+CUDA context actually uses, making the calls silently ineffective or, if
+the struct/ABI details are even slightly off, causing an actual crash.
+There's no C++ compiler in the loop to catch a struct-layout mistake before
+it reaches a running CUDA kernel launch.
+
+**Decision: not pursuing this via raw ctypes.** The catalogued gain
+(`docs/CATALOGUE.md`: "1.1x default, 1.5x+ tiny") doesn't justify that risk
+profile for a benchmark harness with no extension-building safety net.
+Documented the verified enum values here so this is a much smaller lift if
+picked up later with a proper (however small) C++/pybind11 extension
+instead of bare ctypes. Moving to a different next step instead (step 17).
