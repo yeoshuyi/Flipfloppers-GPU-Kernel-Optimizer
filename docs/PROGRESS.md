@@ -85,11 +85,20 @@ expects but doesn't exist yet (see "Current State" below).
   catalogued ~10-50% gain.
 - **Everything reachable via `torch`-level composition (G0, G1, G2.1-G2.4b)
   is now shipped, or investigated and closed with reasons on record.**
-  What's left (G3 fusion, G4 megakernel) needs hand-written Triton/CUDA
-  kernels — a different kind of work, not more of the same. Checkpointing
-  with the user here rather than starting that silently.
-- **Latest commit:** `e097187` (G2.3 investigation write-up); G2.1b's
-  revert + write-up follow in the next commit.
+- **G3.1 (fused FFN tile) built in Triton, verified correct, and rejected
+  on measurement** (step 19). The kernel matches a float64 ground truth to
+  ~2e-6 at `tf32x3`/`ieee`, so it is not a bug — but it is **0.18x (default)
+  to 0.869x (large_batch)** of the three `torch` kernels it replaces, and
+  its fast `tf32` mode is 3.7x less accurate than cuBLAS's own TF32 (0.6%
+  of elements failing in one isolated FFN). Root cause is a roofline fact,
+  not tuning: torch's FFN already runs at **60-69% of the 82.6 TFLOPS TF32
+  peak**, so the ~48 MB/forward of intermediate traffic that fusion removes
+  is already overlapped behind compute. Reverted; `benchmark.py` is
+  bit-identical to the `run27`-validated state.
+- **The archive numbers above are unchanged** — no candidate has improved
+  on `results/g2_4b_sweep_run27.log` since G2.4b.
+- **Latest commit:** `0821c46` (G4 FP8 precheck, step 18); G3.1's write-up
+  follows in the next commit.
 
 ---
 
@@ -799,3 +808,118 @@ all session. `docs/MEGAKERNEL.md` itself sanctions this outcome
 explicitly: "G4.0 winning is a result, not a failure — record it in the
 archive and move to another cell." Treating that as the realistic ceiling
 for G4 this session, not a placeholder on the way to G4.1+.
+
+### 19. G3.1 (fused FFN tile, Triton) — built, verified correct, and rejected on measurement
+**What was built.** A real Triton kernel fusing `ffn_in -> GELU(exact) ->
+ffn_out` into one launch, keeping the `[tokens, 2048]` intermediate in
+registers so it never reaches HBM. Token-parallel (one program owns
+`BLOCK_M` tokens and produces their full `[BLOCK_M, 512]` output row), so
+no grid sync and no partial sums — exactly `docs/CATALOGUE.md`'s G3.1
+shape. FP32/TF32 throughout: steps 14 and 17 closed off precision
+reduction for this model, so this was never going to be a BF16 design.
+
+**Tile budget** (fp32 => `b = 4` bytes; Ada ceiling 101,376 B = 99 KB/SM),
+computed the way `docs/MEGAKERNEL.md` models it, for the best config
+`BLOCK_M=64, BLOCK_N=32, BLOCK_K=64`, 8 warps = 256 threads:
+
+```
+dot1  A = x  [64, 64]  = 16.0 KB      dot2  A = h  [64, 32]  =  8.0 KB
+      B = w1 [32, 64]  =  8.0 KB            B = w2 [512, 32] = 64.0 KB
+      -> 24.0 KB/stage                      -> 72.0 KB
+peak shared ~= max(N_stage*24.0, 72.0) + ~4 KB = 76 KB  <=  99 KB   OK
+accumulator acc[64, 512] = 128 KB registers = 128 regs/thread @ 256 thr
+```
+
+Two hard walls fall straight out of this and both were confirmed by the
+hardware, not assumed. `BLOCK_N=64` needs `512*64*4 = 128 KB` for dot2's B
+operand alone; Triton refused it loudly — *"out of resource: shared memory,
+Required: 147456, Hardware limit: 101376"* — matching the arithmetic. And
+`BLOCK_M=128` puts `acc` at 256 KB of registers (256 regs/thread, over the
+255 architectural max): it compiled but spilled, measuring **26.6 ms vs
+3.1 ms** for `BLOCK_M=64` at M=32768, a 8.6x spill penalty. The 512-wide
+accumulator is the structural cost of this fusion — the second GEMM
+reduces over `ffn_dim`, so `acc` must stay `[BLOCK_M, 512]` live across the
+entire loop, where cuBLAS is free to pick a 64- or 128-wide output tile.
+
+**The kernel is correct.** This was verified against a float64 ground
+truth, not against the thing it was competing with
+(`results/g3_1_precision_run40.log`), at M=1024:
+
+| | max_abs vs fp64 |
+|---|---|
+| cublas_fp32 | 2.454e-06 |
+| **triton_tf32x3** | **1.802e-06** |
+| **triton_ieee** | **5.300e-06** |
+| cublas_tf32 | 1.344e-03 |
+| triton_tf32 | 5.020e-03 |
+
+At `tf32x3`/`ieee` the kernel lands on top of exact FP32 — indexing,
+strided weight views, bias handling and the erf GELU are all right, and
+both score **0 failing elements** against the graded cuBLAS-TF32 reference.
+`tl.erf` vs torch's erf differs by 4.768e-07 in isolation, so GELU was
+never a suspect.
+
+**Blocker 1 — plain `tf32` is 3.7x less accurate than cuBLAS's own TF32**
+(5.02e-03 vs 1.34e-03 against fp64), failing **0.6% of elements**
+(3189/524288) in a *single isolated FFN*. Consistent with Triton truncating
+to TF32 rather than round-to-nearest: a biased error grows like `K` instead
+of `sqrt(K)` across the K=2048 reduction. The model chains six of these
+into a residual stream whose `max_abs` already sits at 65-79% of the atol
+budget (`results/g2_4b_sweep_run27.log`), so this was disqualifying on its
+own. The two modes that *do* pass cost 4.5-5x (`tf32x3` 10.86 ms, `ieee`
+12.65 ms vs torch 2.39 ms at M=32768).
+
+**Blocker 2 — it is slower than the three kernels it replaces, at every
+shape.** Best config per token count, fused-vs-torch, TF32
+(`results/g3_1_pretransposed_run41.log`):
+
+| M | torch (3 kernels) | best fused | ratio | blocks |
+|---|---|---|---|---|
+| 1024 (default) | 0.0864 ms | 0.4799 ms | **0.180x** | 16 |
+| 8192 (long_seq) | 0.5885 ms | 0.7178 ms | **0.820x** | 128 |
+| 32768 (large_batch) | 2.3975 ms | 2.7580 ms | **0.869x** | 512 |
+
+Two structural hypotheses were tested and priced rather than argued about.
+Pre-transposing both weights into contiguous buffers to eliminate
+`tl.trans` from both dots (fp32 MMA operand layouts don't fold a transpose
+into the shared-memory descriptor for free the way fp16 does) plus
+`num_stages=3` moved the ceiling from 0.72x to 0.869x — a real gain, and
+still short of parity. Small M is parallelism-starved exactly as the design
+predicts: the `ffn_dim` reduction can't be split across programs without
+writing partials back to HBM, which is the very traffic G3.1 exists to
+remove, so the grid is only `ceil(M/BLOCK_M)` blocks — 16 blocks on 128 SMs
+at the default shape.
+
+**Why fusion cannot win here, which is the real result.** The saved traffic
+is already off the critical path. At M=32768 one FFN is
+`2 * (2*32768*512*2048) = 137.4 GFLOP`; torch does it in 2.3975 ms =
+**57.3 TFLOPS, 69% of the 82.6 TFLOPS TF32 roofline**. The intermediate
+costs `4*32768*2048*4 = 1.07 GB`, ~1.07 ms at ~1 TB/s — comfortably
+overlapped behind 2.40 ms of compute. At M=1024 it is 49.7 TFLOPS (60% of
+peak) with 33.5 MB of intermediate. `docs/CATALOGUE.md`'s "saves ~48 MB/
+forward" is arithmetically true and strategically irrelevant: cuBLAS is
+already compute-bound on this FFN, so removing that traffic buys almost
+nothing, while the fused structure gives up the tiling freedom that gets
+cuBLAS to 69% of peak in the first place. Note this does **not** contradict
+step 15's DRAM finding — that traffic is per-call *weight re-fetch* (the
+75.66 MB model vs 72 MB L2), which is a different tensor and unaffected by
+fusing the activation intermediate.
+
+**Reproducible.** The kernel was developed inside `benchmark.py` and, on
+revert, extracted verbatim to `probes/g3_1_kernel.py` so the measurement can
+be re-run rather than merely asserted. Re-running the precision probe from the
+committed tree (`results/g3_1_precision_repro_run42.log`) reproduces
+`results/g3_1_precision_run40.log` byte-identically.
+
+**Reverted.** `git checkout HEAD -- benchmark.py`; `git diff HEAD --
+benchmark.py` is empty, so the shipped file is bit-identical to the
+state `results/g2_4b_sweep_run27.log` validated — no re-sweep needed to
+trust it, and `tools/check_validity.py` passes. Kept the three probes and
+their logs. No archive cell was touched: nothing improved.
+
+**What would have to change for G3.1 to be worth revisiting:** a shape
+where the FFN is genuinely memory-bound rather than at 60-69% of the TF32
+roofline (much smaller `ffn_dim`, or a precision that halves the compute
+time without halving the traffic — and precision reduction is closed by
+steps 14/17/18). Not a tuning problem; the roofline says the headroom
+isn't there.

@@ -1,0 +1,42 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  triton 3.7.1
+
+===== CORRECTNESS of the pre-transposed variant (vs fp64) =====
+  cfg(64, 32, 64, 8, 2): max_abs_vs_fp64=4.852e-03  vs_cublas_tf32 failed=3139/524288
+  cfg(64, 32, 64, 8, 3): max_abs_vs_fp64=4.852e-03  vs_cublas_tf32 failed=3139/524288
+  cfg(64, 32, 128, 8, 2): max_abs_vs_fp64=4.852e-03  vs_cublas_tf32 failed=3139/524288
+  cfg(64, 64, 64, 8, 2): ERROR out of resource: shared memory, Required: 147456, Hardware limit: 101376. Reducing block sizes or `num_stages` may help.
+  cfg(128, 32, 64, 16, 2): max_abs_vs_fp64=4.852e-03  vs_cublas_tf32 failed=3139/524288
+  cfg(128, 64, 64, 16, 2): ERROR out of resource: shared memory, Required: 163840, Hardware limit: 101376. Reducing block sizes or `num_stages` may help.
+  cfg(32, 32, 64, 4, 2): max_abs_vs_fp64=4.852e-03  vs_cublas_tf32 failed=3139/524288
+
+===== TIMING: pre-transposed vs torch (ms/call) =====
+  M=1024  torch_tf32=0.0864 ms
+    cfg(64, 32, 64, 8, 2): 0.7502 ms  0.115x  (16 blocks)
+    cfg(64, 32, 64, 8, 3): 0.6226 ms  0.139x  (16 blocks)
+    cfg(64, 32, 128, 8, 2): 0.7186 ms  0.120x  (16 blocks)
+    cfg(64, 64, 64, 8, 2): ERR
+    cfg(128, 32, 64, 16, 2): 2.1598 ms  0.040x  (8 blocks)
+    cfg(128, 64, 64, 16, 2): ERR
+    cfg(32, 32, 64, 4, 2): 0.4799 ms  0.180x  (32 blocks)
+    -> BEST (32, 32, 64, 4, 2)  0.4799 ms  0.180x
+  M=8192  torch_tf32=0.5885 ms
+    cfg(64, 32, 64, 8, 2): 0.7835 ms  0.751x  (128 blocks)
+    cfg(64, 32, 64, 8, 3): 0.7178 ms  0.820x  (128 blocks)
+    cfg(64, 32, 128, 8, 2): 0.8026 ms  0.733x  (128 blocks)
+    cfg(64, 64, 64, 8, 2): ERR
+    cfg(128, 32, 64, 16, 2): 3.5844 ms  0.164x  (64 blocks)
+    cfg(128, 64, 64, 16, 2): ERR
+    cfg(32, 32, 64, 4, 2): 1.0312 ms  0.571x  (256 blocks)
+    -> BEST (64, 32, 64, 8, 3)  0.7178 ms  0.820x
+  M=32768  torch_tf32=2.3975 ms
+    cfg(64, 32, 64, 8, 2): 3.1237 ms  0.768x  (512 blocks)
+    cfg(64, 32, 64, 8, 3): 2.7580 ms  0.869x  (512 blocks)
+    cfg(64, 32, 128, 8, 2): 3.1857 ms  0.753x  (512 blocks)
+    cfg(64, 64, 64, 8, 2): ERR
+    cfg(128, 32, 64, 16, 2): 26.5729 ms  0.090x  (256 blocks)
+    cfg(128, 64, 64, 16, 2): ERR
+    cfg(32, 32, 64, 4, 2): 4.1115 ms  0.583x  (1024 blocks)
+    -> BEST (64, 32, 64, 8, 3)  2.7580 ms  0.869x
+
+DONE

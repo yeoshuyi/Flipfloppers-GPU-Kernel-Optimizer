@@ -1,0 +1,47 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  triton 3.7.1
+allow_tf32=True
+
+===== GELU ISOLATION (tl.erf vs torch erf) =====
+  max_abs_diff=4.768e-07  bitwise_identical=False
+
+===== ERROR vs float64 GROUND TRUTH =====
+  (if kernel and cuBLAS are both ~equally far from fp64, v1 was
+   measuring TF32 reduction-order divergence, not a bug)
+  M=64  |y|_max=2.8545  |y|_rms=0.6615
+    cublas_tf32    vs fp64: max_abs=1.368e-03
+    cublas_fp32    vs fp64: max_abs=7.647e-07
+    triton_tf32    vs fp64: max_abs=4.762e-03
+    triton_tf32x3  vs fp64: max_abs=1.361e-06
+    triton_ieee    vs fp64: max_abs=4.797e-06
+    cublas_fp32    vs cublas_tf32: max_abs=1.368e-03 failed=0/32768 (0.000%)
+    triton_tf32    vs cublas_tf32: max_abs=5.086e-03 failed=189/32768 (0.577%)
+    triton_tf32x3  vs cublas_tf32: max_abs=1.368e-03 failed=0/32768 (0.000%)
+    triton_ieee    vs cublas_tf32: max_abs=1.368e-03 failed=0/32768 (0.000%)
+  M=1024  |y|_max=3.2376  |y|_rms=0.6456
+    cublas_tf32    vs fp64: max_abs=1.344e-03
+    cublas_fp32    vs fp64: max_abs=2.454e-06
+    triton_tf32    vs fp64: max_abs=5.020e-03
+    triton_tf32x3  vs fp64: max_abs=1.802e-06
+    triton_ieee    vs fp64: max_abs=5.300e-06
+    cublas_fp32    vs cublas_tf32: max_abs=1.344e-03 failed=19/524288 (0.004%)
+    triton_tf32    vs cublas_tf32: max_abs=4.885e-03 failed=3189/524288 (0.608%)
+    triton_tf32x3  vs cublas_tf32: max_abs=1.343e-03 failed=19/524288 (0.004%)
+    triton_ieee    vs cublas_tf32: max_abs=1.343e-03 failed=19/524288 (0.004%)
+  M=8192  |y|_max=3.5907  |y|_rms=0.6587
+    cublas_tf32    vs fp64: max_abs=1.526e-03
+    cublas_fp32    vs fp64: max_abs=7.402e-06
+    triton_tf32    vs fp64: max_abs=5.329e-03
+    triton_tf32x3  vs fp64: max_abs=2.336e-06
+    triton_ieee    vs fp64: max_abs=7.402e-06
+    cublas_fp32    vs cublas_tf32: max_abs=1.525e-03 failed=181/4194304 (0.004%)
+    triton_tf32    vs cublas_tf32: max_abs=5.947e-03 failed=25389/4194304 (0.605%)
+    triton_tf32x3  vs cublas_tf32: max_abs=1.526e-03 failed=181/4194304 (0.004%)
+    triton_ieee    vs cublas_tf32: max_abs=1.525e-03 failed=181/4194304 (0.004%)
+
+===== TIMING (ms/call) =====
+  M=  1024 torch_tf32=0.0867  tf3264x32=0.7691(0.11x)  tf3232x32=0.5082(0.17x)  tf32x364x32=2.5228(0.03x)  tf32x332x32=2.0553(0.04x)  ieee64x32=3.0598(0.03x)  ieee32x32=2.5019(0.03x)
+  M=  8192 torch_tf32=0.5892  tf3264x32=0.8303(0.71x)  tf3232x32=1.2238(0.48x)  tf32x364x32=2.6954(0.22x)  tf32x332x32=4.1420(0.14x)  ieee64x32=3.2050(0.18x)  ieee32x32=5.0316(0.12x)
+  M= 32768 torch_tf32=2.3921  tf3264x32=3.3004(0.72x)  tf3232x32=4.8147(0.50x)  tf32x364x32=10.8595(0.22x)  tf32x332x32=16.4696(0.15x)  ieee64x32=12.6467(0.19x)  ieee32x32=20.0352(0.12x)
+
+DONE
