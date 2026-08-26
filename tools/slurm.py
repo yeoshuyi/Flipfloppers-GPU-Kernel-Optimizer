@@ -1,5 +1,5 @@
 import subprocess, json, time, pathlib
-RUNS = pathlib.Path("/scratch/runs")
+RUNS = pathlib.Path("/scratch/techjam2/runs")
 
 def submit(candidate, shape, mode="bench"):
     out = subprocess.run(

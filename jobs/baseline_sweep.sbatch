@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:rtx4090:1
 #SBATCH --exclusive
 #SBATCH --time=00:30:00
-#SBATCH --output=/scratch/runs/%j.out
+#SBATCH --output=/scratch/techjam2/runs/%j.out
 
 set -euo pipefail
 

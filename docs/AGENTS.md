@@ -194,7 +194,7 @@ CELL="$1"; ITERS="${2:-8}"
 
 for i in $(seq 1 "$ITERS"); do
   echo "=== $CELL iteration $i ==="
-  HOME="/scratch/runs/home_${CELL}_${i}" \
+  HOME="/scratch/techjam2/runs/home_${CELL}_${i}" \
   timeout 45m claude -p "$(sed "s/{{CELL}}/$CELL/" prompts/optimise.md)" \
       --output-format json \
       --max-turns 30 \

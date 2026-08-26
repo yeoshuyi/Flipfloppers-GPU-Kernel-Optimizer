@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:rtx4090:1
 #SBATCH --exclusive
 #SBATCH --time=00:20:00
-#SBATCH --output=/scratch/runs/%j.out
+#SBATCH --output=/scratch/techjam2/runs/%j.out
 
 # Usage: sbatch jobs/profile.sbatch [--dtype tf32|bf16|fp8] -- <benchmark.py shape args>
 # Example: sbatch jobs/profile.sbatch --dtype tf32 -- --batch-size 8 --seq-len 128

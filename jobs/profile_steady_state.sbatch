@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:rtx4090:1
 #SBATCH --exclusive
 #SBATCH --time=00:20:00
-#SBATCH --output=/scratch/runs/%j.out
+#SBATCH --output=/scratch/techjam2/runs/%j.out
 
 # Same as jobs/profile.sbatch, but with real warmup (5 calls) BEFORE the
 # profiled window and a much larger --launch-count, so ncu's window lands

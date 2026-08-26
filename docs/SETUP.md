@@ -109,13 +109,13 @@ sudo update-initramfs -u && sudo reboot
 #SBATCH --gres=gpu:rtx4090:1
 #SBATCH --exclusive
 #SBATCH --time=00:20:00
-#SBATCH --output=/scratch/runs/%j.out
+#SBATCH --output=/scratch/techjam2/runs/%j.out
 
 set -euo pipefail
 CANDIDATE="$1"; SHAPE_CFG="$2"; MODE="${3:-bench}"
 
 apptainer exec --nv --cleanenv \
-  --bind /scratch/work:/work --bind /scratch/runs:/runs \
+  --bind /scratch/work:/work --bind /scratch/techjam2/runs:/runs \
   /scratch/kernel.sif \
   python3 /work/harness/run.py \
       --candidate "$CANDIDATE" --shape "$SHAPE_CFG" --mode "$MODE" \
@@ -129,7 +129,7 @@ an agent turn wastes the GPU for the duration of model inference.
 
 ```python
 import subprocess, json, time, pathlib
-RUNS = pathlib.Path("/scratch/runs")
+RUNS = pathlib.Path("/scratch/techjam2/runs")
 
 def submit(candidate, shape, mode="bench"):
     out = subprocess.run(
@@ -301,7 +301,7 @@ agent's context.**
   jobs/bench.sbatch
   probes/phase0.py
   archive/                  MAP-Elites cells + lineage
-/scratch/runs/              job outputs: one JSON + one .out per job id
+/scratch/techjam2/runs/              job outputs: one JSON + one .out per job id
 /scratch/kernel.sif         Apptainer image
 ```
 
