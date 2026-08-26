@@ -66,17 +66,30 @@ expects but doesn't exist yet (see "Current State" below).
   vs comfortably-under-80% everywhere else). Verified safe via a 40-seed
   probe (0/40 true failures) before shipping, but this is disclosed, not
   comfortable — re-verify if the model/shapes/grading protocol change.
-- **G2.1 (BF16 GEMMs) attempted and reverted** (step 14) — failed
-  decisively (11x over the accuracy budget, 13.6% of elements), not a bug
-  as far as investigated, just too aggressive at this depth. `benchmark.py`
-  is back to the G2.4b state (`d9a7e7b`); only a smoke-test job script and
-  the failure log were kept, for the record.
-- **ncu profiling infra gap:** `.claude/agents/profiler.md` expects
-  `tools/`-based ncu-to-JSON parsing + a profiling `jobs/*.sbatch` that
-  don't exist yet. G2.4's "launch-bound" fact was inferred from timing
-  deltas instead. Building this next.
-- **Latest commit:** `d9a7e7b` (G2.4b session summary — G2.1 reverted, not
-  yet committed as of this line; see git log for the actual HEAD)
+- **BF16 (G2.1 full-model, G2.1b FFN-only) tried twice, failed both times
+  at the same magnitude** (steps 14, 17) — ~11x over the accuracy budget,
+  ~13% of elements, regardless of scope. Closed off as a direction for
+  this model at this depth; not attention-specific. `benchmark.py` is back
+  to the clean post-G2.4b state both times; only smoke-test scripts and
+  failure logs were kept.
+- **`ncu` profiling infrastructure built** (step 15, commit `eb884e7`) —
+  real facts: `pct_of_peak`/occupancy are low (23.6%/25.7% default,
+  3.8%/11.5% tiny) with no single dominant kernel; DRAM traffic
+  (355.77/174.49 GB/s) is roughly weight-re-fetch-sized regardless of
+  shape, consistent with the model (75.66MB FP32) exceeding L2 (72MB).
+- **G2.3 (L2 persistence) investigated, not pursued** (step 16) — verified
+  exact CUDA 13.1 enum/struct values from real headers, but
+  `torch.cuda.cudart()` doesn't expose the needed functions; reaching them
+  needs raw `ctypes.CDLL` into `libcudart.so`, judged too risky (context-
+  mismatch / struct-layout crash risk, no compiler safety net) for the
+  catalogued ~10-50% gain.
+- **Everything reachable via `torch`-level composition (G0, G1, G2.1-G2.4b)
+  is now shipped, or investigated and closed with reasons on record.**
+  What's left (G3 fusion, G4 megakernel) needs hand-written Triton/CUDA
+  kernels — a different kind of work, not more of the same. Checkpointing
+  with the user here rather than starting that silently.
+- **Latest commit:** `e097187` (G2.3 investigation write-up); G2.1b's
+  revert + write-up follow in the next commit.
 
 ---
 
@@ -678,3 +691,54 @@ profile for a benchmark harness with no extension-building safety net.
 Documented the verified enum values here so this is a much smaller lift if
 picked up later with a proper (however small) C++/pybind11 extension
 instead of bare ctypes. Moving to a different next step instead (step 17).
+
+### 17. G2.1b (BF16, FFN only) — also failed decisively, closes the question
+**What was tried:** the natural follow-up to step 14 — since "BF16
+everywhere" failed hard, does isolating BF16 to just the FFN (leaving
+attention on the proven TF32/SDPA path from G0-G2.4b untouched) fare
+better? FFN is a large fraction of the model's parameters (`ffn_in`
+`[2048,512]` + `ffn_out` `[512,2048]` per layer, ~2.1M params each — most
+of each layer's weight budget), so it's a reasonable place to isolate.
+Same eager-cached bf16-weight pattern as G2.1, scoped to just
+`_build_ffn_in_fold`'s bf16 copies and the FFN half of `_optimized_forward`.
+
+**Result: failed just as decisively, at nearly identical magnitude.**
+Smoke test (tiny, `results/g2_1b_smoke_FAILED_run37.log`): `max_abs` up to
+**0.0112** (vs G2.1's 0.0110 — essentially the same), **12.7% of elements**
+true-failing (20880/163840, vs G2.1's 13.6%). Reverted immediately, same
+as step 14.
+
+**This is a clean, informative result, not a wash.** Two independent
+attempts — full-model BF16 and FFN-only BF16 — landed at the *same*
+error magnitude. That rules out "it was specifically attention's softmax
+sensitivity" as the cause (step 14 couldn't distinguish this) and points
+instead at something more fundamental: quantizing the FFN's own weights to
+BF16 (2.1M+ params per layer, the majority of each layer's weight budget)
+is, by itself, sufficient to blow the 1% relative budget for a meaningful
+fraction of elements over 6 layers. **Precision reduction (BF16, and by
+extension the more aggressive FP8) is closed off as a direction for this
+model at this depth**, not just "attention was the problem" — a genuinely
+different and more useful conclusion than step 14 alone gave.
+
+Committed alongside this write-up: `results/g2_1b_smoke_FAILED_run37.log`
+(no `benchmark.py` changes to commit — cleanly reverted to the G2.3-
+investigation state).
+
+**This is the natural checkpoint to report back, not silently continue
+into G3/G4.** Every remaining `docs/CATALOGUE.md` item within reach of
+`torch`-level composition (G0, G1, G2.1-G2.4b) has now been tried, shipped,
+or ruled out with real evidence:
+- **Shipped and verified:** G0.1, G0.2, G0.3, G0.5, G1.1, G1.2, G2.4,
+  G2.4b — every regime has a real speedup.
+- **Investigated and closed, with reasons on record:** G2.1/G2.1b (BF16 —
+  fails ~11x over budget regardless of scope), G2.3 (L2 persistence — not
+  reachable from Python without raw-ctypes risk this session judged not
+  worth taking).
+- **Not attempted, and genuinely different in kind:** G3 fusion (G3.1
+  fused FFN tile, G3.2 fused LN+residual, G3.3-3.7 warp-level/layout work)
+  and G4 megakernel — these need hand-written Triton or CUDA kernels, not
+  composition of existing `torch`/`F.*` calls. That's a different scale
+  and risk profile of work than anything done this session, and per the
+  user's own note about escalating to Opus for genuinely hard coding, a
+  reasonable point to check in on before starting rather than committing
+  to it silently.
