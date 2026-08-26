@@ -1,0 +1,28 @@
+=== SHAPE: tiny ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=1, seq_len=64, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00969028 | max_rel=647.965 | failed=4474/32768
+  worst_index=(0, 34, 339), baseline=-1.6976763, optimized=-1.7073666
+  failed output feature dims=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]...
+trial 02/5: FAIL | max_abs=0.010437 | max_rel=627.029 | failed=4401/32768
+  worst_index=(0, 54, 262), baseline=-0.18328552, optimized=-0.17284857
+  failed output feature dims=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]...
+trial 03/5: FAIL | max_abs=0.0102875 | max_rel=52.6864 | failed=4508/32768
+  worst_index=(0, 39, 10), baseline=-1.9007535, optimized=-1.911041
+  failed output feature dims=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]...
+trial 04/5: FAIL | max_abs=0.0102623 | max_rel=364.818 | failed=4492/32768
+  worst_index=(0, 46, 312), baseline=0.37103084, optimized=0.38129312
+  failed output feature dims=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]...
+trial 05/5: FAIL | max_abs=0.0109956 | max_rel=59.971 | failed=4469/32768
+  worst_index=(0, 9, 485), baseline=2.0819812, optimized=2.0709856
+  failed output feature dims=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]...
+summary: FAIL | max_abs=0.0109956 | max_rel=647.965 | failed=22344/163840
+
+Performance benchmark skipped because accuracy validation failed.
+Use --benchmark-on-failure to benchmark an incorrect implementation anyway.

@@ -66,12 +66,17 @@ expects but doesn't exist yet (see "Current State" below).
   vs comfortably-under-80% everywhere else). Verified safe via a 40-seed
   probe (0/40 true failures) before shipping, but this is disclosed, not
   comfortable — re-verify if the model/shapes/grading protocol change.
+- **G2.1 (BF16 GEMMs) attempted and reverted** (step 14) — failed
+  decisively (11x over the accuracy budget, 13.6% of elements), not a bug
+  as far as investigated, just too aggressive at this depth. `benchmark.py`
+  is back to the G2.4b state (`d9a7e7b`); only a smoke-test job script and
+  the failure log were kept, for the record.
 - **ncu profiling infra gap:** `.claude/agents/profiler.md` expects
   `tools/`-based ncu-to-JSON parsing + a profiling `jobs/*.sbatch` that
   don't exist yet. G2.4's "launch-bound" fact was inferred from timing
-  deltas instead. Worth building before G3/G4 decisions that need real
-  `SpeedOfLight`/occupancy data.
-- **Latest commit:** `a79f897` (G2.4b archive: causal/trackA)
+  deltas instead. Building this next.
+- **Latest commit:** `d9a7e7b` (G2.4b session summary — G2.1 reverted, not
+  yet committed as of this line; see git log for the actual HEAD)
 
 ---
 
@@ -541,3 +546,63 @@ diff, which doesn't touch the non-causal path at all).
 
 **Every regime now has a real, verified speedup for the first time this
 session.**
+
+### 14. G2.1 attempted (BF16 GEMMs) — failed decisively, reverted
+**What was tried:** full BF16 compute path for the non-causal loop —
+QKV projection, SDPA (Q/K/V cast to bf16, which also unlocks flash/
+efficient SDPA backends that FP32 disqualifies entirely), `out_proj`,
+and the whole FFN (`ffn_in` → GELU → `ffn_out`), all in bf16, with the
+residual stream `x` kept FP32 throughout and cast-down/cast-up at each
+GEMM boundary — the textbook G2.1 policy (`docs/CATALOGUE.md`: "cast at
+GEMM inputs only → one rounding per layer, not compounded through the
+residual"). BF16 weight copies cached eagerly (extending
+`_build_qkv_fold`/`_build_ffn_in_fold`, same eager-only rule as their
+FP32 counterparts, to avoid repeating step 12's CUDAGraphs bug).
+
+**Result: decisive failure, not a borderline call.** Smoke test (tiny
+shape, `results/g2_1_smoke_FAILED_run28.log`) failed all 5 trials:
+`max_abs` up to **0.0110 — 11x the 0.001 atol budget** — with **13.6% of
+all elements failing** (22344/163840) the actual disjunctive
+`abs_ok OR rel_ok` criterion, not just exceeding one metric. Failing
+elements span broadly across feature dimensions (not a narrow subset),
+and the worst-case values involve normal O(1)-magnitude activations
+(e.g. baseline=-1.6976763 vs optimized=-1.7073666), not near-zero
+edge cases — ruling out the "near-zero reference blows up relative
+error" pattern seen in every prior accuracy investigation this session.
+**Reverted immediately** (`git checkout HEAD -- benchmark.py`, HEAD was
+`d9a7e7b`) without running the usual 40-seed diagnostic probe — a
+gap this large (11x over budget, on the very first shape) doesn't need
+more sampling to be judged unsafe; that probing effort is for genuinely
+close calls (compare step 13, where the smoke test was at 99.5% of
+budget, not 1100%).
+
+**Why this probably isn't a bug, and what it means:**
+`docs/CLAUDE.md`'s own precision walk-down ladder — `FP8 FFN+BF16 attn
+→ FP8 FFN only → split-precision → BF16 everywhere` — lists "BF16
+everywhere" as the **last, most conservative** rung, the fallback
+you're supposed to land on after everything more aggressive (FP8) has
+already failed. This attempt was essentially that last rung (bf16 in
+both attention and FFN, no FP8 anywhere) — and it failed hard. Back-
+of-envelope: BF16 has ~0.39% unit roundoff; injecting that at ~12
+GEMM/attention boundaries (2 per layer × 6 layers) into an FP32
+residual, even without full compounding, plausibly reaches low-single-
+digit-percent relative error for a meaningful fraction of elements —
+enough to breach the 1% `rtol` (which, for the O(1)-magnitude values
+here, is the *effective* governing bound in the disjunctive criterion,
+looser than the ~0.1%-relative-equivalent `atol`). If the safest rung
+of the documented ladder fails this decisively, the more aggressive
+rungs above it (which add FP8, strictly lower precision, into the mix)
+are very unlikely to fare better without a fundamentally different
+technique (e.g. per-channel scales doing real work, or the
+split-precision `A_hi + A_lo` trick) — not something to attempt casually
+on the strength of the catalogue's general gain estimate alone.
+
+**Not concluding BF16/FP8 is impossible for this model** — only that
+applying it uniformly everywhere doesn't work at this depth (6 layers).
+A narrower attempt (BF16 for the FFN only, leaving attention on the
+proven TF32/SDPA path from G0-G2.4b) is a plausible follow-up with a
+smaller blast radius, but wasn't attempted this session — moving to
+lower-risk, clearly-valuable work instead (the `ncu` profiling
+infrastructure gap, flagged repeatedly since step 12) rather than
+immediately re-attempting a narrower slice of a direction that just
+failed hard, without profiler data to justify the investment.
