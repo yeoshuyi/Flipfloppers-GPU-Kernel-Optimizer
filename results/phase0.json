@@ -1,0 +1,19 @@
+{
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "cc": [
+    8,
+    9
+  ],
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "fp8_scaled_mm": true,
+  "triton_fp8": true,
+  "cooperative_launch": true,
+  "sm_count": 128,
+  "shared_per_sm_kb": 100.0,
+  "l2_mb": 75.497472,
+  "regs_per_sm": 65536,
+  "tf32_tflops": 86.86346463606867,
+  "bf16_tflops": 164.0688774352449,
+  "fp16_tflops": 160.5965002744182
+}

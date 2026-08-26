@@ -8,7 +8,7 @@ r = {"torch": torch.__version__, "cuda": torch.version.cuda,
 # --- FP8 library path (gates the whole G4/FP8 plan) --------------------
 try:
     a = torch.randn(64, 128, device="cuda").to(torch.float8_e4m3fn)
-    b = torch.randn(128, 64, device="cuda").to(torch.float8_e4m3fn).t()
+    b = torch.randn(64, 128, device="cuda").to(torch.float8_e4m3fn).t()
     s = torch.ones(1, device="cuda", dtype=torch.float32)
     torch._scaled_mm(a, b, scale_a=s, scale_b=s, out_dtype=torch.bfloat16)
     r["fp8_scaled_mm"] = True
@@ -31,8 +31,8 @@ except Exception as e:
     r["triton_fp8"] = f"NO: {type(e).__name__}: {e}"
 
 # --- cooperative launch (gates G4.1) -----------------------------------
-r["cooperative_launch"] = bool(torch.cuda.get_device_properties(0).__dict__
-                               .get("cooperative_launch", True))
+r["cooperative_launch"] = bool(getattr(torch.cuda.get_device_properties(0),
+                                        "cooperative_launch", True))
 
 # --- hardware limits ----------------------------------------------------
 p = torch.cuda.get_device_properties(0)
