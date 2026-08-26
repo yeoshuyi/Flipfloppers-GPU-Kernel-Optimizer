@@ -1,0 +1,86 @@
+=== SHAPE: tiny ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=1, seq_len=64, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.00063169 | max_rel=5.37827 | failed=0/32768
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 982, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 946, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 627, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 380, in forward
+    return self._compiled_impl(x, valid_token_mask, no_pad)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 382, in _optimized_forward
+    def _optimized_forward(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/aot_autograd.py", line 1277, in forward
+    return compiled_fn(full_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1141, in runtime_wrapper
+    result = _codegen_runtime_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/subclass_codegen.py:codegen(runtime_wrapper_orchestration)", line 8, in _runtime_wrapper
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2548, in __call__
+    return self.compiled_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/output_code.py", line 763, in __call__
+    return self.current_callable(inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/torchinductor_techjam2/3e/c3emmvyetjymaso64iusfufzdnnbbjmndsfrbok2uncdtpcm5tgp.py", line 830, in call
+    (buf117,) = self.partitions[0](partition0_args)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/compile_fx.py", line 1925, in run
+    return compiled_fn(new_inputs)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 460, in deferred_cudagraphify
+    fn, out = cudagraphify(model, inputs, new_static_input_idxs, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 520, in cudagraphify
+    return manager.add_function(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2519, in add_function
+    return fn, fn(inputs)
+               ^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2178, in run
+    out = self._run(new_inputs, function_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2280, in _run
+    return self.run_eager(new_inputs, function_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2477, in run_eager
+    return node.run(new_inputs)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 746, in run
+    non_cudagraph_inps_storages = get_non_cudagraph_inps()
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 742, in get_non_cudagraph_inps
+    and t.untyped_storage().data_ptr() not in existing_path_data_ptrs
+        ^^^^^^^^^^^^^^^^^^^
+RuntimeError: Error: accessing tensor output of CUDAGraphs that has been overwritten by a subsequent run. Stack trace: File "/work/benchmark.py", line 398, in _optimized_forward
+    qkv = self._fused_qkv(attn, layer.norm1, n1)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 295, in _fused_qkv
+    b = b + w @ norm1.bias
+        ^^^^^^^^^^^^^^^^^^. To prevent overwriting, clone the tensor outside of torch.compile() or call torch.compiler.cudagraph_mark_step_begin() before each model invocation.

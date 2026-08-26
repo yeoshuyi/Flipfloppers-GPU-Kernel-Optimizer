@@ -246,62 +246,90 @@ class UserOptimizedTransformer(BaselineTransformer):
     fold is exact in real arithmetic but not provably bit-identical in
     floating point -- verified empirically (max_abs comparison) instead,
     see PROGRESS.md.
+
+    G2.4: forward() computes no_pad, ensures every layer's folded
+    weights exist (_ensure_folded_weights, EAGER -- see
+    _build_qkv_fold's docstring for why this can never move inside the
+    compiled call), and self.config.causal handling itself, then
+    delegates the actual per-layer loop to _optimized_forward(), lazily
+    wrapped in torch.compile(mode="reduce-overhead") on first call.
+    Causal still bypasses this entirely via super().forward() before
+    compilation is even considered -- this diff is scoped to the
+    already-optimized non-causal path only.
     """
 
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__(config)
         self._mask_cache: dict = {}
+        self._compiled_impl = None
 
     @staticmethod
-    def _fused_qkv(
-        attn: "BaselineSelfAttention", norm1: nn.LayerNorm, n: torch.Tensor
-    ) -> torch.Tensor:
-        # n is norm1's PURE REDUCTION output (no affine) -- see forward().
+    def _build_qkv_fold(
+        attn: "BaselineSelfAttention", norm1: nn.LayerNorm,
+        device: torch.device, dtype: torch.dtype,
+    ) -> None:
+        # G0.2+G1.1+G1.2 folded into one weight/bias pair, cached as plain
+        # attributes on attn. MUST run eagerly, never traced inside the
+        # torch.compile'd region (G2.4): building a fresh tensor via
+        # torch.cat inside a cudagraph'd function and then caching a
+        # Python-level reference to it across calls hands out a pointer
+        # into the graph's internal memory pool, which the NEXT replay
+        # reclaims -- PyTorch correctly detects and raises on this
+        # ("accessing tensor output of CUDAGraphs that has been
+        # overwritten"), caught in this iteration's smoke test. Called from
+        # forward() before the compiled call, never from inside
+        # _optimized_forward.
         w = getattr(attn, "_qkv_weight", None)
-        if w is None or w.device != n.device or w.dtype != n.dtype:
-            w = torch.cat(
-                [attn.q_proj.weight, attn.k_proj.weight, attn.v_proj.weight], dim=0
-            )
-            b = torch.cat(
-                [attn.q_proj.bias, attn.k_proj.bias, attn.v_proj.bias], dim=0
-            )
-            # G1.2: fold the attention scale into W_Q/b_Q (only Q's rows of
-            # the fused weight -- torch.cat already returns fresh storage,
-            # so this in-place scale can't touch attn.q_proj.weight itself).
-            # Exact: this model's head_dim is always a power of two (64
-            # here), so scale = head_dim**-0.5 is an exact power of two
-            # (0.125 = 2^-3) -- IEEE float multiplication by a power of two
-            # never rounds, so pre-scaling Q here and passing scale=1.0 to
-            # SDPA is bit-identical to SDPA's default (scaling the [B,H,S,S]
-            # score matrix by 0.125 after the matmul), not merely
-            # "close enough." Verified empirically in PROGRESS.md step 12.
-            d = attn.d_model
-            w[:d].mul_(attn.scale)
-            b[:d].mul_(attn.scale)
-            # G1.1: absorb norm1's affine (gamma=weight, beta=bias) into
-            # this (already scale-folded) weight/bias, so norm1 itself only
-            # ever needs to do the mean/var reduction. y = n*gamma+beta,
-            # z = y@W^T+b = n@(W*gamma)^T + (b + W@beta) -- the bias-absorb
-            # must happen BEFORE the column-scale below, using this W (the
-            # W@beta term doesn't involve gamma at all).
-            b = b + w @ norm1.bias
-            w = w * norm1.weight[None, :]
-            attn._qkv_weight = w
-            attn._qkv_bias = b
-        return F.linear(n, attn._qkv_weight, attn._qkv_bias)
+        if w is not None and w.device == device and w.dtype == dtype:
+            return
+        w = torch.cat(
+            [attn.q_proj.weight, attn.k_proj.weight, attn.v_proj.weight], dim=0
+        )
+        b = torch.cat(
+            [attn.q_proj.bias, attn.k_proj.bias, attn.v_proj.bias], dim=0
+        )
+        # G1.2: fold the attention scale into W_Q/b_Q (only Q's rows of
+        # the fused weight -- torch.cat already returns fresh storage,
+        # so this in-place scale can't touch attn.q_proj.weight itself).
+        # Exact: this model's head_dim is always a power of two (64
+        # here), so scale = head_dim**-0.5 is an exact power of two
+        # (0.125 = 2^-3) -- IEEE float multiplication by a power of two
+        # never rounds, so pre-scaling Q here and passing scale=1.0 to
+        # SDPA is bit-identical to SDPA's default (scaling the [B,H,S,S]
+        # score matrix by 0.125 after the matmul), not merely
+        # "close enough." Verified empirically in PROGRESS.md step 12.
+        d = attn.d_model
+        w[:d].mul_(attn.scale)
+        b[:d].mul_(attn.scale)
+        # G1.1: absorb norm1's affine (gamma=weight, beta=bias) into
+        # this (already scale-folded) weight/bias, so norm1 itself only
+        # ever needs to do the mean/var reduction. y = n*gamma+beta,
+        # z = y@W^T+b = n@(W*gamma)^T + (b + W@beta) -- the bias-absorb
+        # must happen BEFORE the column-scale below, using this W (the
+        # W@beta term doesn't involve gamma at all).
+        b = b + w @ norm1.bias
+        w = w * norm1.weight[None, :]
+        attn._qkv_weight = w
+        attn._qkv_bias = b
 
     @staticmethod
-    def _fused_ffn_in(layer: "BaselineTransformerBlock", n: torch.Tensor) -> torch.Tensor:
-        # G1.1, the norm2 -> ffn_in half. Same fold as above, no scale
-        # involved here (that was attention-specific).
+    def _build_ffn_in_fold(
+        layer: "BaselineTransformerBlock", device: torch.device, dtype: torch.dtype,
+    ) -> None:
+        # G1.1, the norm2 -> ffn_in half. Same eager-only rule as above.
         w = getattr(layer, "_ffn_in_weight", None)
-        if w is None or w.device != n.device or w.dtype != n.dtype:
-            ffn_in = layer.ffn_in
-            b = ffn_in.bias + ffn_in.weight @ layer.norm2.bias
-            w = ffn_in.weight * layer.norm2.weight[None, :]
-            layer._ffn_in_weight = w
-            layer._ffn_in_bias = b
-        return F.linear(n, layer._ffn_in_weight, layer._ffn_in_bias)
+        if w is not None and w.device == device and w.dtype == dtype:
+            return
+        ffn_in = layer.ffn_in
+        b = ffn_in.bias + ffn_in.weight @ layer.norm2.bias
+        w = ffn_in.weight * layer.norm2.weight[None, :]
+        layer._ffn_in_weight = w
+        layer._ffn_in_bias = b
+
+    def _ensure_folded_weights(self, device: torch.device, dtype: torch.dtype) -> None:
+        for layer in self.layers:
+            self._build_qkv_fold(layer.attention, layer.norm1, device, dtype)
+            self._build_ffn_in_fold(layer, device, dtype)
 
     @staticmethod
     def _split_heads_view(x: torch.Tensor, num_heads: int, head_dim: int) -> torch.Tensor:
@@ -344,19 +372,57 @@ class UserOptimizedTransformer(BaselineTransformer):
         # for the common case and skips the now-provably-no-op masked_fill
         # calls (an all-ones keep-mask changes nothing, but still costs a
         # full elementwise pass over the tensor if not skipped).
+        #
+        # Computed HERE, outside the compiled region below (G2.4): if
+        # _mask_is_all_ones's data_ptr() call happened inside traced code,
+        # dynamo would bake that address into the graph's guards and force
+        # a recompile on every new tensor allocation -- silently defeating
+        # the whole point of graph reuse. As a plain bool argument it's just
+        # a specialization dimension (at most 2 graphs: no_pad True/False).
         no_pad = self._mask_is_all_ones(valid_token_mask)
 
+        # Must also happen eagerly, outside the compiled call -- see
+        # _build_qkv_fold's docstring for why.
+        self._ensure_folded_weights(x.device, x.dtype)
+
+        # G2.4: torch.compile(mode="reduce-overhead") -- CUDA graphs, to
+        # remove the remaining per-kernel launch overhead in the TINY
+        # regime. Compiled LAZILY on first forward (never rely on
+        # --compile-user; docs/CATALOGUE.md/CLAUDE.md are explicit the
+        # grader may not pass it). No formal ncu profile exists yet for
+        # this (see docs/PROGRESS.md) -- citing the measured fact instead:
+        # tiny's speedup jumped far more than every other regime's at each
+        # of G0.2/G0.3/G0.5 (fewer GEMMs, no .contiguous(), skipped
+        # masked_fill), which is itself strong evidence tiny is still
+        # launch/overhead-bound post-G0/G1, exactly what CUDA graphs
+        # target -- consistent with CATALOGUE.md's own "3x+ tiny" estimate
+        # for G2.4 specifically (vs "1.2x default").
+        if self._compiled_impl is None:
+            self._compiled_impl = torch.compile(
+                self._optimized_forward, mode="reduce-overhead"
+            )
+        return self._compiled_impl(x, valid_token_mask, no_pad)
+
+    def _optimized_forward(
+        self,
+        x: torch.Tensor,
+        valid_token_mask: Optional[torch.Tensor],
+        no_pad: bool,
+    ) -> torch.Tensor:
         for layer in self.layers:
             attn = layer.attention
-            # G1.1: norm1's affine is folded into _fused_qkv's weight/bias
-            # below, so here we only need the pure reduction (no
-            # weight=gamma/bias=beta) -- F.layer_norm(weight=None,
-            # bias=None) computes exactly (x-mean)/sqrt(var+eps), PyTorch's
-            # own fused kernel, not a hand-rolled reimplementation.
+            # G1.1: norm1's affine is folded into _qkv_weight/_qkv_bias
+            # (built eagerly by _ensure_folded_weights before this
+            # compiled call, see forward()), so here we only need the pure
+            # reduction (no weight=gamma/bias=beta) -- F.layer_norm(
+            # weight=None, bias=None) computes exactly (x-mean)/sqrt(var+
+            # eps), PyTorch's own fused kernel. attn._qkv_weight/_bias are
+            # read here as already-stable tensors, never built inside this
+            # compiled function (see _build_qkv_fold's docstring).
             n1 = F.layer_norm(
                 x, layer.norm1.normalized_shape, eps=layer.norm1.eps
             )
-            qkv = self._fused_qkv(attn, layer.norm1, n1)
+            qkv = F.linear(n1, attn._qkv_weight, attn._qkv_bias)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
@@ -385,7 +451,8 @@ class UserOptimizedTransformer(BaselineTransformer):
             n2 = F.layer_norm(
                 x, layer.norm2.normalized_shape, eps=layer.norm2.eps
             )
-            ffn = layer.ffn_out(F.gelu(self._fused_ffn_in(layer, n2), approximate="none"))
+            ffn_hidden = F.linear(n2, layer._ffn_in_weight, layer._ffn_in_bias)
+            ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
             x = x + ffn
             if not no_pad:
                 x = x.masked_fill(~valid_token_mask[..., None], 0)
