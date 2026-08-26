@@ -14,26 +14,28 @@ can lag by one iteration if a crash happened mid-step).
 
 ## Current State (updated after each iteration)
 
-- **Day:** 1-2 (G0 done, G1 in progress)
-- **Track A progress:** G0.1, G0.2, G0.3, G0.5 done. G0.4/G0.6 skipped (not
-  applicable / not torch-level). G1.2 done (exact, but ~0 speedup under
-  SDPA — kept as G4 prerequisite infra). G1.1 in progress.
+- **Day:** 1-2 (G0 and G1 done for the non-causal path; G2 in progress)
+- **Track A progress:** G0.1, G0.2, G0.3, G0.5, G1.1, G1.2, G2.4 done.
+  G0.4/G0.6 skipped. Attempting a fresh idea for causal next (see step 13).
 - **Archive (Track A elites, `python3 tools/archive.py summary`):**
   | regime | trackA |
   |---|---|
-  | tiny | 2.64x |
-  | default | 1.40x |
-  | long-seq | 2.30x |
-  | large-batch | 1.55x |
-  | padded | 1.22x |
+  | tiny | 4.65x |
+  | default | 1.60x |
+  | long-seq | 2.35x |
+  | large-batch | 1.61x |
+  | padded | 1.60x |
   | causal | 1.00x (fallback to exact baseline, not yet improved) |
-- **Known open gap:** causal regime has no speedup yet. Root cause: even
-  SDPA's MATH backend drifts past the 1e-3 accuracy threshold on ~half of
-  random seeds at B8_S128 causal (step 5). G1.2's scale-folding does NOT
-  fix this (proven bit-identical to the unfolded version, see step 11) —
-  the real lever is still unidentified. Not currently blocking Track A
-  progress elsewhere.
-- **Latest commit:** `1d9b585` (G1.2 implementation)
+- **Known open gap:** causal regime has no speedup yet, and the gap to
+  every other regime just widened a lot (1.00x vs 1.6-4.65x). Root cause of
+  why SDPA can't be used for causal: even its MATH backend drifts past the
+  1e-3 accuracy threshold on ~half of random seeds at B8_S128 causal (step
+  5). G1.2's scale-folding does NOT fix this (proven bit-identical to the
+  unfolded version, step 11). Next attempt (step 13): compile the exact
+  baseline computation for causal (no SDPA, no folding, so no new accuracy
+  risk from that angle) purely for launch-overhead reduction, same lever as
+  G2.4 gave the non-causal path.
+- **Latest commit:** `9853ede` (G2.4 archive: padded/trackA)
 
 ---
 
@@ -337,3 +339,119 @@ scale-folding (open question, not yet identified — candidates to consider
 later: accepting a BF16 walk-down for causal specifically, or revisiting
 whether the accuracy budget is actually the binding constraint the grader
 enforces vs. this benchmark script's own defaults).
+
+### 12. G2.4 — lazy `torch.compile(mode="reduce-overhead")`, CUDA graphs
+**Fact cited (no formal ncu profile — infra gap, see below):** tiny's
+speedup jumped far more than every other regime's at each of G0.2/G0.3/G0.5
+(fewer GEMMs, no `.contiguous()`, skipped `masked_fill`) — itself strong
+evidence tiny is still launch/overhead-bound post-G0/G1, which is exactly
+what CUDA graphs target. Matches `docs/CATALOGUE.md`'s own "3x+ tiny"
+estimate for G2.4 specifically (vs "1.2x default").
+
+**`docs/AGENTS.md`/`CLAUDE.md` want a profiler-cited fact for every
+proposal, and this repo doesn't have working `ncu`-profiling infrastructure
+yet** — `.claude/agents/profiler.md` (the profiler subagent) expects a
+`jobs/*.sbatch` + `tools/` ncu-to-JSON parser to already exist, per
+`docs/SETUP.md`'s "Parse `ncu` to JSON in `tools/` — never let raw output
+reach an agent's context," and neither has been built. Used measured
+end-to-end timing as a substitute fact instead of fabricating a profiler
+run. **This is a real gap to close later** (see "Next up" ideas at the
+bottom of this file) — every G2/G3/G4 decision from here on would benefit
+from real `SpeedOfLight`/occupancy/stall-reason data instead of inference
+from timing deltas.
+
+**What changed:** `forward()` now: check `config.causal` → compute `no_pad`
+eagerly → `_ensure_folded_weights()` eagerly → lazily build
+`self._compiled_impl = torch.compile(self._optimized_forward,
+mode="reduce-overhead")` on first call → delegate. Compiled **lazily on
+first forward**, never via `--compile-user` (`CLAUDE.md` is explicit the
+grader may not pass that flag).
+
+**A real bug was found and fixed before the full sweep — this is the most
+instructive failure of the session so far.** First smoke test (tiny +
+default only, `results/g2_4_smoke_FAILED_run22.log`) crashed:
+
+```
+RuntimeError: Error: accessing tensor output of CUDAGraphs that has been
+overwritten by a subsequent run. Stack trace: ... in _fused_qkv
+    b = b + w @ norm1.bias
+```
+
+Root cause: `_fused_qkv`'s lazy weight-folding cache (`torch.cat(...)`,
+built once via `getattr(attn, "_qkv_weight", None)` and cached as a plain
+attribute — the exact pattern used safely for G0.2/G1.1/G1.2 up to this
+point) was being **built inside the compiled/graphed region**. Constructing
+a fresh tensor there and then caching a Python-level reference to it
+*across calls* hands out a pointer into the CUDA graph's internal memory
+pool — memory the *next* graph replay reclaims and overwrites. PyTorch's
+own safety net catches this and raises rather than silently returning
+corrupted data, which is the good version of this failure mode: a
+loud, immediate crash on the very first accuracy trial, not a subtle
+wrong-answer bug that accuracy checking might have missed.
+
+**Fix:** split weight-folding into `_build_qkv_fold` /
+`_build_ffn_in_fold` / `_ensure_folded_weights` — called from `forward()`,
+**eagerly, before** the compiled call, never from inside
+`_optimized_forward`. The compiled function now only ever *reads*
+`attn._qkv_weight` / `layer._ffn_in_weight` as already-stable tensors, the
+same way it would read a frozen `nn.Parameter` — no caching, no
+`torch.cat`, no conditional building happens inside the traced region
+anymore. Retest (`results/g2_4_smoke_fixed_run23.log`) passed cleanly, no
+errors, and with dramatically better numbers than the smoke test even
+showed pre-fix hope for (tiny 2.692x → 4.638x on the smoke test alone).
+
+**Verification:** full 8-shape sweep (sbatch job id 24,
+`results/g2_4_sweep_run24.log`), all PASS. vs G1.1
+(`results/g1_1_sweep_run21.log`):
+
+| shape | G1.1 | G2.4 | note |
+|---|---|---|---|
+| tiny | 2.692x | **4.649x** | the launch-bound hypothesis, confirmed hard |
+| default | 1.355x | 1.601x | |
+| long_seq | 2.302x | 2.355x | |
+| large_batch | 1.545x | 1.609x | |
+| default_padded | 1.204x | **1.604x** | +33% |
+| default_causal | 0.999x | 1.000x | fallback, untouched |
+| causal_padded | 1.001x | 1.001x | fallback, untouched |
+| long_seq_padded | 2.195x | 2.237x | |
+
+`max_abs` moved in **both directions** across shapes (tiny/long_seq/
+large_batch went down, default/long_seq_padded went up ~10-15%) — flagged
+explicitly rather than glossed over, since this is genuinely different from
+every fold so far: G2.4 is **not** a claimed-exact transform (unlike
+G1.1/G1.2) — inductor's Triton-generated kernels use different fusion/
+reduction order than eager PyTorch, so some drift either direction is
+expected. All values stay well under the 0.001 atol budget (worst case
+~80% of it). Causal's `max_abs` stays exactly `0` (fallback untouched).
+
+Committed `e561559` (implementation + both smoke-test logs + full sweep
+log, so the bug-then-fix story is preserved in git history, not just this
+file). Archived: new elites in every non-causal cell (tiny 4.65x, default
+1.60x, long-seq 2.35x, large-batch 1.61x, padded 1.60x); causal stayed at
+1.00x (near-miss, correctly not overwritten).
+
+### 13. (in progress) Fresh idea for causal — compile the exact baseline math
+The gap between causal (1.00x) and everything else (1.6-4.65x) just got a
+lot wider, which makes it worth another look rather than leaving it parked.
+Every attempt so far tried to make an *independent* computation (SDPA, any
+backend) match baseline's specific TF32-rounded output within 1e-3 — and
+every one hit the same wall, because that's fundamentally about matching
+one specific floating-point rounding pattern with a different kernel, which
+isn't reliably achievable at this depth (steps 5, 11).
+
+**Different angle this time:** don't change the computation *at all* for
+causal — keep calling `super().forward()`, baseline's own exact
+attention/LN/FFN code, unfused, unfolded, using the original `q_proj`/
+`k_proj`/`v_proj`/`norm1`/`norm2` parameters directly. Just wrap *that* in
+`torch.compile(mode="reduce-overhead")` the same way G2.4 did for the
+non-causal path, purely for launch-overhead reduction. Since baseline's
+`forward()` has no lazy weight-caching (it only ever reads existing
+`nn.Parameter`s, the standard case torch.compile/cudagraphs is built to
+handle), the specific bug from step 12 shouldn't apply here — but
+inductor's fusion can still shift `max_abs` away from the current exact
+`0`, and causal is already known to be razor-thin against the 1e-3 budget
+(step 5), so this needs the same smoke-test-first caution as G2.4, not an
+assumption that "no lazy caching" means "no risk."
+
+Results will land here once verified (or reverted, if it regresses
+accuracy).
