@@ -1,0 +1,37 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+{
+  "hot_kernels": [
+    {
+      "name": "void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x128_16x5_tn_align4>(T1::Params)",
+      "us": 40.928,
+      "pct_of_total": 0.9
+    },
+    {
+      "name": "void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)",
+      "us": 39.808,
+      "pct_of_total": 0.88
+    },
+    {
+      "name": "void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(T1::Params)",
+      "us": 39.744,
+      "pct_of_total": 0.88
+    }
+  ],
+  "achieved_tflops": 24.28,
+  "pct_of_peak": 29.4,
+  "pct_of_peak_note": "sm__throughput (overall SM), not tensor-core-isolated; dtype=tf32, peak=82.6",
+  "dram_gbps": 290.8,
+  "l2_gbps": null,
+  "l2_gbps_note": "no reliable peak L2 bandwidth figure available; see lts_pct per-kernel instead",
+  "occupancy_pct": 12.75,
+  "regs_per_thread": null,
+  "shared_bytes_per_block": null,
+  "reg_spills": null,
+  "launch_metrics_note": "no launch__* metrics found in this ncu build (jobs/ncu_discover2.sbatch) -- regs/shared-mem/spills not available",
+  "bank_conflicts": 1868056,
+  "top_stall": null,
+  "stall_pct": null,
+  "kernel_launches": 200,
+  "gpu_idle_pct": null,
+  "graph_replay": false
+}
