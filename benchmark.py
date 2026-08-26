@@ -199,7 +199,34 @@ class UserOptimizedTransformer(BaselineTransformer):
     per layer, per CLAUDE.md) and fall back to the exact baseline computation
     for causal until G1.2 (scale folding into W_Q) is in and the gap is
     re-measured.
+
+    G0.2 (this diff): fuse q_proj/k_proj/v_proj into one [d,3d] matmul
+    instead of three separate [d,d] matmuls -- one GEMM launch instead of
+    three, and a bigger GEMM has better arithmetic intensity than three small
+    ones. The fused weight is built lazily on first forward (after
+    load_state_dict + .to(device,dtype) + .eval(), so it inherits the right
+    device/dtype for free) and cached as a PLAIN ATTRIBUTE on the attention
+    submodule -- never nn.Parameter/nn.Buffer, so strict=True state_dict
+    loading still only ever sees q_proj/k_proj/v_proj (CLAUDE.md invariant
+    4). This caches a deterministic function of the frozen WEIGHTS, not of
+    the input x or the output -- weights never change between calls, so
+    there's nothing stale to return (CLAUDE.md invariant 1 is about caching
+    on x.data_ptr()/output, not about this).
     """
+
+    @staticmethod
+    def _fused_qkv(attn: "BaselineSelfAttention", h: torch.Tensor) -> torch.Tensor:
+        w = getattr(attn, "_qkv_weight", None)
+        if w is None or w.device != h.device or w.dtype != h.dtype:
+            w = torch.cat(
+                [attn.q_proj.weight, attn.k_proj.weight, attn.v_proj.weight], dim=0
+            )
+            b = torch.cat(
+                [attn.q_proj.bias, attn.k_proj.bias, attn.v_proj.bias], dim=0
+            )
+            attn._qkv_weight = w
+            attn._qkv_bias = b
+        return F.linear(h, attn._qkv_weight, attn._qkv_bias)
 
     def forward(
         self,
@@ -212,9 +239,11 @@ class UserOptimizedTransformer(BaselineTransformer):
         for layer in self.layers:
             attn = layer.attention
             h = layer.norm1(x)
-            q = attn._split_heads(attn.q_proj(h))
-            k = attn._split_heads(attn.k_proj(h))
-            v = attn._split_heads(attn.v_proj(h))
+            qkv = self._fused_qkv(attn, h)
+            q, k, v = qkv.split(attn.d_model, dim=-1)
+            q = attn._split_heads(q)
+            k = attn._split_heads(k)
+            v = attn._split_heads(v)
 
             if valid_token_mask is None:
                 context = F.scaled_dot_product_attention(
