@@ -742,3 +742,60 @@ or ruled out with real evidence:
   user's own note about escalating to Opus for genuinely hard coding, a
   reasonable point to check in on before starting rather than committing
   to it silently.
+
+**User decision (after the above checkpoint): proceed through G3 into G4,
+escalating to Opus for hard kernel-design work, no further check-ins
+requested.** The following steps continue under that instruction.
+
+### 18. G4 FP8 accuracy precheck — decisive failure, gates the megakernel design
+Before investing in G4's megakernel machinery (persistent cooperative
+kernel, warp specialization, hand-written `mma.sync` PTX — genuinely weeks
+of work per `docs/MEGAKERNEL.md`'s own scope), checked whether its core
+precision requirement is even viable. `docs/MEGAKERNEL.md`'s shared-memory
+budget arithmetic is explicit that **FP8 isn't chosen for its 2x
+throughput — it's required for pipeline depth**: BF16 tiling caps at 3
+`cp.async` stages (96KB overflows the 99KB/SM budget by 3KB at the
+evaluated tile), while FP8 reaches 4-5 stages with room to spare. "Shallow
+pipelining on Ada costs >30% duty cycle" — so the megakernel design, as
+specified, doesn't have a BF16 fallback; it needs FP8 weights to work as
+designed.
+
+Given BF16 already failed decisively twice this session (steps 14, 17:
+~11x over budget, both full-model and FFN-only), this was worth checking
+*before* writing any megakernel code, not after. Wrote
+`probes/g4_fp8_accuracy_precheck.py`: a fair test, not a strawman —
+**per-output-channel scales** on the FFN weights (`amax` per row / 448,
+matching `docs/CATALOGUE.md`'s own G1.5/G2.6 prescription that per-channel
+scaling is what makes FP8 viable in principle) and a dynamic per-tensor
+scale on activations, simulated via quantize-to-`float8_e4m3fn`-and-back
+(isolates the numerical precision question from which specific GEMM
+kernel API computes it — if the quantization error alone already fails,
+no kernel choice fixes that). Tested the FFN (the 65% of FLOPs
+`CLAUDE.md`'s precision policy targets) across 20 seeds, checking the
+same disjunctive `abs_ok OR rel_ok` criterion `benchmark.py` actually
+uses.
+
+**Result** (`results/g4_fp8_precheck_run38.log`):
+```
+seeds=20 true_failures=20 max=0.077889 mean=0.065174 min=0.059122
+```
+**20 of 20 seeds fail**, at a much larger margin than BF16's failure —
+mean `max_abs` is **65x the 0.001 budget**, worst case 78x. Even with
+correct per-channel scaling (not a naive per-tensor strawman), FP8
+quantization error on this model's FFN weights is roughly an order of
+magnitude past merely "over budget."
+
+**What this means for G4:** the megakernel's core precision assumption
+doesn't hold for this model at this depth. G4.1 onward (persistent kernel,
+K-splitting, warp specialization, FP16-accumulate) are all built on top of
+the FP8-tiled pipeline `docs/MEGAKERNEL.md` specifies — pursuing them
+without a working precision base isn't a smaller version of the same
+plan, it's building on a foundation already shown not to hold. **G4.0
+(two-kernel form) remains the realistic target**: it doesn't carry the
+same pipeline-depth argument for FP8 (it's not doing persistent
+multi-stage residency across a long-running cooperative loop the way
+G4.1+ is), so it can run in the TF32/FP32 precision already proven safe
+all session. `docs/MEGAKERNEL.md` itself sanctions this outcome
+explicitly: "G4.0 winning is a result, not a failure — record it in the
+archive and move to another cell." Treating that as the realistic ceiling
+for G4 this session, not a placeholder on the way to G4.1+.
