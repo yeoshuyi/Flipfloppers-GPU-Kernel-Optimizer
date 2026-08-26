@@ -1,0 +1,2 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+seeds=40 true_failures(abs&rel both exceed)=0 max_abs_over_atol_alone=4 max=0.001175 mean=0.000921 min=0.000780

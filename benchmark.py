@@ -262,6 +262,7 @@ class UserOptimizedTransformer(BaselineTransformer):
         super().__init__(config)
         self._mask_cache: dict = {}
         self._compiled_impl = None
+        self._compiled_causal = None
 
     @staticmethod
     def _build_qkv_fold(
@@ -363,7 +364,23 @@ class UserOptimizedTransformer(BaselineTransformer):
         valid_token_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         if self.config.causal:
-            return super().forward(x, valid_token_mask)
+            # G2.4b: same lever as the non-causal path's G2.4 (CUDA graphs
+            # via lazy torch.compile), applied to baseline's OWN exact
+            # computation -- no SDPA, no folded weights, still reads the
+            # original q_proj/k_proj/v_proj/norm1/norm2 directly. Baseline's
+            # forward() has no lazy weight-caching (only ever reads existing
+            # nn.Parameters), so the step-12 bug (building+caching a fresh
+            # tensor inside the compiled region) doesn't apply here. This
+            # doesn't touch the causal accuracy question at all -- every
+            # attempt to independently RECOMPUTE causal attention has hit
+            # the same TF32-rounding wall (see docstring above); this one
+            # keeps the computation identical and only targets launch
+            # overhead, the same thing G2.4 fixed for non-causal.
+            if self._compiled_causal is None:
+                self._compiled_causal = torch.compile(
+                    super().forward, mode="reduce-overhead"
+                )
+            return self._compiled_causal(x, valid_token_mask)
 
         # G0.5: generate_random_case() always hands back a concrete all-ones
         # tensor when there's no real padding (never a literal None) -- so
