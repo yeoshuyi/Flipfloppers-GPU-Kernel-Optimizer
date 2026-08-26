@@ -1,0 +1,19 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: Memory efficient kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1104.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: Memory Efficient attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:571.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: Flash attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1106.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: Expected query, key and value to all be of dtype: {Half, BFloat16}. Got Query dtype: float, Key dtype: float, and Value dtype: float instead. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:91.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: cuDNN attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1108.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: cuDNN attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:831.)
+  context = F.scaled_dot_product_attention(
+/work/probes/g0_1_causal_backend_probe.py:53: UserWarning: Flash attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:559.)
+  context = F.scaled_dot_product_attention(
+MATH       max_abs over 20 seeds: max=0.001193 mean=0.001000 n_over_1e-3=10/20
+EFFICIENT  max_abs over 20 seeds: max=0.001341 mean=0.001091 n_over_1e-3=17/20
+FLASH      errors: ['ERROR: RuntimeError: No available kernel. Aborting execution.']
+CUDNN      errors: ['ERROR: RuntimeError: No available kernel. Aborting execution.']

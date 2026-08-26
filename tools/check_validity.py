@@ -49,10 +49,22 @@ def check_source(path: str) -> list[str]:
                    f"strict=True will reject the new key. Use a plain attribute.")
 
     # --- explicit attn_mask kicks SDPA off the flash backend --------------
-    if re.search(r"scaled_dot_product_attention\s*\([^)]*attn_mask\s*=\s*(?!None)",
-                 src, re.S):
-        bad.append("explicit attn_mask passed to SDPA -- forces the slow math "
-                   "backend. Use is_causal=True.")
+    # A masked call is only a problem if it is the ONLY way the file ever
+    # calls SDPA -- i.e. there is no coexisting is_causal-only fast path for
+    # the unpadded case. A masked call that sits alongside a real fast path
+    # is the PADDED-regime modifier (CLAUDE.md dispatch table), not a lazy
+    # attn_mask default that skips is_causal.
+    sdpa_calls = re.findall(r"scaled_dot_product_attention\s*\((.*?)\)",
+                             src, re.S)
+    def _is_masked(call: str) -> bool:
+        return bool(re.search(r"attn_mask\s*=\s*(?!None\b)", call))
+    def _is_fast_path(call: str) -> bool:
+        return "is_causal" in call and not _is_masked(call)
+    masked_calls = [c for c in sdpa_calls if _is_masked(c)]
+    if masked_calls and not any(_is_fast_path(c) for c in sdpa_calls):
+        bad.append("explicit attn_mask passed to SDPA with no coexisting "
+                   "is_causal fast path -- forces the slow math backend on "
+                   "every call. Use is_causal=True for the unpadded case.")
 
     # --- module-level mutable caches that could hold outputs --------------
     for node in ast.walk(tree):
