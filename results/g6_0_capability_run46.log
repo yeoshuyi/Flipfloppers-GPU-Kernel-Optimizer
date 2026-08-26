@@ -1,0 +1,5 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  cuda 13.0  cc (8, 9)  gpu NVIDIA GeForce RTX 4090
+scaled_mm per-tensor scalar: OK, out shape (64, 64)
+scaled_mm per-row (RowWise) scale: OK, out shape (64, 32)
+triton tl.dot(float8e4nv): OK, max_abs vs fp32 ref = 0.003418, triton 3.7.1
