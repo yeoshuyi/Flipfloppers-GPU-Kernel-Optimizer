@@ -1490,3 +1490,34 @@ touched.
 those knobs (`coordinate_descent_tuning`, explicit `epilogue_fusion`) only
 have an effect *under* max-autotune's search; with that mode itself closed
 on accuracy, there's nothing left for them to tune.
+
+### 26. G6.2 (`torch.backends.cudnn.benchmark = True`) — tried, clean null result
+
+**What was tried:** added the flag next to the existing `allow_tf32`
+settings in `main()` (never set before this session, grep-confirmed).
+Zero accuracy risk by construction — it only affects cudnn's own kernel-
+algorithm cache, never a computed value — but checked empirically rather
+than assumed a no-op, per this session's own standing preference for
+measurement over assumption (e.g. `_scaled_mm`'s real API constraints in
+step 24 diverged from the plan's own table).
+
+**Result: exactly the predicted no-op, confirmed rather than assumed.**
+Full 8-shape sweep (`results/g6_2_cudnn_benchmark_null_run57.log`, job 57)
+— every shape PASSES accuracy identically to the shipped baseline
+(expected, no computed value changed), and every shape's speedup sits
+within ±1-2% of `results/g2_4b_sweep_run27.log`'s numbers (tiny
+4.595→4.602, default 1.608→1.604, long_seq/large_batch/long_seq_padded
+unchanged to 3 sig figs, default_padded/causal_padded moved ±1.5% in
+opposite directions) — noise, not signal. This model is SDPA/cuBLAS-
+dominated with zero convolutions, so there is nothing in the graph for
+`cudnn.benchmark`'s algorithm cache to act on.
+
+**Reverted** (`git checkout -- benchmark.py`, verified clean, validity
+gate still passes) — a flag with confirmed zero effect isn't worth
+carrying in the shipped file. Committed alongside this write-up: the
+sweep log. No archive cell touched, `benchmark.py` unchanged from
+step 24's state.
+
+Closes Tier 1 entirely: all three items tried (max-autotune: accuracy
+failure; inductor knobs: moot; cudnn.benchmark: null result). Moving to
+Tier 2 (FP16), the most research-grounded remaining candidate.
