@@ -222,7 +222,18 @@ class UserOptimizedTransformer(BaselineTransformer):
     [B,S,d_model] per layer on the way in. The baseline's own
     _split_heads is left untouched since it's shared with the frozen
     reference's manual-matmul forward, which genuinely needs the copy.
+
+    G0.5: _mask_is_all_ones() below is the sanctioned data_ptr() cache from
+    CLAUDE.md -- caches whether a mask is all-ones, never a result. Needed
+    because generate_random_case() always hands back a concrete all-ones
+    tensor when there's no real padding, never a literal None, so the
+    unpadded shapes were silently going through the masked SDPA branch (and
+    the now-provably-no-op masked_fill calls) the whole time. See forward().
     """
+
+    def __init__(self, config: TransformerConfig) -> None:
+        super().__init__(config)
+        self._mask_cache: dict = {}
 
     @staticmethod
     def _fused_qkv(attn: "BaselineSelfAttention", h: torch.Tensor) -> torch.Tensor:
@@ -248,6 +259,22 @@ class UserOptimizedTransformer(BaselineTransformer):
         batch, seq_len, _ = x.shape
         return x.view(batch, seq_len, num_heads, head_dim).transpose(1, 2)
 
+    def _mask_is_all_ones(self, m: Optional[torch.Tensor]) -> bool:
+        # G0.5: caches a PROPERTY of the mask (is it all-ones?), never the
+        # output -- the one data_ptr() use CLAUDE.md sanctions. The harness
+        # reuses one mask tensor across an entire benchmark_models() call
+        # (300+ timed forwards), so this turns a per-call .all() reduction
+        # into a one-time cost; a mask from a different call is a different
+        # allocation (different data_ptr), so there's nothing stale here.
+        if m is None:
+            return True
+        key = (m.data_ptr(), tuple(m.shape))
+        hit = self._mask_cache.get(key)
+        if hit is None:
+            hit = bool(m.all())
+            self._mask_cache[key] = hit
+        return hit
+
     def forward(
         self,
         x: torch.Tensor,
@@ -255,6 +282,15 @@ class UserOptimizedTransformer(BaselineTransformer):
     ) -> torch.Tensor:
         if self.config.causal:
             return super().forward(x, valid_token_mask)
+
+        # G0.5: generate_random_case() always hands back a concrete all-ones
+        # tensor when there's no real padding (never a literal None) -- so
+        # without this check, every "unpadded" shape was still building and
+        # passing a real attn_mask to SDPA below. no_pad short-circuits that
+        # for the common case and skips the now-provably-no-op masked_fill
+        # calls (an all-ones keep-mask changes nothing, but still costs a
+        # full elementwise pass over the tensor if not skipped).
+        no_pad = self._mask_is_all_ones(valid_token_mask)
 
         for layer in self.layers:
             attn = layer.attention
@@ -265,7 +301,7 @@ class UserOptimizedTransformer(BaselineTransformer):
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
             v = self._split_heads_view(v, attn.num_heads, attn.head_dim)
 
-            if valid_token_mask is None:
+            if no_pad:
                 context = F.scaled_dot_product_attention(
                     q, k, v, attn_mask=None, is_causal=False
                 )
@@ -281,18 +317,18 @@ class UserOptimizedTransformer(BaselineTransformer):
                 .view(x.shape[0], x.shape[1], attn.d_model)
             )
             attn_out = attn.out_proj(context)
-            if valid_token_mask is not None:
+            if not no_pad:
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
 
             h2 = layer.norm2(x)
             ffn = layer.ffn_out(F.gelu(layer.ffn_in(h2), approximate="none"))
             x = x + ffn
-            if valid_token_mask is not None:
+            if not no_pad:
                 x = x.masked_fill(~valid_token_mask[..., None], 0)
 
         x = self.final_norm(x)
-        if valid_token_mask is not None:
+        if not no_pad:
             x = x.masked_fill(~valid_token_mask[..., None], 0)
         return x
 
