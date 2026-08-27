@@ -15,7 +15,7 @@ import json, sys, argparse, pathlib, subprocess, datetime
 ROOT = pathlib.Path("archive")
 REGIMES = ["tiny", "default", "long-seq", "large-batch", "padded", "causal",
            "causal-tiny", "causal-long-seq", "causal-large-batch"]
-FAMILIES = ["trackA", "precompute", "two-kernel", "fp8", "megakernel"]
+FAMILIES = ["trackA", "precompute", "two-kernel", "fp8", "megakernel", "fp16"]
 
 
 def _p(cell): return ROOT / f"{cell.replace('/', '__')}.json"
