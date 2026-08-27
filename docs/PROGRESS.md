@@ -3135,3 +3135,71 @@ bit-exact fused erf-GELU epilogue on the G4.3 kernel (26 new configs, cfg
 other half), which would need an fp32 residual add fused into the store; and
 buying causal-large-batch headroom upstream so the FP16-accumulate arm (cfg 51,
 x1.2–x2.2) becomes reachable on the small-`ffn_dim` official shapes.
+
+---
+
+### 43. Profiling the official 14-row causal matrix — where the latency actually is
+
+No build. `probes/g4_9_official_profile.py`, job 145,
+`results/g4_9_official_profile_run145.log`. Representative rows profiled on the
+**shipped** causal model (G0.1c…G6.4bc; G4.7c inert — `d_model < 512` on every
+official row): row 1 (d128, tok 8192), row 6 (d128, tok 1.28M), row 8 (d1024,
+tok 8192), row 13 (d128, S=1024, tok 65536). Compiled-path CUPTI census
+(bucketed) — % of the graphed forward:
+
+| row | wall | SDPA | GEMM | GELU | ELEM (LN+resid+cast) | note |
+|---|---|---|---|---|---|---|
+| 1  (d128 small)       | 0.209 ms | 14.1% | **57.5%** | 5.9% | 22.5% | GEMM-bound but tiny absolute |
+| 6  (d128 large-batch) | 52.5 ms  | 20.3% | 32.6% | 8.2% | **38.9%** | elementwise + GELU = **47%**, memory-bound |
+| 8  (d1024 wide)       | 4.33 ms  | 6.5%  | **72.6%** | 2.9% | 18.1% | GEMM-bound; `ffn_in`/`ffn_out` at ~56% of the FP16 roofline (185 µs for a 17 GFLOP GEMM) |
+| 13 (d128 long-seq)    | 2.23 ms  | **32.2%** | 26.1% | 5.9% | **35.8%** | SDPA (O(S²)) + elementwise co-dominant |
+
+**Findings.**
+
+1. **On the d128 rows (10 of the 14), elementwise LN/residual/cast + the
+   standalone GELU pass is the largest or co-largest cost** — 47% at row 6,
+   42% at row 13. Inductor already fuses LN+residual+bias+`_to_copy` into one
+   `triton_per_fused__to_copy_add_addmm_native_layer_norm_view` kernel per
+   norm site (2/layer), but the **GELU is a separate kernel**
+   (`triton_poi_fused__to_copy_gelu_view_2`, 1/layer): it reads the fp16
+   `ffn_in` output, casts to fp32, applies erf-GELU, writes fp32, and
+   `ffn_out` (an opaque fp32 `nn.Linear`) reads that fp32 back. 4.3 ms of it
+   at row 6. It is separate for the same reason G6.6/step 35 gave — a Triton
+   elementwise cannot fuse across a cuBLAS/CUTLASS GEMM.
+
+2. **The `[tok, ffn_dim]` hidden round-trip is EXPOSED on every d128 row**
+   (roofline check): the hidden write+read is 54% / 100% / 45% of the
+   standalone `ffn_out` FP16 GEMM time at rows 1 / 6 / 13, i.e. not hidden
+   behind compute. This is exactly the condition step 19 (G3.1) named as its
+   reopener — *"a shape where the FFN is genuinely memory-bound"* — now met,
+   because FFN storage moved to FP16 since G3.1 closed under TF32.
+
+3. **Row 8 (d1024) is GEMM-bound (72.6%) and the GEMMs leave headroom**:
+   `ampere_fp16_s1688gemm_128x128 ... stages_32x1` runs the d1024
+   `qkv`/`ffn_in`/`ffn_out` at ~56% of the 165 TFLOPS FP16-fp32-accum
+   roofline (185 µs for a 17 GFLOP GEMM). A shallow (`stages_32x1`) library
+   pipeline; a deeper FP32-accumulate warp-spec kernel (G4.3's ACCF32 arm,
+   never tested at d1024 for the plain attention GEMMs) has room. Precision-
+   neutral.
+
+4. **Row 13 SDPA is 32%** — `pytorch_flash::flash_fwd_kernel<32,128,128,…>`,
+   head_dim 32. Whether `EFFICIENT_ATTENTION` is the fastest available backend
+   at this shape is unaudited.
+
+5. **Every row carries a `multi_tensor_apply_kernel` (cudagraph static-input
+   `_foreach_copy_`)**, 1.5–6.9 µs — real but not addressable.
+
+**Ranked precision-neutral targets (drives iterations 2+):**
+
+- **T1 — SDPA backend audit** (rows 8, 13) + **CUDA-graph / `recompile_limit`
+  audit** (small rows 1–5, 9–12). Cheap, config-only, whole-matrix coverage.
+- **T2 — FP32-accumulate warp-spec GEMM for the row-8 (d1024) attention +
+  FFN GEMMs.** ~15% of row 8 is recoverable roofline. Reuses G4.7's ACCF32
+  arm; precision-neutral. G4.3 only closed the *FP16*-accumulate version.
+- **T3 — the d128 elementwise/GELU bar (rows 6, 13, and 1/9/10/11).** Two
+  routes: (a) precision-**reducing** — both FFN GEMMs in FP16 at K=128, re-
+  priced at the 0.002 budget (step 27 closed it at 0.001); (b) precision-
+  **neutral** — a fused `GELU → ffn_out → +residual` kernel keeping the hidden
+  on-chip (G3.1 rebuilt on the warp-spec infra, fp32/TF32x3 hidden), justified
+  now that the round-trip is measured-exposed. (b) is the bigger build; decide
+  after T1/T2.

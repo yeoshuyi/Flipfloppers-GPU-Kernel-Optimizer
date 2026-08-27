@@ -9,17 +9,26 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 1 — profile the official matrix
-- **Phase:** profile job running
-- **Last completed:** iteration 0 doc refresh committed as `12a68d4`. Wrote
-  `probes/g4_9_official_profile.py` + `jobs/g4_9_official_profile.sbatch`, submitted.
-- **Next concrete action:** when job 145 done → `cp /scratch/techjam2/runs/145.out
-  results/g4_9_official_profile_run145.log`; read it; write PROGRESS step 43 (per-row kernel
-  breakdown + ranked precision-neutral target list); commit; pick iteration 2 target.
-- **In-flight jobs:** **145** = `jobs/g4_9_official_profile.sbatch` → expect `results/g4_9_official_profile_run145.log`.
-  Profiles official rows 1/6/8/13: eager stage split (cast+QKV / SDPA / FFN), compiled kernel census,
-  d128 ffn_out roofline. ~40 min.
-- **Pending decisions:** iteration 2 target — depends on job 145.
+- **Iteration:** 2 — T1: SDPA backend audit + CUDA-graph/recompile audit (cheap, whole-matrix)
+- **Phase:** starting
+- **Last completed:** iter 1 profile done (job 145 → `results/g4_9_official_profile_run145.log`),
+  PROGRESS step 43 written (per-row census + ranked targets T1/T2/T3). About to commit iter 1.
+- **Next concrete action:** commit iter 1 (probe log + step 43). Then write
+  `probes/g5_0_sdpa_backend_audit.py` — for official rows 8 & 13, time SDPA under each
+  available backend (FLASH / EFFICIENT / MATH / cuDNN) via `torch.nn.attention.sdpa_kernel`,
+  fp16 q/k/v, is_causal=True, scale=1.0; and a recompile check: run rows 1/4/9/12 through the
+  compiled causal path with `TORCH_LOGS=recompiles`, count recompiles. sbatch it.
+- **In-flight jobs:** none.
+- **Pending decisions:** T3 route (fp16-both-FFN vs fused neutral kernel) — after T1/T2.
+
+## Iteration 1 result (step 43) — target ranking
+
+- **T1** (iter 2): SDPA backend audit rows 8/13 + recompile audit small rows. Cheap, config-only.
+- **T2** (iter 3): FP32-accum warp-spec GEMM for row-8 (d1024) attention+FFN GEMMs — ~15% of row 8
+  is recoverable roofline (library runs `stages_32x1`, ~56% of 165 TF FP16 roofline). Precision-neutral.
+- **T3** (iter 4+): d128 elementwise/GELU bar (rows 6=47%, 13=42%). (a) fp16 both-FFN GEMMs re-priced
+  at 0.002 [precision-reducing]; (b) fused GELU→ffn_out→+resid kernel, hidden on-chip [neutral, bigger build].
+  Roofline confirms the [tok,ffn] hidden round-trip is EXPOSED on all d128 rows.
 
 ## Iteration queue
 
@@ -29,12 +38,14 @@ document while acting; commit after every meaningful unit.
 
 ## Candidate levers (iteration 1 profile re-ranks)
 
-- G4.5 gated softmax max-subtraction skip (biggest on rows 13/6/8)
-- fused ffn_out for memory-bound d128 rows 6/13 (only if round-trip exposed)
-- FP32-accum warp-spec for causal attention GEMMs (qkv/out_proj) — G4.3 only closed the FP16-accum version
-- SDPA backend/flash-config audit for rows 8, 13
-- CUDA-graph / recompile_limit audit for the small rows
-- non-catalogue: Stream-K / persistent GEMM, flash-decode split
+Reassessed after noting **SDPA owns its own softmax** (flash kernel) — so:
+- **G4.5 (skip softmax max-sub) is mostly N/A** — we don't own the softmax; would need to replace SDPA's flash kernel (huge lift, step 20/35 says won't win). DEMOTED.
+- **Cast / LayerNorm traffic at huge-tok rows 6, 13** — the causal path does `n1.to(fp16)`, `n2.to(fp16)`, casts back, per layer. At row 6 (1.28M tok) that's ~1ms/layer of pure elementwise traffic. If census ELEM bucket is large → fuse the fp16 cast into LayerNorm's output emit (precision-neutral, saves a pass). Inductor may already do it — census decides. **Top hypothesis for iter 2.**
+- **SDPA backend audit** for rows 8/13 — force FLASH vs EFFICIENT vs MATH, measure. Config-only, precision-neutral, cheap.
+- **CUDA-graph / recompile_limit audit** for small rows 1-5/9-12 — cheap check.
+- **Skinny-N GEMM (ffn_in/ffn_out N=128 on small-d rows) underfills the GPU** — Stream-K / split-K. But cuBLAS `splitKreduce` may already handle it; census will show. If cuBLAS isn't splitting, a warp-spec split-K arm (precision-neutral, fp32 reduce) could help.
+- FP32-accum warp-spec for causal attention GEMMs (qkv/out_proj) at row 8 — G4.3 only closed the FP16-accum version.
+- fused ffn_out for memory-bound d128 rows 6/13 — only if the roofline check says the round-trip is exposed.
 
 ## Key facts for a cold resume
 
