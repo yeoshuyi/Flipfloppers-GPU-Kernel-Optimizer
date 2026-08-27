@@ -656,6 +656,13 @@ class UserOptimizedTransformer(BaselineTransformer):
             # optimisation per iteration.
             for layer in self.layers:
                 self._build_ffn_in_fold(layer, x.device, x.dtype)
+                # Stage 2B-B2: scale-fold (G1.2, provably bit-identical --
+                # head_dim**-0.5=0.125=2^-3, exact power of two, IEEE754
+                # multiplication by one never rounds) + norm1-affine-fold
+                # (G1.1, exact in real arithmetic, empirically verified for
+                # non-causal -- re-verified here independently for causal,
+                # not assumed to inherit the non-causal result).
+                self._build_qkv_fold(layer.attention, layer.norm1, x.device, x.dtype)
             if self._compiled_causal is None:
                 self._compiled_causal = torch.compile(
                     self._optimized_forward_causal, mode="reduce-overhead"
@@ -717,10 +724,16 @@ class UserOptimizedTransformer(BaselineTransformer):
         # everywhere except the one kernel under test.
         for layer in self.layers:
             attn = layer.attention
-            n1 = layer.norm1(x)
-            q = self._split_heads_view(attn.q_proj(n1), attn.num_heads, attn.head_dim)
-            k = self._split_heads_view(attn.k_proj(n1), attn.num_heads, attn.head_dim)
-            v = self._split_heads_view(attn.v_proj(n1), attn.num_heads, attn.head_dim)
+            # Stage 2B-B2: norm1's affine folded into _qkv_weight/_bias
+            # (G1.1), so norm1 here is only the pure reduction; QKV is one
+            # fused GEMM (G0.2) instead of three, and Q is pre-scaled so
+            # SDPA gets scale=1.0 (G1.2).
+            n1 = F.layer_norm(x, layer.norm1.normalized_shape, eps=layer.norm1.eps)
+            qkv = F.linear(n1, attn._qkv_weight, attn._qkv_bias)
+            q, k, v = qkv.split(attn.d_model, dim=-1)
+            q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
+            k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
+            v = self._split_heads_view(v, attn.num_heads, attn.head_dim)
 
             if no_pad:
                 # No padding: is_causal=True keeps EFFICIENT_ATTENTION
@@ -728,7 +741,7 @@ class UserOptimizedTransformer(BaselineTransformer):
                 # CLAUDE.md trap #3).
                 with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
                     context = F.scaled_dot_product_attention(
-                        q, k, v, attn_mask=None, is_causal=True
+                        q, k, v, attn_mask=None, is_causal=True, scale=1.0
                     )
             else:
                 # Padding present: causal restriction and key validity both
@@ -743,7 +756,7 @@ class UserOptimizedTransformer(BaselineTransformer):
                 allow = key_keep & causal_ok[None, None, :, :]
                 with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
                     context = F.scaled_dot_product_attention(
-                        q, k, v, attn_mask=allow, is_causal=False
+                        q, k, v, attn_mask=allow, is_causal=False, scale=1.0
                     )
 
             context = (
