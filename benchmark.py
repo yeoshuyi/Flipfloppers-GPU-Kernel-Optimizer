@@ -756,13 +756,20 @@ class UserOptimizedTransformer(BaselineTransformer):
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
 
-            # Stage 2B-B1: norm2's affine folded into _ffn_in_weight/_bias
-            # (G1.1), so norm2 itself only needs the pure reduction here --
-            # F.layer_norm(weight=None, bias=None) computes exactly
-            # (x-mean)/sqrt(var+eps), matching the non-causal path's use
-            # of this same fold exactly.
+            # Stage 2B-B1 + G6.4a_v2: norm2's affine folded into
+            # _ffn_in_weight/_bias (G1.1), FFN-in itself in FP16 (cast back
+            # to FP32 immediately after, same pattern as the non-causal
+            # path's G6.4a_v2 -- ffn_out and GELU stay exact). The exact-
+            # FP32 fold alone (Stage 2B-B1) measured <0.3% here, launch
+            # overhead already absorbed by G2.4b/G0.1c's CUDA graphs --
+            # this is the next real lever, following the non-causal
+            # session's own precedent that FP16 FFN was the largest single
+            # win after SDPA/graphs there too.
             n2 = F.layer_norm(x, layer.norm2.normalized_shape, eps=layer.norm2.eps)
-            ffn_hidden = F.linear(n2, layer._ffn_in_weight, layer._ffn_in_bias)
+            n2_fp16 = n2.to(torch.float16)
+            ffn_hidden_fp16 = F.linear(n2_fp16, layer._ffn_in_weight_fp16,
+                                       layer._ffn_in_bias_fp16)
+            ffn_hidden = ffn_hidden_fp16.to(torch.float32)
             ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
             x = x + ffn
             if not no_pad:
