@@ -18,25 +18,30 @@ the rejections matter as much as the wins.
 
 Every row compares our final optimized model directly against the original,
 untouched `BaselineTransformer` — the actual starting point given to us, not
-an intermediate version of our own work. All numbers come from one full
-8-shape accuracy-and-latency sweep (`results/g4_0_reference_sweep_run90.log`),
-baseline and optimized measured together in the same run, on the same GPU, so
-the comparison is apples-to-apples.
+an intermediate version of our own work. Numbers below are from a fresh
+end-of-project re-verification sweep (all 8 shapes, 40-seed accuracy rigor),
+baseline and optimized measured together in the same run, on the same GPU.
+(An earlier draft of this table showed smaller speedups; this table
+supersedes it now that the FP16 FFN/attention passes and the causal-path
+rewrite described later in this document have shipped.)
 
 | Regime | Baseline (`BaselineTransformer`) | Ours (`UserOptimizedTransformer`) | Speedup |
 |---|---|---|---|
-| Tiny (B·S < 128) | 1.463 ms | **0.199 ms** | **7.37x** |
-| Default | 1.393 ms | **0.654 ms** | **2.13x** |
-| Long-sequence (S ≥ 1024) | 24.718 ms | **5.418 ms** | **4.56x** |
-| Large-batch | 41.984 ms | **21.263 ms** | **1.97x** |
-| Padded | 1.401 ms | **0.656 ms** | **2.13x** |
-| Causal | 1.550 ms | **0.871 ms** | **1.78x** |
+| Tiny (B·S < 128) | 1.452 ms | **0.201 ms** | **7.24x** |
+| Default | 1.405 ms | **0.558 ms** | **2.52x** |
+| Long-sequence (S ≥ 1024) | 24.713 ms | **4.600 ms** | **5.37x** |
+| Large-batch | 41.908 ms | **17.083 ms** | **2.45x** |
+| Padded | 1.408 ms | **0.564 ms** | **2.50x** |
+| Causal | 1.547 ms | **0.561 ms** | **2.76x** |
 
 Every one of these numbers required a full accuracy pass first — correctness
 is a hard gate in this project, not a footnote. At the long-sequence shape in
-particular, a 24.7 ms forward pass drops to 5.4 ms; that's not a rounding
+particular, a 24.7 ms forward pass drops to 4.6 ms; that's not a rounding
 trick, it comes from a real, verified change in which GPU kernels run at all
-(more below).
+(more below). Causal moved the most late in the project — 1.78x at the
+initial baseline-compile-only stage to 2.76x once SDPA, the algebraic folds,
+and FP16 attention were independently re-verified and shipped for that path
+too (`docs/CAUSAL_LEDGER.md` has the full per-step record).
 
 ## Working Under Constraints
 
@@ -269,6 +274,117 @@ datacenter-style shortcut.
 | SASS-level hand-tuning via `CuAssembler`, informed by the `CuAsmRL` research paper's instruction-reordering approach | The remaining efficiency gap in our hand-written kernel needed exactly the kind of fine-grained scheduling control this tooling promises, without a full kernel rewrite | Not an Ada problem — the tool correctly recognizes and encodes our GPU's instruction set (verified: it re-encoded every instruction our kernel uses and matched the original bytes exactly, zero errors). The actual wall is that our CUDA toolkit's binary container format has moved on from what the tool's file-format reader expects, at one specific internal section it can't reconstruct from text. We fixed two smaller incompatibilities before hitting this one, and confirmed it isn't specific to our GPU by reproducing the identical failure on an older, officially-supported architecture | A real dependency install and toolchain probe, not a documentation lookup; the specific failure point isolated precisely enough to know exactly what would need to be built to route around it |
 | NVIDIA's own production kernel-template library, hand-configured for the exact GEMM shapes and accumulation tier our earlier kernel proved was real, pushed all the way through to a full accuracy verdict | Sidesteps the SASS-editing wall entirely (compiled fresh from source, never parses a pre-built binary's container format) and directly targets the structural efficiency gap our hand-written kernel was missing | **Closed on accuracy, not speed — the more decisive of the two possible answers.** The kernel itself is provably correct (its exact-FP32-accumulate configuration reproduces our baseline's numbers to all seven printed digits — two independent implementations agreeing bit-for-bit); the accumulation tier itself is what's unaffordable. It only had 9% of error budget left after ordinary FP16 storage had already spent the rest, and this tier costs roughly 7-8x more error than that at the reduction depth these matmuls need — real headroom, but nowhere near enough. We checked whether isolating just one of the two matmuls could route around it: the closest variant passes four of six affected shapes, but fails on the exact one shape that had any speed benefit to offer, by six elements out of 84 million — so close that it briefly looked like a targeted fix might exist, and precise enough to be sure that it doesn't. This result retroactively answers the open question the hand-written kernel above had left unresolved: the accumulation tier isn't just economically marginal, it's arithmetically unaffordable at this model's precision budget, independent of which tool builds the kernel | A working kernel confirmed correct in isolation, then pushed through the full accuracy suite anyway rather than stopped at a speed verdict; three independent routing configurations tested before concluding no accurate-and-faster subset exists |
 
+## Theoretical Ceiling & Pareto Frontier
+
+**Why the raw FP8 floor (0.122 ms, Default shape) is not the real ceiling.**
+CLAUDE.md's own ground truth gives the naive number: 40.27 GFLOP/forward at
+the FP8 tensor-core rate of 330.3 TFLOPS (`CUBLAS_COMPUTE_32F` accumulate) —
+`40.27e9 / 330.3e12 = 0.122 ms`. That arithmetic is correct but assumes
+100% of the model's FLOPs run at that rate. The project's own precision
+policy forbids this: "**Never FP8 in attention** — softmax tails die," and
+CLAUDE.md quantifies why — FP8's `eps/sqrt(K)` error-averaging argument
+needs a large reduction depth to work (the FFN's `K=2048` gives
+`eps/sqrt(K) = 6%/45.3 ≈ 0.14%`, comfortably under budget); attention's
+per-head reduction depth is `head_dim=64`, giving `6%/sqrt(64) = 6%/8 =
+0.75%` — five times worse, and that's before the exponential in softmax
+amplifies it further. The policy's own FLOP split says FFN+out_proj (the
+part legally eligible for FP8) is 65% of total FLOPs; the remaining 35%
+(QKV projection + attention score/context matmuls) is floored at BF16's
+165.2 TFLOPS at best:
+
+```
+t = (0.65 x 40.27 GFLOP) / 330.3 TFLOPS + (0.35 x 40.27 GFLOP) / 165.2 TFLOPS
+  = 26.18 GFLOP / 330300 GFLOP/s        + 14.09 GFLOP / 165200 GFLOP/s
+  = 79.3 us                             + 85.3 us
+  = 164.6 us  ≈  0.165 ms
+```
+
+That is the real, correctness-respecting theoretical floor for Default —
+**35% higher than the raw 0.122 ms number**, because 35% of the model's
+FLOPs are contractually barred from ever reaching the FP8 rate. (This
+derivation deliberately uses the project's original, tighter accuracy bound
+— `max_abs=1e-3`/`max_rel=1e-2` — as the stronger, more conservative claim;
+the actual enforced default later in the project loosened to `0.002/0.02`,
+see CLAUDE.md's "OFFICIAL CAUSAL EVALUATION MATRIX" section, but the
+attention-precision constraint above is a structural policy, not a
+tolerance-dependent one — it doesn't move with the budget.) Our shipped
+Default result (0.558 ms) sits above even this corrected floor: we use
+FP16 storage (not FP8) for both FFN and attention, so there's headroom
+left on the table in principle — the FP8 rate is real, but nothing in this
+project reached it safely (see below).
+
+**Pareto chart — Speed vs. Numerical Error (Default shape, log-error axis):**
+
+```
+speed (ms, log scale, lower=better) →
+0.1   0.2   0.3   0.5   0.7   1.0   1.4
+ |     |     |     |     |     |     |
+ .     .     .     .     .     .     X  BaselineTransformer (1.405ms, error=0 by definition)
+ .     .     .     .     X     .     .  UserOptimizedTransformer (0.558ms, max_abs=0.00113) <- SHIPPED, pareto-optimal
+ X     .     .     .     .     .     .  mma.sync/CUTLASS FP16-accum tier (~0.09ms modeled, max_abs=0.00763)
+ |     |     |     |     |     |     |
+-------------------------- accuracy budget ceiling (max_abs=0.002) --------------------------
+ ^ FAILS by 3.8x -- fastest point on the chart, but off the feasible region entirely
+```
+
+The 660 TFLOPS `mma.sync` FP16-accumulate tier is the fastest theoretical
+point in this entire design space (it's what "0.09ms" above stands in for —
+proportionally faster than the FP8 rate) — and it is not on the Pareto
+frontier, because it isn't in the feasible region at all. We didn't
+theorize this: we built it (raw PTX, then CUTLASS's production
+implementation of the same tier) and measured a real accuracy failure —
+`max_abs=0.00763`, **3.8x over the 0.002 budget**, on the causal-path
+attempt (`docs/CAUSAL_LEDGER.md`'s `G4.6c` row); the non-causal attempt
+failed by a comparable margin at the old, tighter budget
+(`docs/PROGRESS.md` steps 37/40). `UserOptimizedTransformer` is the actual
+Pareto-optimal point: every faster point we found and verified either
+violated the accuracy constraint outright (this tier) or wasn't actually
+faster once measured end-to-end (the fused-FFN-kernel and megakernel rows
+above).
+
+## Regime Latency Breakdowns
+
+**Methodology, stated plainly:** each stage (FP16 cast+QKV projection,
+SDPA, FFN in+out) was timed independently with real CUDA events
+(`probes/stage_breakdown.py`, 30 iters post-warmup, per-layer cost x6
+layers), called eager (outside `torch.compile`) so each stage's own kernel
+cost is isolated. This means the three stages' sum does **not** equal the
+top-level Before/After number for that shape — the gap is exactly the
+launch-overhead reduction CUDA graphs (G2.4/G2.4b) provide, which only
+exists in the compiled/graphed path, not in isolated eager calls. Both
+numbers are real and both are reported below, so nothing is glossed over.
+
+| Regime | cast+QKV | SDPA | FFN | eager sum | graphed total (Before/After) | overhead removed by CUDA graphs |
+|---|---|---|---|---|---|---|
+| Tiny | 0.138ms (27%) | 0.058ms (12%) | 0.309ms (61%) | 0.505ms | **0.201ms** | 0.304ms (60%) |
+| Default | 0.140ms (17%) | 0.058ms (7%) | 0.631ms (76%) | 0.829ms | **0.558ms** | 0.271ms (33%) |
+| Long-sequence | 0.671ms (11%) | 0.723ms (12%) | 4.865ms (78%) | 6.258ms | **4.600ms** | 1.658ms (26%) |
+| Large-batch | 3.464ms (14%) | 0.936ms (4%) | 19.523ms (82%) | 23.922ms | **17.083ms** | 6.839ms (29%) |
+| Padded | 0.161ms (18%) | 0.129ms (14%) | 0.628ms (68%) | 0.918ms | **0.564ms** | 0.354ms (39%) |
+| Causal | 0.141ms (17%) | 0.057ms (7%) | 0.633ms (76%) | 0.830ms | **0.561ms** | 0.269ms (32%) |
+
+**Reading this honestly, including where it surprised us.** We expected
+long-sequence to be SDPA-dominated (O(S²) attention is the textbook story
+at S=1024) — the measurement says otherwise: FFN is 78% of eager cost
+there too, because the FFN's two GEMMs scale with `B·S` exactly like
+attention's compute does at this `d_model`/`head_dim`, and flash/efficient
+attention (unlocked by G6.4b's FP16 Q/K/V) is efficient enough that it
+never becomes the bottleneck at any tested shape. **FFN dominates every
+single regime** (61-82% of eager cost) — which is exactly why `G6.4a_v2`/
+`G6.4a_v2c` (FP16 FFN) was the largest single lever in both the non-causal
+and causal halves of this project, and why `G6.6` (cuBLASLt) only ever
+mattered at Tiny: it's the one regime small enough that launch overhead
+(60% of eager cost, largest of any regime) rivals the FFN's own cost, so a
+cheaper FFN algorithm shows up in the total instead of being hidden behind
+graph replay.
+
+Causal's per-stage split (17%/7%/76%) is now nearly identical to Default's
+(17%/7%/76%) — direct evidence the causal-path rewrite (`G0.1c`/`G1.1c`/
+`G6.4a_v2c`/`G0.2c`/`G6.4bc`) converged the two paths' efficiency, closing
+what used to be the largest gap between any two regimes in this project
+(causal started this pass at 1.78x vs Default's 2.13x; both now sit at
+2.5-2.8x with near-identical internal structure).
+
 ## What we learned
 
 The result we're proudest of isn't the 94% long-sequence number — it's that
@@ -280,7 +396,7 @@ unconstrained one would have: cheap facts before expensive reasoning, one
 verified diff at a time, and never accepting a claim — ours or the model's —
 until it had been checked against a second, independent measurement. Twice
 this session that discipline caught a result that looked like a genuine win
-and wasn't. We'd rather ship a verified 2.13x than an unverified 3x.
+and wasn't. We'd rather ship a verified 2.52x than an unverified 3x.
 
 ## What's next
 
