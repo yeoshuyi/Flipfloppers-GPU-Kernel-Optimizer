@@ -1,0 +1,264 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+[1/3] /usr/local/cuda/bin/nvcc -MD -MF g4_4_mma_gemm.cuda.o.d -DTORCH_EXTENSION_NAME=g4_4_mma_gemm -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options '-fPIC' -gencode=arch=compute_89,code=sm_89 -Xptxas -v -std=c++20 -c /work/csrc/g4_4_mma_gemm.cu -o g4_4_mma_gemm.cuda.o 
+/work/csrc/g4_4_mma_gemm.cu(343): warning #179-D: right operand of "%" is zero
+    if (SPLIT != 0 && (K % SPLIT)) return -3;
+                           ^
+          detected during instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=64, NSTAGE=3, SPLIT=0]" at line 375
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/work/csrc/g4_4_mma_gemm.cu(279): warning #179-D: right operand of "%" is zero
+        if (SPLIT != 0 && (kdone % SPLIT) == 0) {
+                                   ^
+          detected during:
+            instantiation of "void mma_gemm_kernel<BM,BN,BK,NSTAGE,SPLIT>(const __half *, const __half *, const __half *, __half *, int, int, int) [with BM=64, BN=128, BK=64, NSTAGE=3, SPLIT=0]" at line 344
+            instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=64, NSTAGE=3, SPLIT=0]" at line 375
+
+/work/csrc/g4_4_mma_gemm.cu(343): warning #179-D: right operand of "%" is zero
+    if (SPLIT != 0 && (K % SPLIT)) return -3;
+                           ^
+          detected during instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=64, NSTAGE=2, SPLIT=0]" at line 376
+
+/work/csrc/g4_4_mma_gemm.cu(279): warning #179-D: right operand of "%" is zero
+        if (SPLIT != 0 && (kdone % SPLIT) == 0) {
+                                   ^
+          detected during:
+            instantiation of "void mma_gemm_kernel<BM,BN,BK,NSTAGE,SPLIT>(const __half *, const __half *, const __half *, __half *, int, int, int) [with BM=64, BN=128, BK=64, NSTAGE=2, SPLIT=0]" at line 344
+            instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=64, NSTAGE=2, SPLIT=0]" at line 376
+
+/work/csrc/g4_4_mma_gemm.cu(343): warning #179-D: right operand of "%" is zero
+    if (SPLIT != 0 && (K % SPLIT)) return -3;
+                           ^
+          detected during instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=7, SPLIT=0]" at line 377
+
+/work/csrc/g4_4_mma_gemm.cu(279): warning #179-D: right operand of "%" is zero
+        if (SPLIT != 0 && (kdone % SPLIT) == 0) {
+                                   ^
+          detected during:
+            instantiation of "void mma_gemm_kernel<BM,BN,BK,NSTAGE,SPLIT>(const __half *, const __half *, const __half *, __half *, int, int, int) [with BM=64, BN=128, BK=32, NSTAGE=7, SPLIT=0]" at line 344
+            instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=7, SPLIT=0]" at line 377
+
+/work/csrc/g4_4_mma_gemm.cu(343): warning #179-D: right operand of "%" is zero
+    if (SPLIT != 0 && (K % SPLIT)) return -3;
+                           ^
+          detected during instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=4, SPLIT=0]" at line 378
+
+/work/csrc/g4_4_mma_gemm.cu(279): warning #179-D: right operand of "%" is zero
+        if (SPLIT != 0 && (kdone % SPLIT) == 0) {
+                                   ^
+          detected during:
+            instantiation of "void mma_gemm_kernel<BM,BN,BK,NSTAGE,SPLIT>(const __half *, const __half *, const __half *, __half *, int, int, int) [with BM=64, BN=128, BK=32, NSTAGE=4, SPLIT=0]" at line 344
+            instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=4, SPLIT=0]" at line 378
+
+/work/csrc/g4_4_mma_gemm.cu(343): warning #179-D: right operand of "%" is zero
+    if (SPLIT != 0 && (K % SPLIT)) return -3;
+                           ^
+          detected during instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=5, SPLIT=0]" at line 379
+
+/work/csrc/g4_4_mma_gemm.cu(279): warning #179-D: right operand of "%" is zero
+        if (SPLIT != 0 && (kdone % SPLIT) == 0) {
+                                   ^
+          detected during:
+            instantiation of "void mma_gemm_kernel<BM,BN,BK,NSTAGE,SPLIT>(const __half *, const __half *, const __half *, __half *, int, int, int) [with BM=64, BN=128, BK=32, NSTAGE=5, SPLIT=0]" at line 344
+            instantiation of "int launch_cfg<BM,BN,BK,NSTAGE,SPLIT>(const void *, const void *, const void *, void *, int, int, int, cudaStream_t, size_t *) [with BM=64, BN=128, BK=32, NSTAGE=5, SPLIT=0]" at line 379
+
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi64EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi64EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 70.959 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi128EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi128EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 16.395 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi128EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi128EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 125 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 18.000 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi256EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi256EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 16.157 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi256EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi256EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 125 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 18.104 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi5ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi5ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 8.987 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi4ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi4ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 63 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 8.869 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 9.882 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 70 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 10.247 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 73 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 12.544 ms
+[2/3] c++ -MMD -MF g4_4_mma_gemm.o.d -DTORCH_EXTENSION_NAME=g4_4_mma_gemm -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -fPIC -std=c++20 -c /work/csrc/g4_4_mma_gemm.cpp -o g4_4_mma_gemm.o 
+[3/3] c++ g4_4_mma_gemm.o g4_4_mma_gemm.cuda.o -shared -L/usr/local/lib/python3.12/dist-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o g4_4_mma_gemm.so
+USDT:2026-08-27 05:06:57 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:06:57 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:06:57 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:06:57 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:06:59 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:06:59 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:06:59 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:06:59 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:07:09 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:09 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:07:09 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:09 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:07:10 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:10 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:07:10 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:10 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+configs:
+  [0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)
+  [1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)
+  [2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)
+  [3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)
+  [4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)
+  [5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)
+  [6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)
+  [7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)
+  [8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)
+  [9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)
+
+==============================================================================
+LAUNCH SANITY (out_proj M=1024 K=512 N=512) -- finite / non-degenerate only, Stage 1 does the real numerics
+  cfg[0] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=5.859e-03 relmax=2.445e-03  OK
+  cfg[1] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=5.859e-03 relmax=2.445e-03  OK
+  cfg[2] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=5.859e-03 relmax=2.445e-03  OK
+  cfg[3] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=5.859e-03 relmax=2.445e-03  OK
+  cfg[4] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=5.859e-03 relmax=2.445e-03  OK
+  cfg[5] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=3.906e-03 relmax=1.630e-03  OK
+  cfg[6] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=3.906e-03 relmax=1.630e-03  OK
+  cfg[7] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=1.953e-03 relmax=8.150e-04  OK
+  cfg[8] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=1.953e-03 relmax=8.150e-04  OK
+  cfg[9] finite=True std=0.45270 (ref std 0.45270)  maxabs_vs_cublas=1.953e-03 relmax=8.150e-04  OK
+  launching configs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+==============================================================================
+=== qkv      large_batch  M=32768 K=512 N=1536   PRIMARY/JUDGED
+    grid 512 x 12 = 6144 blocks = 48.00 waves on 128 SMs
+    pytorch F.linear(addmm)  340.634 us/call    151.31 TFLOPS   [cuBLASLt floor]
+    cfg[0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)     322.263 us   159.93 TF  x1.057
+    cfg[1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)     327.270 us   157.48 TF  x1.041
+    cfg[2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)     387.338 us   133.06 TF  x0.879
+    cfg[3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)     370.248 us   139.20 TF  x0.920
+    cfg[4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)     398.141 us   129.45 TF  x0.856
+    cfg[5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)   351.724 us   146.53 TF  x0.968
+    cfg[6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)   395.735 us   130.24 TF  x0.861
+    cfg[7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)   342.852 us   150.33 TF  x0.994
+    cfg[8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)   408.613 us   126.13 TF  x0.834
+    cfg[9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)    361.103 us   142.73 TF  x0.943
+    BEST cfg[0]  322.263 us  159.93 TF  x1.057 vs pytorch
+    [prof] pytorch  346.015 us  ['ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn']
+    [prof] mma      328.070 us  ['void mma_gemm_kernel<64, 128, 64, 3, 0>']
+    [prof] ratio x1.055   (graph said x1.057, delta 0.2%)
+    >>> GATE (1.3x): NOT MET  (x1.057)
+
+==============================================================================
+=== qkv      long_seq     M=8192 K=512 N=1536   reported, not judged
+    grid 128 x 12 = 1536 blocks = 12.00 waves on 128 SMs
+    pytorch F.linear(addmm)   87.806 us/call    146.74 TFLOPS   [cuBLASLt floor]
+    cfg[0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)      87.142 us   147.86 TF  x1.008
+    cfg[1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)      87.936 us   146.53 TF  x0.999
+    cfg[2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)     102.598 us   125.59 TF  x0.856
+    cfg[3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)      96.113 us   134.06 TF  x0.914
+    cfg[4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)     100.129 us   128.68 TF  x0.877
+    cfg[5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)    87.757 us   146.83 TF  x1.001
+    cfg[6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)   103.487 us   124.51 TF  x0.848
+    cfg[7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)    88.906 us   144.93 TF  x0.988
+    cfg[8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)   104.446 us   123.36 TF  x0.841
+    cfg[9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)     89.682 us   143.67 TF  x0.979
+    BEST cfg[0]  87.142 us  147.86 TF  x1.008 vs pytorch
+    [prof] pytorch   87.886 us  ['ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn']
+    [prof] mma       88.834 us  ['void mma_gemm_kernel<64, 128, 64, 3, 0>']
+    [prof] ratio x0.989   (graph said x1.008, delta 1.8%)
+
+==============================================================================
+=== qkv      default      M=1024 K=512 N=1536   PRIMARY/JUDGED
+    grid 16 x 12 = 192 blocks = 1.50 waves on 128 SMs
+    pytorch F.linear(addmm)   14.396 us/call    111.88 TFLOPS   [cuBLASLt floor]
+    cfg[0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)      16.133 us    99.83 TF  x0.892
+    cfg[1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)      14.381 us   112.00 TF  x1.001
+    cfg[2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)      18.548 us    86.84 TF  x0.776
+    cfg[3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)      15.015 us   107.27 TF  x0.959
+    cfg[4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)      17.916 us    89.90 TF  x0.804
+    cfg[5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)    16.285 us    98.90 TF  x0.884
+    cfg[6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)    18.917 us    85.14 TF  x0.761
+    cfg[7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)    16.447 us    97.93 TF  x0.875
+    cfg[8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)    19.173 us    84.00 TF  x0.751
+    cfg[9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)     16.637 us    96.81 TF  x0.865
+    BEST cfg[1]  14.381 us  112.00 TF  x1.001 vs pytorch
+    [prof] pytorch   14.589 us  ['void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x6']
+    [prof] mma       14.276 us  ['void mma_gemm_kernel<64, 128, 64, 2, 0>']
+    [prof] ratio x1.022   (graph said x1.001, delta 2.1%)
+    >>> GATE (1.3x): NOT MET  (x1.001)
+
+==============================================================================
+=== out_proj large_batch  M=32768 K=512 N=512   reported, not judged
+    grid 512 x 4 = 2048 blocks = 16.00 waves on 128 SMs
+    pytorch F.linear(addmm)  115.441 us/call    148.82 TFLOPS   [cuBLASLt floor]
+    cfg[0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)     110.042 us   156.12 TF  x1.049
+    cfg[1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)     106.934 us   160.66 TF  x1.080
+    cfg[2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)     131.385 us   130.76 TF  x0.879
+    cfg[3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)     123.222 us   139.42 TF  x0.937
+    cfg[4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)     128.173 us   134.04 TF  x0.901
+    cfg[5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)   112.336 us   152.93 TF  x1.028
+    cfg[6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)   132.554 us   129.61 TF  x0.871
+    cfg[7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)   113.578 us   151.26 TF  x1.016
+    cfg[8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)   133.617 us   128.58 TF  x0.864
+    cfg[9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)    114.478 us   150.07 TF  x1.008
+    BEST cfg[1]  106.934 us  160.66 TF  x1.080 vs pytorch
+    [prof] pytorch  116.654 us  ['ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn']
+    [prof] mma      108.344 us  ['void mma_gemm_kernel<64, 128, 64, 2, 0>']
+    [prof] ratio x1.077   (graph said x1.080, delta 0.3%)
+
+==============================================================================
+=== out_proj default      M=1024 K=512 N=512   reported, not judged
+    grid 16 x 4 = 64 blocks = 0.50 waves on 128 SMs
+    pytorch F.linear(addmm)    6.900 us/call     77.81 TFLOPS   [cuBLASLt floor]
+    cfg[0] BM64 BN128 BK64 stg3 split0 smem=73728B(72KB)       7.585 us    70.78 TF  x0.910USDT:2026-08-27 05:07:14 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:14 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:07:14 88146:88146 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:07:14 88146:88146 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+    cfg[1] BM64 BN128 BK64 stg2 split0 smem=49152B(48KB)       7.600 us    70.64 TF  x0.908
+    cfg[2] BM64 BN128 BK32 stg7 split0 smem=86016B(84KB)       8.133 us    66.01 TF  x0.848
+    cfg[3] BM64 BN128 BK32 stg4 split0 smem=49152B(48KB)       7.650 us    70.18 TF  x0.902
+    cfg[4] BM64 BN128 BK32 stg5 split0 smem=61440B(60KB)       8.043 us    66.75 TF  x0.858
+    cfg[5] BM64 BN128 BK64 stg3 split256 smem=73728B(72KB)     7.595 us    70.69 TF  x0.909
+    cfg[6] BM64 BN128 BK32 stg7 split256 smem=86016B(84KB)     8.337 us    64.39 TF  x0.828
+    cfg[7] BM64 BN128 BK64 stg3 split128 smem=73728B(72KB)     7.738 us    69.38 TF  x0.892
+    cfg[8] BM64 BN128 BK32 stg7 split128 smem=86016B(84KB)     8.453 us    63.51 TF  x0.816
+    cfg[9] BM64 BN128 BK64 stg3 split64 smem=73728B(72KB)      7.879 us    68.14 TF  x0.876
+    BEST cfg[0]  7.585 us  70.78 TF  x0.910 vs pytorch
+    [prof] pytorch    6.759 us  ['ampere_fp16_s16816gemm_fp16_64x64_ldg8_relu_f2f_stages_64x5_tn']
+    [prof] mma        7.686 us  ['void mma_gemm_kernel<64, 128, 64, 3, 0>']
+    [prof] ratio x0.879   (graph said x0.910, delta 3.3%)
+
+==============================================================================
+Stage 0 complete. Judge on qkv/large_batch under graph replay.

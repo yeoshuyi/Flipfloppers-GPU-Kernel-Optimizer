@@ -2239,3 +2239,127 @@ died the same way: an isolated probe's *reference* was slower than what
 name plus bit-identical output means the delta is the harness. Worth
 checking the compiled model's *actual* kernel before believing any
 GEMM-level probe again.
+
+### 37. G4.4 (`mma.sync` FP16-ACCUMULATE PTX for the attention GEMMs) — built, verified, measured; **Stage-0 gate NOT met, clean negative**
+
+**Why this was worth a build cycle at all.** Every alternative-kernel idea this
+session lost while competing *inside the same accumulate tier* as cuBLAS —
+step 19's Triton FFN tile (0.180-0.869x), step 34's cuBLASLt algorithm search
+(x0.999/x1.001 under fair measurement), step 36's long-seq extension. G4.4 is
+the one mechanism cuBLAS is **architecturally incapable** of ever offering on
+this GPU: its FP16 path mandates `CUBLAS_COMPUTE_32F`, and GeForce Ada runs
+FP32-accumulate tensor-core math at half rate. Only hand-written
+`mma.sync.aligned.m16n8k16.f16.f16` reaches the FP16-accumulate tier.
+
+Scope note: this is a **standalone kernel replacing one `F.linear`**, not the
+persistent multi-layer cooperative kernel step 35 closed. And the ceiling here
+is ~2x the FP32-accumulate rate (330.3 TF dense), **not** CLAUDE.md's 660.6 —
+that figure is FP8-storage-with-FP16-accumulate and its own text says never to
+cite it otherwise. This keeps FP16 storage and changes only accumulation.
+
+**Stage 0a — PTX micro-unit-test. PASS, first attempt.**
+(`csrc/g4_4_mma_micro.cu`, `probes/g4_4_mma_micro.py`, job 94,
+`results/g4_4_stage0a_micro_run94.log`.) There is no `.cu`, no `mma.sync` and
+no `ldmatrix` anywhere in this repo or in the installed torch headers, so
+fragment addressing had no local example to copy. One warp, one 16x16x16
+problem, three checks: a deterministic integer input whose exact answer is
+representable in fp16 (`max_abs = 0.000e+00`), 8 random-fp16 seeds
+(worst 5.77e-03, the expected fp16-accumulate rounding for k=16), and a 75-case
+one-hot sweep that would catch any index transposition (**0/75 mismatches**).
+The same mma was fed twice — once from `ldmatrix.x4`/`.x2`, once from
+hand-assembled fragments — and the two are **bitwise identical**, which
+isolates ldmatrix addressing from mma layout rather than confounding them.
+
+**Stage 0 — raw throughput. GATE NOT MET.** One parameterised kernel
+(`csrc/g4_4_mma_gemm.cu`) serving both shapes; 26 configs; `cp.async` software
+pipeline, XOR swizzle, no padding. Tile budget recomputed for 2-byte operands
+(**not** MEGAKERNEL.md's FP8 example): BM64/BN128/BK64 = 24.0 KB/stage → 3
+stages (4 overflows 101376 B by 1024 B); BK32 = 12.0 KB/stage → 7 stages.
+`-Xptxas -v` confirms **25 of 26 instantiations spill zero bytes** (63-168
+registers each); the one exception (BM128/BN256/BK64/stg2, 255 registers — the
+architectural cap) spills a negligible 12 bytes and was not among the winning
+configs at any shape. Timed under **CUDA-graph replay**, cross-checked against
+`torch.profiler` kernel time (step 34's mandatory protocol) — the two agree to
+0.3-1.2% everywhere.
+
+Primary judgment shape qkv/large_batch (M=32768, 6144 blocks = 48 waves, so
+this is not an occupancy story), job 98,
+`results/g4_4_stage0c_tiles_run98.log`:
+
+| | us | TFLOPS | vs PyTorch |
+|---|---|---|---|
+| PyTorch `F.linear` (cuBLASLt) | 342.03 | 150.69 | — |
+| best FP16-accum, cfg[11] BM128 BN128 BK64 stg2 | **283.29** | **181.93** | **x1.207** |
+| repeat / profiler cross-check | 277.04 | — | x1.234 / x1.211 |
+
+| shape | best | gate 1.3x |
+|---|---|---|
+| qkv large_batch (PRIMARY) | **x1.207** | **NOT MET** |
+| qkv default (secondary) | **x1.000** | **NOT MET** |
+| out_proj large_batch | x1.137 | not judged |
+
+Three independent tile searches were run before calling it (jobs 96/97/98):
+BM=64 tiles (best x1.073), BM=128 (x1.207), then BM=256/BN=256 with warp tiles
+of 64x64 and 128x32 (x1.144-x1.183 — **worse**). The search has saturated.
+
+**The mechanism is real; it is simply not enough. This is the finding.**
+cfg 15-18/23-24 are FP32-accumulate twins — same tile, same `cp.async`
+pipeline, same `ldmatrix`, same epilogue, **only the mma accumulate type
+differs**. Step 35's finding-3 discipline: change exactly one thing and price
+it.
+
+```
+qkv large_batch   cfg[11] accF16 283.3us  vs cfg[18] accF32 425.1us  -> x1.500
+qkv large_batch   cfg[19] accF16 299.1us  vs cfg[23] accF32 457.2us  -> x1.529
+out_proj lb       cfg[10] accF16 101.4us  vs cfg[17] accF32 153.8us  -> x1.516
+qkv default       cfg[11] accF16  14.6us  vs cfg[18] accF32  21.0us  -> x1.435
+```
+
+So FP16 accumulate really is worth **x1.43-x1.54** inside a fixed kernel. It
+does not convert into a win because of where the two sides sit relative to
+their own ceilings:
+
+```
+cuBLASLt : 150.69 TF = 91.2% of the 165.2 TF FP32-accumulate tier ceiling
+this kernel: 181.93 TF = 55.1% of the 330.3 TF FP16-accumulate tier ceiling
+```
+
+The tier is worth 2x; cuBLAS gives up 8.8% of its tier and this kernel gives up
+44.9% of its own. 2.00 x (0.551/0.912) = 1.21 — the measured number falls
+straight out. **Beating cuBLAS here does not require reaching the FP16-accum
+tier, it requires reaching it AND matching CUTLASS-grade kernel efficiency.**
+
+Memory is not the excuse: a measured fp16 copy of the output ran at
+**921 GB/s**, putting the compulsory-traffic floor at 147.5 us (349 TF) against
+283 us actual. The gap is mma issue efficiency / shared-memory bandwidth /
+the 4-byte-per-thread epilogue store, i.e. the part of CUTLASS that took years.
+
+**Whole-model dilution, which closes it even if the kernel were tuned
+further.** At large_batch — the *only* shape with any win — the two GEMMs are
+6 x (342.0 + 115.3) = 2.744 ms of a 21.263 ms forward
+(`results/g4_0_reference_sweep_run90.log`) = **12.9%**. The best-case saving is
+6 x (58.7 + 13.9) = 0.436 ms = **2.05%**, taking 1.974x to ~2.015x. That is at
+CLAUDE.md's own "<2% ⇒ stop" line and far under step 33's "don't trust a delta
+below 10% without a fresh baseline". At default it is x1.000 and at tiny it
+would be a regression. And the config numerics would actually require
+(split-K, cfg 14, x1.155) cuts even that to ~1.5%.
+
+**Stopped at Stage 0 per the plan. Stages 1 (fp64 accuracy) and 2
+(integration) NOT run** — deliberately, since large_batch already spends
+~90% of its 1e-3 atol budget on FP16 *storage* alone (`max_abs = 0.000905529`,
+step 28) and FP16 accumulation would be spent on top of it to buy 2%.
+
+**Nothing shipped, nothing regressed.** `git diff HEAD -- benchmark.py
+csrc/cublaslt_algo.cpp csrc/cublaslt_algo_fp16.cpp csrc/cublaslt_gelu.cpp` is
+empty; `tools/check_validity.py` passes. Confirmed in code (not assumed) that
+causal never reaches this path: `forward()` routes `config.causal` to
+`_compiled_causal`/`super().forward` at benchmark.py:613-630, before
+`_optimized_forward`.
+
+**What would have to change for G4.4 to reopen:** a kernel that reaches ~80%
+of the FP16-accumulate tier (~264 TF) rather than 55%, which means a
+CUTLASS-grade epilogue (shared-memory-staged 128-bit stores) and warp
+specialisation — MEGAKERNEL.md G4.3's territory, priced against a 2% ceiling at
+one shape. The reusable asset is the verified fragment addressing in
+`csrc/g4_4_mma_micro.cu` and the accF16/accF32 A/B harness, which now gives
+this project a measured price for the accumulate tier: **x1.43-x1.54, not x2.**

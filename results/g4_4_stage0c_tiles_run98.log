@@ -1,0 +1,356 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+[1/3] /usr/local/cuda/bin/nvcc -MD -MF g4_4_mma_gemm.cuda.o.d -DTORCH_EXTENSION_NAME=g4_4_mma_gemm_v3 -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options '-fPIC' -gencode=arch=compute_89,code=sm_89 -Xptxas -v -diag-suppress 179 -std=c++20 -c /work/csrc/g4_4_mma_gemm.cu -o g4_4_mma_gemm.cuda.o 
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi256ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi256ELi0EEvPK6__halfS2_S2_PS0_iii
+    16 bytes stack frame, 12 bytes spill stores, 12 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 16 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 132.353 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi256ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi256ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 235 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 49.239 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 232 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 47.415 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi256ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi256ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 144 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 31.490 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi256ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi256ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 158 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 27.337 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi256ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi256ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 158 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 26.872 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi256ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 164 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 30.244 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 21.778 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 159 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 25.670 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 12.288 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0ELi1EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0ELi1EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 93 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 14.978 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi256ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi256ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 34.247 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 83 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.017 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi32ELi6ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi32ELi6ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 92 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 16.340 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.668 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi128ELi128ELi64ELi3ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 98 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 18.741 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi64ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi64ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 16.369 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi128ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi128ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.353 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi128ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi128ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 125 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 17.906 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi256ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi256ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.358 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi256ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi256ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 125 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 18.267 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi5ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi5ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 8.984 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi4ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 63 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 8.857 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi32ELi7ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 9.864 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi2ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 70 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 9.947 ms
+ptxas info    : Compiling entry function '_Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0ELi0EEvPK6__halfS2_S2_PS0_iii' for 'sm_89'
+ptxas info    : Function properties for _Z15mma_gemm_kernelILi64ELi128ELi64ELi3ELi0ELi0EEvPK6__halfS2_S2_PS0_iii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 73 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 12.500 ms
+[2/3] c++ -MMD -MF g4_4_mma_gemm.o.d -DTORCH_EXTENSION_NAME=g4_4_mma_gemm_v3 -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -fPIC -std=c++20 -c /work/csrc/g4_4_mma_gemm.cpp -o g4_4_mma_gemm.o 
+[3/3] c++ g4_4_mma_gemm.o g4_4_mma_gemm.cuda.o -shared -L/usr/local/lib/python3.12/dist-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o g4_4_mma_gemm_v3.so
+USDT:2026-08-27 05:12:48 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:12:48 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:12:48 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:12:48 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+configs:
+  [ 0] accF16 BM64 BN128 BK64 stg3 split0 smem=72KB
+  [ 1] accF16 BM64 BN128 BK64 stg2 split0 smem=48KB
+  [ 2] accF16 BM64 BN128 BK32 stg7 split0 smem=84KB
+  [ 3] accF16 BM64 BN128 BK32 stg4 split0 smem=48KB
+  [ 4] accF16 BM64 BN128 BK32 stg5 split0 smem=60KB
+  [ 5] accF16 BM64 BN128 BK64 stg3 split256 smem=72KB
+  [ 6] accF16 BM64 BN128 BK32 stg7 split256 smem=84KB
+  [ 7] accF16 BM64 BN128 BK64 stg3 split128 smem=72KB
+  [ 8] accF16 BM64 BN128 BK32 stg7 split128 smem=84KB
+  [ 9] accF16 BM64 BN128 BK64 stg3 split64 smem=72KB
+  [10] accF16 BM128 BN128 BK64 stg3 split0 smem=96KB
+  [11] accF16 BM128 BN128 BK64 stg2 split0 smem=64KB
+  [12] accF16 BM128 BN128 BK32 stg6 split0 smem=96KB
+  [13] accF16 BM128 BN128 BK32 stg4 split0 smem=64KB
+  [14] accF16 BM128 BN128 BK64 stg3 split256 smem=96KB
+  [15] accF32 BM64 BN128 BK64 stg3 split0 smem=72KB
+  [16] accF32 BM64 BN128 BK64 stg2 split0 smem=48KB
+  [17] accF32 BM128 BN128 BK64 stg3 split0 smem=96KB
+  [18] accF32 BM128 BN128 BK64 stg2 split0 smem=64KB
+  [19] accF16 BM128 BN256 BK64 stg2 split0 smem=96KB
+  [20] accF16 BM256 BN128 BK32 stg4 split0 smem=96KB
+  [21] accF16 BM128 BN256 BK32 stg4 split0 smem=96KB
+  [22] accF16 BM256 BN128 BK64 stg2 split0 smem=96KB
+  [23] accF32 BM128 BN256 BK64 stg2 split0 smem=96KB
+  [24] accF32 BM256 BN128 BK64 stg2 split0 smem=96KB
+  [25] accF16 BM128 BN256 BK64 stg2 split256 smem=96KB
+
+==============================================================================
+=== qkv      large_batch  M=32768 K=512 N=1536   PRIMARY/JUDGED
+    51.54 GFLOP, >= 135.8 MB of compulsory HBM traffic
+    memory-bound floor at 1008 GB/s: 134.71 us (382.6 TFLOPS ceiling)
+    tier ceilings: FP32-acc 165.2 TF, FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of the [M,N] output): 218.675 us for 201.3 MB = 921 GB/s
+    -> compulsory traffic at that measured rate: 147.49 us (349.4 TFLOPS hard ceiling)
+    (pytorch reference repeatability: 342.034 / 341.985 us, spread 0.01%)
+
+    pytorch F.linear(addmm)   342.034 us   150.69 TF   =  91.2% of the FP32-acc tier ceiling   [THE FLOOR TO BEAT]
+    cfg[ 0] accF16 BM64 BN128 BK64 stg3 split0 smem=72KB   321.188 us  160.47 TF  x1.065  (48.6% of its own tier ceiling)
+    cfg[ 1] accF16 BM64 BN128 BK64 stg2 split0 smem=48KB   318.811 us  161.66 TF  x1.073  (48.9% of its own tier ceiling)
+    cfg[ 2] accF16 BM64 BN128 BK32 stg7 split0 smem=84KB   388.342 us  132.72 TF  x0.881  (40.2% of its own tier ceiling)
+    cfg[ 3] accF16 BM64 BN128 BK32 stg4 split0 smem=48KB   365.466 us  141.02 TF  x0.936  (42.7% of its own tier ceiling)
+    cfg[ 4] accF16 BM64 BN128 BK32 stg5 split0 smem=60KB   388.659 us  132.61 TF  x0.880  (40.1% of its own tier ceiling)
+    cfg[ 5] accF16 BM64 BN128 BK64 stg3 split256 smem=72KB   335.176 us  153.77 TF  x1.020  (46.6% of its own tier ceiling)
+    cfg[ 6] accF16 BM64 BN128 BK32 stg7 split256 smem=84KB   389.458 us  132.34 TF  x0.878  (40.1% of its own tier ceiling)
+    cfg[ 7] accF16 BM64 BN128 BK64 stg3 split128 smem=72KB   333.865 us  154.37 TF  x1.024  (46.7% of its own tier ceiling)
+    cfg[ 8] accF16 BM64 BN128 BK32 stg7 split128 smem=84KB   397.210 us  129.75 TF  x0.861  (39.3% of its own tier ceiling)
+    cfg[ 9] accF16 BM64 BN128 BK64 stg3 split64 smem=72KB   346.040 us  148.94 TF  x0.988  (45.1% of its own tier ceiling)
+    cfg[10] accF16 BM128 BN128 BK64 stg3 split0 smem=96KB   284.076 us  181.43 TF  x1.204  (54.9% of its own tier ceiling)
+    cfg[11] accF16 BM128 BN128 BK64 stg2 split0 smem=64KB   283.287 us  181.93 TF  x1.207  (55.1% of its own tier ceiling)
+    cfg[12] accF16 BM128 BN128 BK32 stg6 split0 smem=96KB   330.277 us  156.05 TF  x1.036  (47.2% of its own tier ceiling)
+    cfg[13] accF16 BM128 BN128 BK32 stg4 split0 smem=64KB   324.475 us  158.84 TF  x1.054  (48.1% of its own tier ceiling)
+    cfg[14] accF16 BM128 BN128 BK64 stg3 split256 smem=96KB   296.182 us  174.01 TF  x1.155  (52.7% of its own tier ceiling)
+    cfg[15] accF32 BM64 BN128 BK64 stg3 split0 smem=72KB   457.359 us  112.69 TF  x0.748  (68.2% of its own tier ceiling)
+    cfg[16] accF32 BM64 BN128 BK64 stg2 split0 smem=48KB   365.036 us  141.19 TF  x0.937  (85.5% of its own tier ceiling)
+    cfg[17] accF32 BM128 BN128 BK64 stg3 split0 smem=96KB   432.926 us  119.05 TF  x0.790  (72.1% of its own tier ceiling)
+    cfg[18] accF32 BM128 BN128 BK64 stg2 split0 smem=64KB   425.052 us  121.25 TF  x0.805  (73.4% of its own tier ceiling)
+    cfg[19] accF16 BM128 BN256 BK64 stg2 split0 smem=96KB   299.055 us  172.34 TF  x1.144  (52.2% of its own tier ceiling)
+    cfg[20] accF16 BM256 BN128 BK32 stg4 split0 smem=96KB   326.697 us  157.76 TF  x1.047  (47.8% of its own tier ceiling)
+    cfg[21] accF16 BM128 BN256 BK32 stg4 split0 smem=96KB   332.165 us  155.16 TF  x1.030  (47.0% of its own tier ceiling)
+    cfg[22] accF16 BM256 BN128 BK64 stg2 split0 smem=96KB   289.188 us  178.22 TF  x1.183  (54.0% of its own tier ceiling)
+    cfg[23] accF32 BM128 BN256 BK64 stg2 split0 smem=96KB   457.184 us  112.73 TF  x0.748  (68.2% of its own tier ceiling)
+    cfg[24] accF32 BM256 BN128 BK64 stg2 split0 smem=96KB   445.655 us  115.65 TF  x0.767  (70.0% of its own tier ceiling)
+    cfg[25] accF16 BM128 BN256 BK64 stg2 split256 smem=96KB   303.954 us  169.56 TF  x1.125  (51.3% of its own tier ceiling)
+
+    BEST FP16-accumulate cfg[11]  283.287 us  181.93 TF  x1.207 vs pytorch
+    REPEATABILITY of the best cfg: 283.287 / 277.043 us -> x1.207 / x1.234
+    [prof] pytorch   344.806 us  ['ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn']
+    [prof] mma       284.689 us  ['void mma_gemm_kernel<128, 128, 64, 2, 0, 0>']
+    [prof] ratio x1.211  (graph x1.207, agree to 0.3%)
+
+    --- THE A/B: same kernel, only the accumulate type changes ---
+    cfg[ 0] accF16   321.188 us  vs  cfg[15] accF32   457.359 us   -> FP16 accumulate is x1.424   (tier says it should be ~x2.0 if compute-bound)
+    cfg[ 1] accF16   318.811 us  vs  cfg[16] accF32   365.036 us   -> FP16 accumulate is x1.145   (tier says it should be ~x2.0 if compute-bound)
+    cfg[10] accF16   284.076 us  vs  cfg[17] accF32   432.926 us   -> FP16 accumulate is x1.524   (tier says it should be ~x2.0 if compute-bound)
+    cfg[11] accF16   283.287 us  vs  cfg[18] accF32   425.052 us   -> FP16 accumulate is x1.500   (tier says it should be ~x2.0 if compute-bound)
+    cfg[19] accF16   299.055 us  vs  cfg[23] accF32   457.184 us   -> FP16 accumulate is x1.529   (tier says it should be ~x2.0 if compute-bound)
+    cfg[22] accF16   289.188 us  vs  cfg[24] accF32   445.655 us   -> FP16 accumulate is x1.541   (tier says it should be ~x2.0 if compute-bound)
+
+    >>> GATE (1.3x): NOT MET  (x1.207)
+
+==============================================================================
+=== qkv      default      M=1024 K=512 N=1536   PRIMARY/JUDGED
+    1.61 GFLOP, >= 5.8 MB of compulsory HBM traffic
+    memory-bound floor at 1008 GB/s: 5.72 us (281.5 TFLOPS ceiling)
+    tier ceilings: FP32-acc 165.2 TF, FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of the [M,N] output): 2.542 us for 6.3 MB = 2475 GB/s
+    -> compulsory traffic at that measured rate: 2.33 us (691.1 TFLOPS hard ceiling)
+    (pytorch reference repeatability: 14.437 / 14.389 us, spread 0.33%)
+
+    pytorch F.linear(addmm)    14.437 us   111.56 TF   =  67.5% of the FP32-acc tier ceiling   [THE FLOOR TO BEAT]
+    cfg[ 0] accF16 BM64 BN128 BK64 stg3 split0 smem=72KB    16.155 us   99.70 TF  x0.894  (30.2% of its own tier ceiling)
+    cfg[ 1] accF16 BM64 BN128 BK64 stg2 split0 smem=48KB    14.431 us  111.61 TF  x1.000  (33.8% of its own tier ceiling)
+    cfg[ 2] accF16 BM64 BN128 BK32 stg7 split0 smem=84KB    18.598 us   86.60 TF  x0.776  (26.2% of its own tier ceiling)
+    cfg[ 3] accF16 BM64 BN128 BK32 stg4 split0 smem=48KB    14.828 us  108.62 TF  x0.974  (32.9% of its own tier ceiling)
+    cfg[ 4] accF16 BM64 BN128 BK32 stg5 split0 smem=60KB    17.919 us   89.88 TF  x0.806  (27.2% of its own tier ceiling)
+    cfg[ 5] accF16 BM64 BN128 BK64 stg3 split256 smem=72KB    16.322 us   98.68 TF  x0.885  (29.9% of its own tier ceiling)
+    cfg[ 6] accF16 BM64 BN128 BK32 stg7 split256 smem=84KB    19.001 us   84.76 TF  x0.760  (25.7% of its own tier ceiling)
+    cfg[ 7] accF16 BM64 BN128 BK64 stg3 split128 smem=72KB    16.389 us   98.27 TF  x0.881  (29.8% of its own tier ceiling)USDT:2026-08-27 05:13:17 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:13:17 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:13:17 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:13:17 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:13:19 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:13:19 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 05:13:19 88753:88753 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 05:13:19 88753:88753 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+    cfg[ 8] accF16 BM64 BN128 BK32 stg7 split128 smem=84KB    19.246 us   83.68 TF  x0.750  (25.3% of its own tier ceiling)
+    cfg[ 9] accF16 BM64 BN128 BK64 stg3 split64 smem=72KB    16.587 us   97.10 TF  x0.870  (29.4% of its own tier ceiling)
+    cfg[10] accF16 BM128 BN128 BK64 stg3 split0 smem=96KB    14.960 us  107.66 TF  x0.965  (32.6% of its own tier ceiling)
+    cfg[11] accF16 BM128 BN128 BK64 stg2 split0 smem=64KB    14.610 us  110.24 TF  x0.988  (33.4% of its own tier ceiling)
+    cfg[12] accF16 BM128 BN128 BK32 stg6 split0 smem=96KB    15.446 us  104.27 TF  x0.935  (31.6% of its own tier ceiling)
+    cfg[13] accF16 BM128 BN128 BK32 stg4 split0 smem=64KB    15.891 us  101.35 TF  x0.908  (30.7% of its own tier ceiling)
+    cfg[14] accF16 BM128 BN128 BK64 stg3 split256 smem=96KB    15.209 us  105.90 TF  x0.949  (32.1% of its own tier ceiling)
+    cfg[15] accF32 BM64 BN128 BK64 stg3 split0 smem=72KB    21.491 us   74.94 TF  x0.672  (45.4% of its own tier ceiling)
+    cfg[16] accF32 BM64 BN128 BK64 stg2 split0 smem=48KB    18.527 us   86.94 TF  x0.779  (52.6% of its own tier ceiling)
+    cfg[17] accF32 BM128 BN128 BK64 stg3 split0 smem=96KB    21.246 us   75.81 TF  x0.680  (45.9% of its own tier ceiling)
+    cfg[18] accF32 BM128 BN128 BK64 stg2 split0 smem=64KB    20.968 us   76.81 TF  x0.689  (46.5% of its own tier ceiling)
+    cfg[19] accF16 BM128 BN256 BK64 stg2 split0 smem=96KB    22.230 us   72.45 TF  x0.649  (21.9% of its own tier ceiling)
+    cfg[20] accF16 BM256 BN128 BK32 stg4 split0 smem=96KB    23.343 us   69.00 TF  x0.618  (20.9% of its own tier ceiling)
+    cfg[21] accF16 BM128 BN256 BK32 stg4 split0 smem=96KB    23.827 us   67.60 TF  x0.606  (20.5% of its own tier ceiling)
+    cfg[22] accF16 BM256 BN128 BK64 stg2 split0 smem=96KB    22.439 us   71.78 TF  x0.643  (21.7% of its own tier ceiling)
+    cfg[23] accF32 BM128 BN256 BK64 stg2 split0 smem=96KB    36.011 us   44.73 TF  x0.401  (27.1% of its own tier ceiling)
+    cfg[24] accF32 BM256 BN128 BK64 stg2 split0 smem=96KB    35.730 us   45.08 TF  x0.404  (27.3% of its own tier ceiling)
+    cfg[25] accF16 BM128 BN256 BK64 stg2 split256 smem=96KB    23.236 us   69.32 TF  x0.621  (21.0% of its own tier ceiling)
+
+    BEST FP16-accumulate cfg[1]  14.431 us  111.61 TF  x1.000 vs pytorch
+    REPEATABILITY of the best cfg: 14.431 / 14.474 us -> x1.000 / x0.994
+    [prof] pytorch    14.616 us  ['void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x6']
+    [prof] mma        14.443 us  ['void mma_gemm_kernel<64, 128, 64, 2, 0, 0>']
+    [prof] ratio x1.012  (graph x1.000, agree to 1.2%)
+
+    --- THE A/B: same kernel, only the accumulate type changes ---
+    cfg[ 0] accF16    16.155 us  vs  cfg[15] accF32    21.491 us   -> FP16 accumulate is x1.330   (tier says it should be ~x2.0 if compute-bound)
+    cfg[ 1] accF16    14.431 us  vs  cfg[16] accF32    18.527 us   -> FP16 accumulate is x1.284   (tier says it should be ~x2.0 if compute-bound)
+    cfg[10] accF16    14.960 us  vs  cfg[17] accF32    21.246 us   -> FP16 accumulate is x1.420   (tier says it should be ~x2.0 if compute-bound)
+    cfg[11] accF16    14.610 us  vs  cfg[18] accF32    20.968 us   -> FP16 accumulate is x1.435   (tier says it should be ~x2.0 if compute-bound)
+    cfg[19] accF16    22.230 us  vs  cfg[23] accF32    36.011 us   -> FP16 accumulate is x1.620   (tier says it should be ~x2.0 if compute-bound)
+    cfg[22] accF16    22.439 us  vs  cfg[24] accF32    35.730 us   -> FP16 accumulate is x1.592   (tier says it should be ~x2.0 if compute-bound)
+
+    >>> GATE (1.3x): NOT MET  (x1.000)
+
+==============================================================================
+=== out_proj large_batch  M=32768 K=512 N=512   reported, not judged
+    17.18 GFLOP, >= 67.6 MB of compulsory HBM traffic
+    memory-bound floor at 1008 GB/s: 67.10 us (256.0 TFLOPS ceiling)
+    tier ceilings: FP32-acc 165.2 TF, FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of the [M,N] output): 17.693 us for 67.1 MB = 3793 GB/s
+    -> compulsory traffic at that measured rate: 17.83 us (963.4 TFLOPS hard ceiling)
+    (pytorch reference repeatability: 115.292 / 115.316 us, spread 0.02%)
+
+    pytorch F.linear(addmm)   115.292 us   149.01 TF   =  90.2% of the FP32-acc tier ceiling   [THE FLOOR TO BEAT]
+    cfg[ 0] accF16 BM64 BN128 BK64 stg3 split0 smem=72KB   110.900 us  154.91 TF  x1.040  (46.9% of its own tier ceiling)
+    cfg[ 1] accF16 BM64 BN128 BK64 stg2 split0 smem=48KB   106.802 us  160.86 TF  x1.080  (48.7% of its own tier ceiling)
+    cfg[ 2] accF16 BM64 BN128 BK32 stg7 split0 smem=84KB   130.714 us  131.43 TF  x0.882  (39.8% of its own tier ceiling)
+    cfg[ 3] accF16 BM64 BN128 BK32 stg4 split0 smem=48KB   123.869 us  138.69 TF  x0.931  (42.0% of its own tier ceiling)
+    cfg[ 4] accF16 BM64 BN128 BK32 stg5 split0 smem=60KB   128.095 us  134.12 TF  x0.900  (40.6% of its own tier ceiling)
+    cfg[ 5] accF16 BM64 BN128 BK64 stg3 split256 smem=72KB   112.916 us  152.15 TF  x1.021  (46.1% of its own tier ceiling)
+    cfg[ 6] accF16 BM64 BN128 BK32 stg7 split256 smem=84KB   132.085 us  130.07 TF  x0.873  (39.4% of its own tier ceiling)
+    cfg[ 7] accF16 BM64 BN128 BK64 stg3 split128 smem=72KB   114.512 us  150.03 TF  x1.007  (45.4% of its own tier ceiling)
+    cfg[ 8] accF16 BM64 BN128 BK32 stg7 split128 smem=84KB   133.292 us  128.89 TF  x0.865  (39.0% of its own tier ceiling)
+    cfg[ 9] accF16 BM64 BN128 BK64 stg3 split64 smem=72KB   115.419 us  148.85 TF  x0.999  (45.1% of its own tier ceiling)
+    cfg[10] accF16 BM128 BN128 BK64 stg3 split0 smem=96KB   101.396 us  169.43 TF  x1.137  (51.3% of its own tier ceiling)
+    cfg[11] accF16 BM128 BN128 BK64 stg2 split0 smem=64KB   101.987 us  168.45 TF  x1.130  (51.0% of its own tier ceiling)
+    cfg[12] accF16 BM128 BN128 BK32 stg6 split0 smem=96KB   117.918 us  145.69 TF  x0.978  (44.1% of its own tier ceiling)
+    cfg[13] accF16 BM128 BN128 BK32 stg4 split0 smem=64KB   116.827 us  147.05 TF  x0.987  (44.5% of its own tier ceiling)
+    cfg[14] accF16 BM128 BN128 BK64 stg3 split256 smem=96KB   105.364 us  163.05 TF  x1.094  (49.4% of its own tier ceiling)
+    cfg[15] accF32 BM64 BN128 BK64 stg3 split0 smem=72KB   155.859 us  110.23 TF  x0.740  (66.7% of its own tier ceiling)
+    cfg[16] accF32 BM64 BN128 BK64 stg2 split0 smem=48KB   125.468 us  136.93 TF  x0.919  (82.9% of its own tier ceiling)
+    cfg[17] accF32 BM128 BN128 BK64 stg3 split0 smem=96KB   153.810 us  111.70 TF  x0.750  (67.6% of its own tier ceiling)
+    cfg[18] accF32 BM128 BN128 BK64 stg2 split0 smem=64KB   151.523 us  113.38 TF  x0.761  (68.6% of its own tier ceiling)
+    cfg[19] accF16 BM128 BN256 BK64 stg2 split0 smem=96KB   111.524 us  154.05 TF  x1.034  (46.6% of its own tier ceiling)
+    cfg[20] accF16 BM256 BN128 BK32 stg4 split0 smem=96KB   122.662 us  140.06 TF  x0.940  (42.4% of its own tier ceiling)
+    cfg[21] accF16 BM128 BN256 BK32 stg4 split0 smem=96KB   123.864 us  138.70 TF  x0.931  (42.0% of its own tier ceiling)
+    cfg[22] accF16 BM256 BN128 BK64 stg2 split0 smem=96KB   109.877 us  156.36 TF  x1.049  (47.3% of its own tier ceiling)
+    cfg[23] accF32 BM128 BN256 BK64 stg2 split0 smem=96KB   165.652 us  103.71 TF  x0.696  (62.8% of its own tier ceiling)
+    cfg[24] accF32 BM256 BN128 BK64 stg2 split0 smem=96KB   160.580 us  106.99 TF  x0.718  (64.8% of its own tier ceiling)
+    cfg[25] accF16 BM128 BN256 BK64 stg2 split256 smem=96KB   116.066 us  148.02 TF  x0.993  (44.8% of its own tier ceiling)
+
+    BEST FP16-accumulate cfg[10]  101.396 us  169.43 TF  x1.137 vs pytorch
+    REPEATABILITY of the best cfg: 101.396 / 101.419 us -> x1.137 / x1.137
+    [prof] pytorch   115.431 us  ['ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn']
+    [prof] mma       104.961 us  ['void mma_gemm_kernel<128, 128, 64, 3, 0, 0>']
+    [prof] ratio x1.100  (graph x1.137, agree to 3.3%)
+
+    --- THE A/B: same kernel, only the accumulate type changes ---
+    cfg[ 0] accF16   110.900 us  vs  cfg[15] accF32   155.859 us   -> FP16 accumulate is x1.405   (tier says it should be ~x2.0 if compute-bound)
+    cfg[ 1] accF16   106.802 us  vs  cfg[16] accF32   125.468 us   -> FP16 accumulate is x1.175   (tier says it should be ~x2.0 if compute-bound)
+    cfg[10] accF16   101.396 us  vs  cfg[17] accF32   153.810 us   -> FP16 accumulate is x1.517   (tier says it should be ~x2.0 if compute-bound)
+    cfg[11] accF16   101.987 us  vs  cfg[18] accF32   151.523 us   -> FP16 accumulate is x1.486   (tier says it should be ~x2.0 if compute-bound)
+    cfg[19] accF16   111.524 us  vs  cfg[23] accF32   165.652 us   -> FP16 accumulate is x1.485   (tier says it should be ~x2.0 if compute-bound)
+    cfg[22] accF16   109.877 us  vs  cfg[24] accF32   160.580 us   -> FP16 accumulate is x1.461   (tier says it should be ~x2.0 if compute-bound)
+
+==============================================================================
+A/B SUMMARY -- value of the FP16-accumulate tier, everything else held identical
+  qkv      large_batch  cfg[0]  accF32/accF16 = x1.424
+  qkv      large_batch  cfg[1]  accF32/accF16 = x1.145
+  qkv      large_batch  cfg[10]  accF32/accF16 = x1.524
+  qkv      large_batch  cfg[11]  accF32/accF16 = x1.500
+  qkv      large_batch  cfg[19]  accF32/accF16 = x1.529
+  qkv      large_batch  cfg[22]  accF32/accF16 = x1.541
+  qkv      default      cfg[0]  accF32/accF16 = x1.330
+  qkv      default      cfg[1]  accF32/accF16 = x1.284
+  qkv      default      cfg[10]  accF32/accF16 = x1.420
+  qkv      default      cfg[11]  accF32/accF16 = x1.435
+  qkv      default      cfg[19]  accF32/accF16 = x1.620
+  qkv      default      cfg[22]  accF32/accF16 = x1.592
+  out_proj large_batch  cfg[0]  accF32/accF16 = x1.405
+  out_proj large_batch  cfg[1]  accF32/accF16 = x1.175
+  out_proj large_batch  cfg[10]  accF32/accF16 = x1.517
+  out_proj large_batch  cfg[11]  accF32/accF16 = x1.486
+  out_proj large_batch  cfg[19]  accF32/accF16 = x1.485
+  out_proj large_batch  cfg[22]  accF32/accF16 = x1.461
+
+If these ratios are near 1.0 the accumulate tier is not the binding constraint at these shapes and G4.4 has no headroom to recover, regardless of how well the kernel is tuned.
