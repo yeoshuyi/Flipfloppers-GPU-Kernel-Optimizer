@@ -3226,3 +3226,32 @@ tok 8192), row 13 (d128, S=1024, tok 65536). Compiled-path CUPTI census
   does not happen on a real single-model run. **No action.**
 
 Both cheap config levers ruled out. Moving to T2 (row-8 d1024 GEMM roofline).
+
+---
+
+### 45. T2 (iteration 3) — FP32-accumulate warp-spec for the row-8 d1024 GEMMs: negative
+
+`probes/g5_1_d1024_gemm_sweep.py`, job 147,
+`results/g5_1_d1024_gemm_sweep_run147.log`. Isolated CUDA-graph-replay
+microbench at the row-8 GEMM shapes (M=8192, K=1024, N∈{1024, 3072}):
+
+| shape | cuBLAS fp16 | % of 165 TF f32-acc roofline | best ACCF32 warp-spec (precision-neutral) |
+|---|---|---|---|
+| qkv N=3072 | 325 µs | **95.9%** | cfg 53 — **x0.907** (loss) |
+| out_proj / ffn_in N=1024 | 111 µs | **93.7%** | cfg 53 — **x0.921** (loss) |
+
+**Step 43's roofline read was wrong.** It inferred "~56% of roofline" from the
+*in-model* kernel time (185 µs for the N=1024 GEMM); the isolated GEMM is
+111 µs at **93.7%**. cuBLAS is essentially at peak on these shapes. The
+~1.7× in-model vs isolated gap is real but is L2/occupancy/context
+interaction, not slack in the GEMM kernel — swapping the kernel does not
+recover it (the warp-spec kernel is *slower* in isolation).
+
+Every precision-neutral (FP32-accumulate) config loses x0.87–x0.92 —
+half-rate FP32 `mma` on Ada cannot beat cuBLAS's near-peak FP32-accum path,
+the same wall as steps 37/39/41. The FP16-accumulate configs win x1.4–x1.6
+but at `err` 2.1e-2 (3.9e-3 with SPLIT-64) — precision-reducing, closed for
+causal at step 41. **T2 closed. No change to benchmark.py.**
+
+Moving to T3 — the d128 elementwise/GELU bar (step 43), the largest remaining
+official-matrix cost.

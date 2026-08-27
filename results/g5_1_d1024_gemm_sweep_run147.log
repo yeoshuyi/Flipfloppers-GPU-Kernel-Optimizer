@@ -1,0 +1,33 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+config table: 77 entries
+
+### qkv      M8192 K1024 N3072   (51.54 GFLOP)
+  cuBLAS addmm fp16        325.381 us  ( 158.4 TF, 95.9% of f32-acc peak)  err 1.956e-03
+  arm                   cfg        us  vs cuBLAS  err vs fp64  B
+  FP16-acc (ref only)    33   215.416     x1.510    2.104e-02
+  FP16-acc (ref only)    39   216.466     x1.503    2.104e-02
+  FP16-acc (ref only)    26   217.674     x1.495    2.104e-02
+  FP16-acc (ref only)    37   217.835     x1.494    2.104e-02
+  FP16-acc (ref only)    48   242.808     x1.340    4.808e-03
+  ACCF32 (neutral)       53   358.556     x0.907    1.956e-03
+  ACCF32 (neutral)       57   359.129     x0.906    1.956e-03
+  ACCF32 (neutral)       72   367.001     x0.887    1.956e-03
+  ACCF32 (neutral)       61   372.861     x0.873    1.956e-03
+  ACCF32 (neutral)       65   373.005     x0.872    1.956e-03
+
+### out/ffnin M8192 K1024 N1024   (17.18 GFLOP)
+  cuBLAS addmm fp16        111.025 us  ( 154.7 TF, 93.7% of f32-acc peak)  err 1.938e-03
+  arm                   cfg        us  vs cuBLAS  err vs fp64  B
+  FP16-acc (ref only)    26    69.635     x1.594    2.134e-02
+  FP16-acc (ref only)    39    70.746     x1.569    2.134e-02
+  FP16-acc (ref only)    37    73.316     x1.514    2.134e-02
+  FP16-acc (ref only)    33    73.474     x1.511    2.134e-02
+  FP16-acc (ref only)    48    79.132     x1.403    3.877e-03
+  ACCF32 (neutral)       53   120.598     x0.921    1.938e-03
+  ACCF32 (neutral)       57   121.277     x0.915    1.938e-03
+  ACCF32 (neutral)       72   123.018     x0.903    1.938e-03
+  ACCF32 (neutral)       61   126.646     x0.877    1.938e-03
+  ACCF32 (neutral)       65   126.866     x0.875    1.938e-03
+
+interpret: an ACCF32 cfg with vs-cuBLAS > 1.03 and err ~= cuBLAS err is a precision-neutral candidate for qkv/out_proj/ffn_in at d1024.
