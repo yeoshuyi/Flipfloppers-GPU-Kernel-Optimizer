@@ -1,0 +1,146 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+allow_fp16_reduced_precision_reduction=False
+
+=== layout confirmation (FP16, asymmetric M=7 K=24 N=13) ===
+  bias=False: maxdiff=0.000e+00 (|ref|max=12.047) -> MATCH
+  bias=True: maxdiff=0.000e+00 (|ref|max=13.828) -> MATCH
+  layout mapping CONFIRMED for FP16
+
+=== qkv       M=64 K=512 N=1536 bias=True  red_mask=2 ===
+  pytorch F.linear : gpu     5.63 us  cpu-issue    5.66 us   17.87 TFLOPS  (spread 14.5%)
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  [pytorch F.linear fp16] dispatched kernels:
+      void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8::Params)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu     4.49 us  cpu   3.92 us   22.43 TF  x1.255  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 1] gpu     4.77 us  cpu   3.88 us   21.09 TF  x1.180  maxdiff=0.000e+00  id=21 tile=11 stages=14 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.15
+  [ 2] gpu     4.79 us  cpu   3.92 us   21.01 TF  x1.175  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.6
+  [ 3] gpu     6.19 us  cpu   5.76 us   16.27 TF  x0.910  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=5 reduc=2 swizzle=0 ws=1572864 wave=0.375
+  [ 4] gpu     6.39 us  cpu   5.30 us   15.76 TF  x0.882  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=5 reduc=2 swizzle=0 ws=1572864 wave=0.75
+  [ 5] gpu     6.03 us  cpu   3.84 us   16.69 TF  x0.934  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0833333
+  [ 6] gpu     7.34 us  cpu   5.65 us   13.71 TF  x0.767  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=2 swizzle=0 ws=3145728 wave=1.2
+  [ 7] gpu     7.66 us  cpu   5.66 us   13.13 TF  x0.735  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=2 swizzle=0 ws=3145728 wave=1.2
+  BEST -> algo[0]  4.49 us  speedup vs pytorch = 1.2550  (WIN (>10% gate PASSED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.92 us vs gpu 4.49 us -> no, GPU-bound
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  [cublasLt algo[0]] dispatched kernels:
+      void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8::Params)
+
+=== out_proj  M=64 K=512 N=512 bias=True  red_mask=2 ===
+  pytorch F.linear : gpu     7.75 us  cpu-issue    7.83 us    4.33 TFLOPS  (spread 0.6%)
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  [pytorch F.linear fp16] dispatched kernels:
+      void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8::Params)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu     4.04 us  cpu   3.90 us    8.31 TF  x1.918  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.2
+  [ 1] gpu     3.96 us  cpu   3.91 us    8.48 TF  x1.958  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [ 2] gpu     5.77 us  cpu   5.77 us    5.81 TF  x1.342  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.2
+  [ 3] gpu     5.77 us  cpu   5.77 us    5.81 TF  x1.342  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.4
+  [ 4] gpu     5.78 us  cpu   5.78 us    5.80 TF  x1.340  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.4
+  [ 5] gpu     5.81 us  cpu   5.83 us    5.77 TF  x1.332  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [ 6] gpu     5.46 us  cpu   5.34 us    6.15 TF  x1.420  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.5
+  [ 7] gpu     5.86 us  cpu   3.84 us    5.72 TF  x1.321  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0277778
+  BEST -> algo[1]  3.96 us  speedup vs pytorch = 1.9581  (WIN (>10% gate PASSED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.91 us vs gpu 3.96 us -> YES -- treat any delta as dispatch cost
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:16:29 69455:69455 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  [cublasLt algo[1]] dispatched kernels:
+      void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8::Params)
+
+=== qkv       M=64 K=512 N=1536 bias=True  red_mask=7 ===
+  pytorch F.linear : gpu     7.70 us  cpu-issue    7.74 us   13.08 TFLOPS  (spread 0.7%)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu     4.49 us  cpu   3.92 us   22.40 TF  x1.712  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 1] gpu     4.77 us  cpu   3.85 us   21.09 TF  x1.612  maxdiff=0.000e+00  id=21 tile=11 stages=14 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.15
+  [ 2] gpu     4.79 us  cpu   3.90 us   21.01 TF  x1.606  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.6
+  [ 3] gpu     6.24 us  cpu   5.35 us   16.12 TF  x1.233  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=5 reduc=4 swizzle=0 ws=786432 wave=0.75
+  [ 4] gpu     6.22 us  cpu   5.78 us   16.18 TF  x1.237  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=5 reduc=2 swizzle=0 ws=1572864 wave=0.375
+  [ 5] gpu     6.72 us  cpu   5.68 us   14.97 TF  x1.145  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=4 swizzle=0 ws=1572864 wave=1.2
+  [ 6] gpu     6.03 us  cpu   3.84 us   16.69 TF  x1.277  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0833333
+  [ 7] gpu     7.18 us  cpu   5.65 us   14.02 TF  x1.072  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=4 swizzle=0 ws=1572864 wave=1.2
+  BEST -> algo[0]  4.49 us  speedup vs pytorch = 1.7124  (WIN (>10% gate PASSED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.92 us vs gpu 4.49 us -> no, GPU-bound
+
+=== out_proj  M=64 K=512 N=512 bias=True  red_mask=7 ===
+  pytorch F.linear : gpu     7.80 us  cpu-issue    7.83 us    4.30 TFLOPS  (spread 0.5%)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu     4.04 us  cpu   3.90 us    8.31 TF  x1.930  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.2
+  [ 1] gpu     3.96 us  cpu   3.89 us    8.48 TF  x1.971  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [ 2] gpu     5.75 us  cpu   5.75 us    5.83 TF  x1.355  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=4 reduc=4 swizzle=0 ws=262144 wave=0.2
+  [ 3] gpu     5.75 us  cpu   5.74 us    5.84 TF  x1.356  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=4 swizzle=0 ws=524288 wave=0.4
+  [ 4] gpu     5.84 us  cpu   5.84 us    5.74 TF  x1.334  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=4 swizzle=0 ws=524288 wave=0.4
+  [ 5] gpu     5.85 us  cpu   5.85 us    5.73 TF  x1.332  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [ 6] gpu     5.47 us  cpu   5.40 us    6.13 TF  x1.425  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=8 reduc=4 swizzle=0 ws=524288 wave=0.5
+  [ 7] gpu     5.87 us  cpu   3.85 us    5.71 TF  x1.327  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0277778
+  BEST -> algo[1]  3.96 us  speedup vs pytorch = 1.9708  (WIN (>10% gate PASSED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.89 us vs gpu 3.96 us -> YES -- treat any delta as dispatch cost
+
+=== qkv       M=1024 K=512 N=1536 bias=True  red_mask=2 ===
+  pytorch F.linear : gpu    15.13 us  cpu-issue    7.84 us  106.49 TFLOPS  (spread 0.0%)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu    15.10 us  cpu   3.86 us  106.68 TF  x1.002  maxdiff=0.000e+00  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=1.5
+  [ 1] gpu    17.65 us  cpu   3.74 us   91.28 TF  x0.857  maxdiff=9.766e-04  id=30 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=1.5
+  [ 2] gpu    17.49 us  cpu   3.34 us   92.07 TF  x0.865  maxdiff=0.000e+00  id=5 tile=20 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 3] gpu    17.85 us  cpu   3.35 us   90.24 TF  x0.847  maxdiff=0.000e+00  id=5 tile=21 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 4] gpu    18.79 us  cpu   3.37 us   85.72 TF  x0.805  maxdiff=9.766e-04  id=30 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.75
+  [ 5] gpu    18.64 us  cpu   3.68 us   86.39 TF  x0.811  maxdiff=9.766e-04  id=30 tile=17 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=0.75
+  [ 6] gpu    23.63 us  cpu   3.79 us   68.15 TF  x0.640  maxdiff=0.000e+00  id=21 tile=11 stages=19 splitk=1 reduc=0 swizzle=0 ws=0 wave=2.4
+  [ 7] gpu    21.89 us  cpu   3.80 us   73.58 TF  x0.691  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=1.33333
+  BEST -> algo[0]  15.10 us  speedup vs pytorch = 1.0018  (NULL)  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.86 us vs gpu 15.10 us -> no, GPU-bound
+
+=== out_proj  M=1024 K=512 N=512 bias=True  red_mask=2 ===
+  pytorch F.linear : gpu     7.53 us  cpu-issue    7.56 us   71.30 TFLOPS  (spread 0.4%)
+  heuristic returned 5 candidate(s)
+  [ 0] gpu     7.30 us  cpu   3.64 us   73.51 TF  x1.031  maxdiff=0.000e+00  id=6 tile=15 stages=17 splitk=1 reduc=0 swizzle=1 ws=0 wave=1
+  [ 1] gpu     8.64 us  cpu   3.81 us   62.13 TF  x0.871  maxdiff=0.000e+00  id=21 tile=11 stages=14 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.8
+  [ 2] gpu     8.76 us  cpu   3.81 us   61.27 TF  x0.859  maxdiff=0.000e+00  id=21 tile=11 stages=13 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.5
+  [ 3] gpu     9.18 us  cpu   3.83 us   58.46 TF  x0.820  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.444444
+  [ 4] gpu    12.41 us  cpu   5.53 us   43.25 TF  x0.607  maxdiff=1.953e-03  id=6 tile=18 stages=12 splitk=2 reduc=2 swizzle=1 ws=4194304 wave=1
+  BEST -> algo[0]  7.30 us  speedup vs pytorch = 1.0310  (MARGINAL (<10% gate FAILED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.64 us vs gpu 7.30 us -> no, GPU-bound
+
+=== qkv       M=1024 K=512 N=1536 bias=True  red_mask=7 ===
+  pytorch F.linear : gpu    15.17 us  cpu-issue    7.82 us  106.19 TFLOPS  (spread 0.1%)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu    15.07 us  cpu   3.86 us  106.88 TF  x1.006  maxdiff=0.000e+00  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=1.5
+  [ 1] gpu    17.62 us  cpu   3.74 us   91.43 TF  x0.861  maxdiff=9.766e-04  id=30 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=1.5
+  [ 2] gpu    17.49 us  cpu   3.35 us   92.07 TF  x0.867  maxdiff=0.000e+00  id=5 tile=20 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 3] gpu    17.81 us  cpu   3.34 us   90.42 TF  x0.851  maxdiff=0.000e+00  id=5 tile=21 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [ 4] gpu    18.76 us  cpu   3.35 us   85.85 TF  x0.808  maxdiff=9.766e-04  id=30 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.75
+  [ 5] gpu    18.61 us  cpu   3.68 us   86.57 TF  x0.815  maxdiff=9.766e-04  id=30 tile=17 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=0.75
+  [ 6] gpu    23.59 us  cpu   3.79 us   68.26 TF  x0.643  maxdiff=0.000e+00  id=21 tile=11 stages=19 splitk=1 reduc=0 swizzle=0 ws=0 wave=2.4
+  [ 7] gpu    21.81 us  cpu   3.77 us   73.83 TF  x0.695  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=1.33333
+  BEST -> algo[0]  15.07 us  speedup vs pytorch = 1.0065  (NULL)  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.86 us vs gpu 15.07 us -> no, GPU-bound
+
+=== out_proj  M=1024 K=512 N=512 bias=True  red_mask=7 ===
+  pytorch F.linear : gpu     7.57 us  cpu-issue    7.60 us   70.95 TFLOPS  (spread 0.1%)
+  heuristic returned 8 candidate(s)
+  [ 0] gpu     7.29 us  cpu   3.65 us   73.68 TF  x1.039  maxdiff=0.000e+00  id=6 tile=15 stages=17 splitk=1 reduc=0 swizzle=1 ws=0 wave=1
+  [ 1] gpu     8.62 us  cpu   3.84 us   62.27 TF  x0.878  maxdiff=0.000e+00  id=21 tile=11 stages=14 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.8
+  [ 2] gpu     8.75 us  cpu   3.82 us   61.38 TF  x0.865  maxdiff=0.000e+00  id=21 tile=11 stages=13 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.5
+  [ 3] gpu     9.17 us  cpu   3.79 us   58.54 TF  x0.825  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.444444
+  [ 4] gpu    12.29 us  cpu   4.95 us   43.68 TF  x0.616  maxdiff=1.953e-03  id=30 tile=15 stages=0 splitk=2 reduc=1 swizzle=1 ws=512 wave=1
+  [ 5] gpu     9.63 us  cpu   5.05 us   55.74 TF  x0.786  maxdiff=1.953e-03  id=21 tile=15 stages=12 splitk=2 reduc=1 swizzle=0 ws=512 wave=1
+  [ 6] gpu    11.48 us  cpu   5.55 us   46.75 TF  x0.659  maxdiff=1.953e-03  id=6 tile=18 stages=12 splitk=2 reduc=4 swizzle=1 ws=2097152 wave=1
+  [ 7] gpu    20.39 us  cpu   4.98 us   26.33 TF  x0.371  maxdiff=1.953e-03  id=30 tile=18 stages=0 splitk=4 reduc=1 swizzle=1 ws=256 wave=1
+  BEST -> algo[0]  7.29 us  speedup vs pytorch = 1.0386  (MARGINAL (<10% gate FAILED))  maxdiff=0.000e+00
+  launch-bound? cpu-issue 3.65 us vs gpu 7.29 us -> no, GPU-bound
+
+==============================================================================
+SUMMARY (gate: >1.10x, reproducible, on at least one shape at M=64 with red_mask=2)
+  qkv       M=64 K=512 N=1536 bias=True  red_mask=2    x1.2550  (   5.63 ->    4.49 us)  maxdiff=0.00e+00
+  out_proj  M=64 K=512 N=512 bias=True  red_mask=2     x1.9581  (   7.75 ->    3.96 us)  maxdiff=0.00e+00  [launch-bound]
+  qkv       M=64 K=512 N=1536 bias=True  red_mask=7    x1.7124  (   7.70 ->    4.49 us)  maxdiff=0.00e+00
+  out_proj  M=64 K=512 N=512 bias=True  red_mask=7     x1.9708  (   7.80 ->    3.96 us)  maxdiff=0.00e+00  [launch-bound]
+  qkv       M=1024 K=512 N=1536 bias=True  red_mask=2  x1.0018  (  15.13 ->   15.10 us)  maxdiff=0.00e+00
+  out_proj  M=1024 K=512 N=512 bias=True  red_mask=2   x1.0310  (   7.53 ->    7.30 us)  maxdiff=0.00e+00
+  qkv       M=1024 K=512 N=1536 bias=True  red_mask=7  x1.0065  (  15.17 ->   15.07 us)  maxdiff=0.00e+00
+  out_proj  M=1024 K=512 N=512 bias=True  red_mask=7   x1.0386  (   7.57 ->    7.29 us)  maxdiff=0.00e+00
+
+VERDICT: GATE PASSED -- qkv       M=64 K=512 N=1536 bias=True  red_mask=2, out_proj  M=64 K=512 N=512 bias=True  red_mask=2

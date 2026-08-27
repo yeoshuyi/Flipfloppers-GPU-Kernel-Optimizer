@@ -1918,3 +1918,83 @@ agent's own report) caught two things worth recording:**
 bit-identical in `max_abs` to `run63`/`run76` (the strongest evidence the
 gate touches only the tiny path). Archived: `tiny/fp16` elite updated to
 7.24x (from 6.14x), `applied` now includes `G6.6-cublaslt-algo-search`.
+
+### 34. G6.7 (cuBLASLt algorithm search for the FP16 ATTENTION GEMMs) — clean negative, not integrated
+
+**Hypothesis:** step 33 found cuBLASLt's own heuristic-returned algorithm list
+contains split-K variants that beat PyTorch's default kernel choice by
+1.32-1.49x for the FFN's two **TF32** GEMMs at TINY (M=64). Since G6.4b (step
+28) the attention path runs in **FP16**, and at tok=64 its two GEMMs are also
+small (`qkv` M=64/K=512/N=1536, `out_proj` M=64/K=512/N=512). Does the same
+"default heuristic misses a better variant at small M" phenomenon reproduce for
+FP16? Probed standalone in `csrc/cublaslt_algo_fp16.cpp` (a **copy** of the
+shipped `csrc/cublaslt_algo.cpp`, deliberately separate so the shipped G6.6 FFN
+path is never perturbed) — `CUDA_R_16F` layouts with `CUBLAS_COMPUTE_32F`, i.e.
+fp16 storage / fp32 accumulate, matching G6.4b's own
+`allow_fp16_reduced_precision_reduction = False`. Added a
+`CUBLASLT_MATMUL_PREF_REDUCTION_SCHEME_MASK` parameter so split-K candidates
+that reduce partials in fp16 can be excluded (`mask=2`, fp32 partials) or
+allowed (`mask=7`) — a win existing only at `mask=7` would be bought with fp16
+partial sums and would need its own accuracy argument.
+
+**Layout mapping re-confirmed independently for FP16**, not assumed from the
+FP32 file: an asymmetric M=7/K=24/N=13 shape (all three dims unequal, so any
+transposition or `ld` error is a hard mismatch) reproduces `F.linear` with
+`maxdiff = 0.000e+00` both with and without bias, and `torch.profiler` shows
+PyTorch's own FP16 dispatch is
+`cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8` — the same
+"tn" configuration the mapping derives, the FP16 equivalent of the FP32 file's
+`_tn_` check.
+
+**Run 82 looked like a win and was not.** It reported 1.26x (qkv) and 1.96x
+(out_proj) at M=64 — comfortably past the >10% gate. Its own `time_algo2`
+instrumentation is what falsified it:
+
+* PyTorch's reference was **launch-bound in every M=64 case** — cpu-issue ≈ gpu
+  time (5.63/5.66, 7.75/7.83, 7.70/7.74, 7.80/7.83 us). That "GPU time" is the
+  Python dispatch rate, not kernel time.
+* The identical measurement moved **5.63 → 7.70 us between two passes (37%)**.
+* The two harnesses have different floors: PyTorch's Python loop bottoms out at
+  ~7.8 us/call, `time_algo2`'s pure-C++ loop at ~3.3-3.9 us/call. Every M=64
+  FP16 kernel here sits **below both floors**.
+* `torch.profiler` showed both sides dispatching the **same kernel**, with
+  `maxdiff = 0.000e+00` (bit-identical). One kernel cannot be 1.96x faster than
+  itself.
+
+This is exactly the confound step 33 built `time_algo2` to catch. It did not
+bite there because TF32's M=64 GEMMs were 7.7-30 us — *above* both floors. FP16
+is ~3x faster, which drops these GEMMs *underneath* the dispatch floor and makes
+the naive comparison measure the two harnesses instead of the two kernels.
+
+**Fair re-measurement (run 83, `probes/g6_7_cublaslt_fp16_probe2.py`)** removes
+per-call dispatch symmetrically, two independent ways: (A) CUDA-graph replay —
+50 calls captured in one graph, replayed 200x, best of 5, zero per-call dispatch
+on either side (also what the real model does under
+`torch.compile(mode="reduce-overhead")`); (B) `torch.profiler`
+`self_device_time_total / launches`, the GPU's own kernel duration. **They
+agree to within 0.4%:**
+
+```
+shape                          graph      prof    maxdiff  same-kernel
+qkv      M=64 K=512 N=1536    x0.9991   x1.0041   0.0e+00     YES
+out_proj M=64 K=512 N=512     x0.9994   x1.0010   0.0e+00     YES
+```
+
+**Conclusion: FP16 is already optimally served by cuBLASLt's default heuristic
+at this shape.** PyTorch picks the top-ranked candidate (algo 0 for qkv, algo 1
+for out_proj) and every other candidate is *slower* — 0.57x-0.98x. Notably the
+mechanism of the G6.6 win is absent by construction: at M=64 in FP16 the fastest
+candidates are all `splitk=1, reduc=0`, and **every split-K candidate loses**
+(0.57x-0.86x). The M=1024 shapes were a negative too (1.00x qkv, 1.03x
+out_proj), consistent with step 33's own default-shape finding.
+
+**Not integrated. `benchmark.py` and the shipped `csrc/cublaslt_algo.cpp` are
+untouched.** Per step 33's boundary, G6.6 remains scoped to the FFN at
+`tok <= _LT_MAX_TOKENS = 127`; the attention path keeps plain FP16 `F.linear`.
+
+**Lesson, generalising step 33's environmental-drift lesson:** a probe's
+*reference* needs its own bottleneck audit, not just the candidate's. Whenever
+the thing being measured is smaller than the harness's dispatch floor, compare
+under CUDA-graph capture (or profiler kernel time) or the number is the
+harness's, not the kernel's. Cheap tell used here: if the two sides dispatch the
+same kernel name and produce bit-identical output, any "speedup" is measurement.

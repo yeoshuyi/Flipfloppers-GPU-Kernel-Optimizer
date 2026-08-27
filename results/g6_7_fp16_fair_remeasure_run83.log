@@ -1,0 +1,58 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+
+==============================================================================
+=== qkv       M=64 K=512 N=1536 bias=True  red_mask=2 ===
+  [graph] pytorch F.linear        3.619 us/call
+  [graph] algo[ 0]                3.622 us/call  x0.9991  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.375
+  [graph] algo[ 1]                3.964 us/call  x0.9130  maxdiff=0.000e+00  id=21 tile=11 stages=14 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.15
+  [graph] algo[ 2]                4.013 us/call  x0.9018  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.6
+  [graph] algo[ 3]                4.804 us/call  x0.7533  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=5 reduc=2 swizzle=0 ws=1572864 wave=0.375
+  [graph] algo[ 4]                5.180 us/call  x0.6986  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=5 reduc=2 swizzle=0 ws=1572864 wave=0.75
+  [graph] algo[ 5]                5.254 us/call  x0.6888  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0833333
+  [graph] algo[ 6]                6.055 us/call  x0.5976  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=2 swizzle=0 ws=3145728 wave=1.2
+  [graph] algo[ 7]                6.368 us/call  x0.5683  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=2 swizzle=0 ws=3145728 wave=1.2
+USDT:2026-08-27 01:18:22 69676:69676 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:18:23 69676:69676 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 01:18:23 69676:69676 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:18:23 69676:69676 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+  [prof]  pytorch kernel time     4.007 us/launch
+            cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>
+  [prof]  algo[0] kernel time     3.990 us/launch  x1.0041
+            cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>
+  same kernel dispatched by both sides? YES
+
+  BEST algo[0]:  graph x0.9991   prof x1.0041   maxdiff=0.000e+00
+
+==============================================================================
+=== out_proj  M=64 K=512 N=512 bias=True  red_mask=2 ===
+  [graph] pytorch F.linear        3.183 us/call
+  [graph] algo[ 0]                3.243 us/call  x0.9815  maxdiff=0.000e+00  id=21 tile=5 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.2
+  [graph] algo[ 1]                3.185 us/call  x0.9994  maxdiff=0.000e+00  id=21 tile=11 stages=20 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [graph] algo[ 2]                3.712 us/call  x0.8575  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.2
+  [graph] algo[ 3]                3.919 us/call  x0.8122  maxdiff=9.766e-04  id=21 tile=11 stages=14 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.4
+  [graph] algo[ 4]                4.045 us/call  x0.7870  maxdiff=9.766e-04  id=21 tile=11 stages=19 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.4
+  [graph] algo[ 5]                3.941 us/call  x0.8076  maxdiff=9.766e-04  id=21 tile=15 stages=12 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [graph] algo[ 6]                4.177 us/call  x0.7620  maxdiff=9.766e-04  id=6 tile=15 stages=17 splitk=8 reduc=2 swizzle=0 ws=1048576 wave=0.5
+  [graph] algo[ 7]                5.142 us/call  x0.6190  maxdiff=0.000e+00  id=21 tile=11 stages=7 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.0277778
+USDT:2026-08-27 01:18:24 69676:69676 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:18:24 69676:69676 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 01:18:24 69676:69676 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 01:18:24 69676:69676 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+  [prof]  pytorch kernel time     3.362 us/launch
+            cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>
+  [prof]  algo[1] kernel time     3.359 us/launch  x1.0010
+            cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8>
+  same kernel dispatched by both sides? YES
+
+  BEST algo[1]:  graph x0.9994   prof x1.0010   maxdiff=0.000e+00
+
+==============================================================================
+SUMMARY -- launch overhead removed symmetrically
+  shape                                  graph      prof   maxdiff   same-kernel
+  qkv      M=64 K=512 N=1536         x 0.9991 x 1.0041   0.0e+00   True
+  out_proj M=64 K=512 N=512          x 0.9994 x 1.0010   0.0e+00   True
+
+VERDICT: GATE FAILED -- with per-call dispatch removed from BOTH sides, no cuBLASLt candidate beats PyTorch's own FP16 F.linear by >10% at M=64. Run 82's apparent 1.26x/1.96x was the gap between two harness dispatch floors (PyTorch's Python loop ~7.8us/call vs the C++ loop ~3.9us/call), not kernel time. CLEAN NEGATIVE.
