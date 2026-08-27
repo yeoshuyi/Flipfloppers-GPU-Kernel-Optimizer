@@ -1,0 +1,664 @@
+=== SHAPE: tiny ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=1, seq_len=64, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.0010854 | max_rel=62.1542 | failed=0/32768
+trial 02/40: PASS | max_abs=0.00108325 | max_rel=52.0841 | failed=0/32768
+trial 03/40: PASS | max_abs=0.00110722 | max_rel=6.16078 | failed=0/32768
+trial 04/40: PASS | max_abs=0.00127065 | max_rel=20.7134 | failed=0/32768
+trial 05/40: PASS | max_abs=0.00132561 | max_rel=8.73997 | failed=0/32768
+trial 06/40: FAIL | max_abs=0.00116026 | max_rel=65.3483 | failed=1/32768
+  worst_index=(0, 32, 270), baseline=1.8243977, optimized=1.8232374
+  failed output feature dims=[441]
+trial 07/40: FAIL | max_abs=0.00117165 | max_rel=17.8604 | failed=1/32768
+  worst_index=(0, 0, 439), baseline=-0.34426317, optimized=-0.34309152
+  failed output feature dims=[508]
+trial 08/40: PASS | max_abs=0.00141418 | max_rel=2.67701 | failed=0/32768
+trial 09/40: PASS | max_abs=0.00108501 | max_rel=1.86986 | failed=0/32768
+trial 10/40: PASS | max_abs=0.0010941 | max_rel=10.6153 | failed=0/32768
+trial 11/40: PASS | max_abs=0.00110185 | max_rel=10.084 | failed=0/32768
+trial 12/40: PASS | max_abs=0.0011456 | max_rel=8.34117 | failed=0/32768
+trial 13/40: FAIL | max_abs=0.00119209 | max_rel=48.0258 | failed=1/32768
+  worst_index=(0, 56, 322), baseline=-0.65154135, optimized=-0.65034926
+  failed output feature dims=[463]
+trial 14/40: FAIL | max_abs=0.00109391 | max_rel=28.7066 | failed=1/32768
+  worst_index=(0, 24, 204), baseline=-0.048863981, optimized=-0.047770076
+  failed output feature dims=[204]
+trial 15/40: FAIL | max_abs=0.00101389 | max_rel=3.54569 | failed=1/32768
+  worst_index=(0, 3, 50), baseline=0.09192995, optimized=0.09294384
+  failed output feature dims=[50]
+trial 16/40: FAIL | max_abs=0.00116467 | max_rel=3.00772 | failed=1/32768
+  worst_index=(0, 41, 405), baseline=-0.54289168, optimized=-0.54405636
+  failed output feature dims=[177]
+trial 17/40: FAIL | max_abs=0.00120151 | max_rel=82.9244 | failed=1/32768
+  worst_index=(0, 36, 357), baseline=0.81960678, optimized=0.82080829
+  failed output feature dims=[64]
+trial 18/40: PASS | max_abs=0.00114131 | max_rel=1.5796 | failed=0/32768
+trial 19/40: FAIL | max_abs=0.00103307 | max_rel=7.57078 | failed=1/32768
+  worst_index=(0, 1, 237), baseline=0.46778071, optimized=0.46881378
+  failed output feature dims=[439]
+trial 20/40: PASS | max_abs=0.00100315 | max_rel=57.5182 | failed=0/32768
+trial 21/40: PASS | max_abs=0.00111 | max_rel=31.046 | failed=0/32768
+trial 22/40: PASS | max_abs=0.00104707 | max_rel=1.54824 | failed=0/32768
+trial 23/40: FAIL | max_abs=0.00117493 | max_rel=4.39818 | failed=1/32768
+  worst_index=(0, 52, 456), baseline=-0.074297547, optimized=-0.075472474
+  failed output feature dims=[456]
+trial 24/40: PASS | max_abs=0.00122195 | max_rel=5.75097 | failed=0/32768
+trial 25/40: PASS | max_abs=0.00112748 | max_rel=8.06218 | failed=0/32768
+trial 26/40: PASS | max_abs=0.00105953 | max_rel=43.4461 | failed=0/32768
+trial 27/40: FAIL | max_abs=0.00104463 | max_rel=55.7939 | failed=1/32768
+  worst_index=(0, 20, 358), baseline=1.4390078, optimized=1.4379631
+  failed output feature dims=[59]
+trial 28/40: PASS | max_abs=0.00105464 | max_rel=10.5667 | failed=0/32768
+trial 29/40: FAIL | max_abs=0.00106239 | max_rel=27.6462 | failed=1/32768
+  worst_index=(0, 50, 64), baseline=-0.82795721, optimized=-0.82901961
+  failed output feature dims=[11]
+trial 30/40: PASS | max_abs=0.00117116 | max_rel=5.1447 | failed=0/32768
+trial 31/40: PASS | max_abs=0.00108552 | max_rel=12.893 | failed=0/32768
+trial 32/40: PASS | max_abs=0.00116318 | max_rel=2.40366 | failed=0/32768
+trial 33/40: PASS | max_abs=0.00109446 | max_rel=18.0374 | failed=0/32768
+trial 34/40: PASS | max_abs=0.00110209 | max_rel=4.68552 | failed=0/32768
+trial 35/40: PASS | max_abs=0.00104427 | max_rel=6.78246 | failed=0/32768
+trial 36/40: FAIL | max_abs=0.00115615 | max_rel=88.4426 | failed=1/32768
+  worst_index=(0, 39, 332), baseline=-0.2815187, optimized=-0.28267485
+  failed output feature dims=[307]
+trial 37/40: PASS | max_abs=0.0011943 | max_rel=4.92704 | failed=0/32768
+trial 38/40: PASS | max_abs=0.00111222 | max_rel=1.90723 | failed=0/32768
+trial 39/40: PASS | max_abs=0.0011422 | max_rel=17.1947 | failed=0/32768
+trial 40/40: PASS | max_abs=0.00112081 | max_rel=85.1533 | failed=0/32768
+summary: FAIL | max_abs=0.00141418 | max_rel=88.4426 | failed=12/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.4364 ms | mean=1.4436 ms | p90=1.4583 ms | min=1.4051 ms | throughput=44557.32 token/s
+optimized: median=0.2468 ms | mean=0.2492 ms | p90=0.2488 ms | min=0.2458 ms | throughput=259336.10 token/s
+speedup  : 5.820x based on median latency
+
+=== SHAPE: default ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.00106072 | max_rel=47.2032 | failed=0/524288
+trial 02/40: FAIL | max_abs=0.00104034 | max_rel=511.086 | failed=1/524288
+  worst_index=(4, 8, 38), baseline=-0.86604565, optimized=-0.86500531
+  failed output feature dims=[9]
+trial 03/40: PASS | max_abs=0.00104523 | max_rel=779.196 | failed=0/524288
+trial 04/40: PASS | max_abs=0.00110149 | max_rel=38.777 | failed=0/524288
+trial 05/40: PASS | max_abs=0.0010727 | max_rel=164.757 | failed=0/524288
+trial 06/40: PASS | max_abs=0.00111693 | max_rel=18.923 | failed=0/524288
+trial 07/40: FAIL | max_abs=0.00120866 | max_rel=92.2649 | failed=1/524288
+  worst_index=(7, 93, 225), baseline=-1.3515997, optimized=-1.350391
+  failed output feature dims=[189]
+trial 08/40: FAIL | max_abs=0.00114358 | max_rel=63.6876 | failed=1/524288
+  worst_index=(3, 20, 507), baseline=0.072954625, optimized=0.074098207
+  failed output feature dims=[507]
+trial 09/40: PASS | max_abs=0.00111485 | max_rel=138.567 | failed=0/524288
+trial 10/40: PASS | max_abs=0.0011071 | max_rel=86.1921 | failed=0/524288
+trial 11/40: PASS | max_abs=0.00108317 | max_rel=123.086 | failed=0/524288
+trial 12/40: PASS | max_abs=0.00102329 | max_rel=9328.64 | failed=0/524288
+trial 13/40: PASS | max_abs=0.00127482 | max_rel=71.1454 | failed=0/524288
+trial 14/40: PASS | max_abs=0.00103247 | max_rel=109.533 | failed=0/524288
+trial 15/40: PASS | max_abs=0.0010978 | max_rel=93.0707 | failed=0/524288
+trial 16/40: PASS | max_abs=0.00113469 | max_rel=100.559 | failed=0/524288
+trial 17/40: FAIL | max_abs=0.00119424 | max_rel=654.032 | failed=3/524288
+  worst_index=(0, 65, 22), baseline=2.2700763, optimized=2.268882
+  failed output feature dims=[23, 226, 398]
+trial 18/40: PASS | max_abs=0.00110555 | max_rel=309.679 | failed=0/524288
+trial 19/40: FAIL | max_abs=0.00110555 | max_rel=129.938 | failed=2/524288
+  worst_index=(7, 55, 467), baseline=-0.27982756, optimized=-0.28093311
+  failed output feature dims=[365, 489]
+trial 20/40: PASS | max_abs=0.0010758 | max_rel=29.7211 | failed=0/524288
+trial 21/40: PASS | max_abs=0.00106889 | max_rel=56.229 | failed=0/524288
+trial 22/40: PASS | max_abs=0.0010941 | max_rel=167.627 | failed=0/524288
+trial 23/40: PASS | max_abs=0.00105059 | max_rel=85.2326 | failed=0/524288
+trial 24/40: PASS | max_abs=0.00104946 | max_rel=40.1843 | failed=0/524288
+trial 25/40: FAIL | max_abs=0.00122213 | max_rel=63.0541 | failed=1/524288
+  worst_index=(2, 2, 408), baseline=1.2166709, optimized=1.2154487
+  failed output feature dims=[73]
+trial 26/40: PASS | max_abs=0.00107718 | max_rel=161.865 | failed=0/524288
+trial 27/40: FAIL | max_abs=0.00106001 | max_rel=42.8292 | failed=1/524288
+  worst_index=(0, 46, 115), baseline=-1.6742421, optimized=-1.6753021
+  failed output feature dims=[322]
+trial 28/40: PASS | max_abs=0.00106728 | max_rel=216.853 | failed=0/524288
+trial 29/40: PASS | max_abs=0.00111498 | max_rel=49.1849 | failed=0/524288
+trial 30/40: PASS | max_abs=0.00115755 | max_rel=107.418 | failed=0/524288
+trial 31/40: PASS | max_abs=0.00115895 | max_rel=58.8433 | failed=0/524288
+trial 32/40: PASS | max_abs=0.00113809 | max_rel=39.3418 | failed=0/524288
+trial 33/40: FAIL | max_abs=0.00110972 | max_rel=88.3228 | failed=1/524288
+  worst_index=(4, 44, 506), baseline=1.3004807, optimized=1.3015904
+  failed output feature dims=[51]
+trial 34/40: PASS | max_abs=0.00116277 | max_rel=51.6495 | failed=0/524288
+trial 35/40: PASS | max_abs=0.00106855 | max_rel=131.246 | failed=0/524288
+trial 36/40: PASS | max_abs=0.00106013 | max_rel=93.4254 | failed=0/524288
+trial 37/40: FAIL | max_abs=0.0010878 | max_rel=36.1193 | failed=1/524288
+  worst_index=(6, 93, 497), baseline=-0.02414288, optimized=-0.023055084
+  failed output feature dims=[497]
+trial 38/40: PASS | max_abs=0.00108996 | max_rel=280.355 | failed=0/524288
+trial 39/40: FAIL | max_abs=0.00114523 | max_rel=32.3777 | failed=1/524288
+  worst_index=(3, 124, 176), baseline=-0.19991228, optimized=-0.19876705
+  failed output feature dims=[285]
+trial 40/40: PASS | max_abs=0.00111255 | max_rel=1583.79 | failed=0/524288
+summary: FAIL | max_abs=0.00127482 | max_rel=9328.64 | failed=13/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.4316 ms | mean=1.4372 ms | p90=1.4480 ms | min=1.4080 ms | throughput=715307.56 token/s
+optimized: median=0.7557 ms | mean=0.7570 ms | p90=0.7578 ms | min=0.7537 ms | throughput=1355013.60 token/s
+speedup  : 1.894x based on median latency
+
+=== SHAPE: long_seq ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: FAIL | max_abs=0.00123149 | max_rel=1257.82 | failed=2/4194304
+  worst_index=(1, 708, 481), baseline=-0.71268022, optimized=-0.71144873
+  failed output feature dims=[15, 394]
+trial 02/40: FAIL | max_abs=0.00119901 | max_rel=933.288 | failed=3/4194304
+  worst_index=(5, 640, 143), baseline=0.42424414, optimized=0.42304513
+  failed output feature dims=[19, 95, 375]
+trial 03/40: FAIL | max_abs=0.00126033 | max_rel=290.761 | failed=2/4194304
+  worst_index=(2, 40, 232), baseline=0.15390199, optimized=0.15264167
+  failed output feature dims=[90, 107]
+trial 04/40: FAIL | max_abs=0.00119615 | max_rel=333.375 | failed=5/4194304
+  worst_index=(1, 338, 395), baseline=0.68006289, optimized=0.68125904
+  failed output feature dims=[96, 150, 200, 308, 369]
+trial 05/40: FAIL | max_abs=0.00116327 | max_rel=434.523 | failed=1/4194304
+  worst_index=(0, 350, 70), baseline=-0.35649014, optimized=-0.35765341
+  failed output feature dims=[21]
+trial 06/40: FAIL | max_abs=0.00114405 | max_rel=1000.85 | failed=3/4194304
+  worst_index=(7, 263, 494), baseline=-1.4438251, optimized=-1.4449692
+  failed output feature dims=[83, 89, 204]
+trial 07/40: FAIL | max_abs=0.00122941 | max_rel=1147.4 | failed=4/4194304
+  worst_index=(1, 757, 154), baseline=-0.76609397, optimized=-0.76732337
+  failed output feature dims=[309, 355, 382, 430]
+trial 08/40: FAIL | max_abs=0.00120255 | max_rel=718.111 | failed=6/4194304
+  worst_index=(5, 639, 61), baseline=0.38771743, optimized=0.38651487
+  failed output feature dims=[0, 44, 270, 311, 458, 473]
+trial 09/40: FAIL | max_abs=0.00117481 | max_rel=1254.38 | failed=1/4194304
+  worst_index=(5, 167, 263), baseline=-0.5261268, optimized=-0.52730161
+  failed output feature dims=[406]
+trial 10/40: FAIL | max_abs=0.00124747 | max_rel=1008.21 | failed=3/4194304
+  worst_index=(7, 415, 290), baseline=-0.44373038, optimized=-0.44248292
+  failed output feature dims=[219, 483, 504]
+trial 11/40: FAIL | max_abs=0.00117163 | max_rel=1749.8 | failed=1/4194304
+  worst_index=(7, 201, 139), baseline=0.21983948, optimized=0.22101112
+  failed output feature dims=[186]
+trial 12/40: FAIL | max_abs=0.00114018 | max_rel=917.522 | failed=6/4194304
+  worst_index=(5, 691, 203), baseline=0.5546599, optimized=0.55351973
+  failed output feature dims=[2, 334, 394, 420, 421]
+trial 13/40: FAIL | max_abs=0.00112391 | max_rel=1606.97 | failed=4/4194304
+  worst_index=(5, 287, 277), baseline=1.3809733, optimized=1.3798494
+  failed output feature dims=[34, 242, 398, 399]
+trial 14/40: FAIL | max_abs=0.00129735 | max_rel=1476.54 | failed=2/4194304
+  worst_index=(0, 439, 198), baseline=0.38340291, optimized=0.38210556
+  failed output feature dims=[208, 332]
+trial 15/40: FAIL | max_abs=0.00121482 | max_rel=700.456 | failed=7/4194304
+  worst_index=(3, 639, 457), baseline=0.057035178, optimized=0.055820357
+  failed output feature dims=[71, 254, 302, 330, 457, 472]
+trial 16/40: FAIL | max_abs=0.00123307 | max_rel=3630.09 | failed=2/4194304
+  worst_index=(5, 899, 406), baseline=0.17069837, optimized=0.17193145
+  failed output feature dims=[135, 211]
+trial 17/40: FAIL | max_abs=0.00121421 | max_rel=41997.2 | failed=1/4194304
+  worst_index=(3, 828, 461), baseline=-0.36135852, optimized=-0.36257273
+  failed output feature dims=[323]
+trial 18/40: FAIL | max_abs=0.0012393 | max_rel=1063.87 | failed=3/4194304
+  worst_index=(4, 506, 347), baseline=2.1512511, optimized=2.1500118
+  failed output feature dims=[211, 318, 360]
+trial 19/40: PASS | max_abs=0.00112045 | max_rel=559.15 | failed=0/4194304
+trial 20/40: FAIL | max_abs=0.00111318 | max_rel=376.631 | failed=3/4194304
+  worst_index=(3, 329, 145), baseline=-2.3549519, optimized=-2.356065
+  failed output feature dims=[407, 428, 459]
+trial 21/40: FAIL | max_abs=0.00119972 | max_rel=4520.66 | failed=5/4194304
+  worst_index=(6, 915, 500), baseline=-1.0105065, optimized=-1.0117062
+  failed output feature dims=[101, 184, 194, 422, 443]
+trial 22/40: FAIL | max_abs=0.00127289 | max_rel=1461.08 | failed=1/4194304
+  worst_index=(7, 647, 84), baseline=0.45689103, optimized=0.45816392
+  failed output feature dims=[228]
+trial 23/40: FAIL | max_abs=0.00115566 | max_rel=2287.68 | failed=1/4194304
+  worst_index=(6, 402, 205), baseline=-0.1244147, optimized=-0.12557036
+  failed output feature dims=[350]
+trial 24/40: FAIL | max_abs=0.00122857 | max_rel=297.782 | failed=3/4194304
+  worst_index=(3, 594, 228), baseline=-2.0826769, optimized=-2.0814483
+  failed output feature dims=[238, 271, 371]
+trial 25/40: FAIL | max_abs=0.00120306 | max_rel=2524.05 | failed=3/4194304
+  worst_index=(6, 290, 157), baseline=-0.51070708, optimized=-0.50950402
+  failed output feature dims=[213, 333, 341]
+trial 26/40: FAIL | max_abs=0.0011791 | max_rel=664.861 | failed=2/4194304
+  worst_index=(1, 655, 60), baseline=-0.68199188, optimized=-0.68081278
+  failed output feature dims=[196, 489]
+trial 27/40: FAIL | max_abs=0.00119237 | max_rel=1596.76 | failed=5/4194304
+  worst_index=(3, 37, 203), baseline=0.016914146, optimized=0.01810652
+  failed output feature dims=[6, 128, 177, 203, 508]
+trial 28/40: FAIL | max_abs=0.00116694 | max_rel=3064.86 | failed=3/4194304
+  worst_index=(1, 113, 231), baseline=1.9047959, optimized=1.9059628
+  failed output feature dims=[137, 290, 442]
+trial 29/40: FAIL | max_abs=0.0012399 | max_rel=666.167 | failed=2/4194304
+  worst_index=(2, 225, 9), baseline=-0.62013698, optimized=-0.62137687
+  failed output feature dims=[388, 444]
+trial 30/40: FAIL | max_abs=0.00122774 | max_rel=998.625 | failed=5/4194304
+  worst_index=(6, 815, 91), baseline=1.0428071, optimized=1.0415794
+  failed output feature dims=[87, 91, 360, 376, 418]
+trial 31/40: FAIL | max_abs=0.00118095 | max_rel=331.675 | failed=2/4194304
+  worst_index=(2, 1009, 328), baseline=-0.18557695, optimized=-0.18675789
+  failed output feature dims=[293, 344]
+trial 32/40: FAIL | max_abs=0.00111455 | max_rel=561.946 | failed=1/4194304
+  worst_index=(2, 850, 464), baseline=0.425567, optimized=0.42668155
+  failed output feature dims=[179]
+trial 33/40: FAIL | max_abs=0.00116047 | max_rel=810.274 | failed=5/4194304
+  worst_index=(5, 866, 485), baseline=-0.026631657, optimized=-0.025471188
+  failed output feature dims=[110, 262, 404, 458, 485]
+trial 34/40: FAIL | max_abs=0.00119174 | max_rel=394.188 | failed=2/4194304
+  worst_index=(6, 404, 207), baseline=-0.33328158, optimized=-0.33208984
+  failed output feature dims=[244, 330]
+trial 35/40: FAIL | max_abs=0.00129783 | max_rel=357.891 | failed=1/4194304
+  worst_index=(4, 911, 400), baseline=-1.7117929, optimized=-1.7104951
+  failed output feature dims=[239]
+trial 36/40: FAIL | max_abs=0.00114226 | max_rel=2517.47 | failed=1/4194304
+  worst_index=(4, 743, 179), baseline=-2.3580258, optimized=-2.3591681
+  failed output feature dims=[431]
+trial 37/40: FAIL | max_abs=0.00117916 | max_rel=723.39 | failed=6/4194304
+  worst_index=(4, 33, 94), baseline=-0.97325069, optimized=-0.97207153
+  failed output feature dims=[76, 218, 268, 338, 421, 479]
+trial 38/40: FAIL | max_abs=0.00121009 | max_rel=169.445 | failed=2/4194304
+  worst_index=(6, 7, 368), baseline=1.6536446, optimized=1.6548547
+  failed output feature dims=[193, 474]
+trial 39/40: FAIL | max_abs=0.0013175 | max_rel=1570.08 | failed=4/4194304
+  worst_index=(3, 63, 421), baseline=-0.49108738, optimized=-0.48976988
+  failed output feature dims=[60, 101, 424, 475]
+trial 40/40: FAIL | max_abs=0.00109679 | max_rel=3130.49 | failed=5/4194304
+  worst_index=(6, 711, 212), baseline=-0.67572165, optimized=-0.67462486
+  failed output feature dims=[51, 127, 300, 384, 458]
+summary: FAIL | max_abs=0.0013175 | max_rel=41997.2 | failed=118/167772160
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.7050 ms | mean=24.7076 ms | p90=24.7173 ms | min=24.6886 ms | throughput=331592.46 token/s
+optimized: median=8.8730 ms | mean=8.8749 ms | p90=8.8822 ms | min=8.8577 ms | throughput=923254.46 token/s
+speedup  : 2.784x based on median latency
+
+=== SHAPE: large_batch ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: FAIL | max_abs=0.00133768 | max_rel=31971.9 | failed=14/16777216
+  worst_index=(244, 45, 43), baseline=0.38212812, optimized=0.3834658
+  failed output feature dims=[23, 56, 118, 125, 153, 181, 207, 221, 260, 269, 274, 298, 392, 511]
+trial 02/40: FAIL | max_abs=0.00128472 | max_rel=8941.04 | failed=19/16777216
+  worst_index=(56, 58, 10), baseline=-1.2292899, optimized=-1.2280052
+  failed output feature dims=[3, 4, 6, 40, 72, 78, 146, 162, 218, 263, 267, 283, 285, 314, 340, 366]...
+trial 03/40: FAIL | max_abs=0.00134695 | max_rel=875.698 | failed=26/16777216
+  worst_index=(254, 42, 93), baseline=-0.64242643, optimized=-0.64107949
+  failed output feature dims=[7, 28, 29, 33, 43, 47, 68, 79, 88, 97, 102, 173, 183, 210, 271, 293]...
+trial 04/40: FAIL | max_abs=0.00124729 | max_rel=6467.93 | failed=17/16777216
+  worst_index=(43, 43, 423), baseline=1.1221285, optimized=1.1208812
+  failed output feature dims=[1, 56, 59, 219, 254, 274, 281, 292, 309, 366, 425, 431, 435, 486, 501, 502]...
+trial 05/40: FAIL | max_abs=0.00123411 | max_rel=38150.7 | failed=14/16777216
+  worst_index=(11, 36, 344), baseline=0.51033401, optimized=0.51156813
+  failed output feature dims=[12, 32, 35, 71, 156, 169, 173, 190, 219, 234, 299, 330, 338, 433]
+trial 06/40: FAIL | max_abs=0.00121617 | max_rel=3543.14 | failed=15/16777216
+  worst_index=(40, 28, 404), baseline=-1.2929693, optimized=-1.2917532
+  failed output feature dims=[22, 37, 118, 190, 208, 226, 283, 286, 370, 412, 415, 421, 426, 449, 476]
+trial 07/40: FAIL | max_abs=0.00123739 | max_rel=6671.4 | failed=14/16777216
+  worst_index=(97, 119, 485), baseline=0.47082299, optimized=0.4695856
+  failed output feature dims=[23, 28, 65, 73, 177, 199, 225, 245, 264, 355, 357, 449, 462]
+trial 08/40: FAIL | max_abs=0.00125188 | max_rel=1118.14 | failed=12/16777216
+  worst_index=(204, 65, 497), baseline=-0.37427047, optimized=-0.37552235
+  failed output feature dims=[16, 27, 47, 110, 176, 223, 309, 336, 369, 370]
+trial 09/40: FAIL | max_abs=0.00123858 | max_rel=7632.23 | failed=12/16777216
+  worst_index=(103, 55, 388), baseline=-0.85354191, optimized=-0.8547805
+  failed output feature dims=[51, 81, 174, 217, 238, 239, 302, 307, 357, 370, 452, 454]
+trial 10/40: FAIL | max_abs=0.00127321 | max_rel=4261.23 | failed=16/16777216
+  worst_index=(178, 112, 216), baseline=0.99722314, optimized=0.99849635
+  failed output feature dims=[21, 137, 183, 188, 194, 219, 250, 299, 321, 328, 330, 346, 399, 443, 459, 461]
+trial 11/40: FAIL | max_abs=0.00133502 | max_rel=793.645 | failed=20/16777216
+  worst_index=(169, 7, 194), baseline=-0.50597763, optimized=-0.50731266
+  failed output feature dims=[34, 72, 74, 111, 117, 147, 151, 153, 171, 292, 310, 332, 356, 366, 407, 415]...
+trial 12/40: FAIL | max_abs=0.0012933 | max_rel=3594.32 | failed=24/16777216
+  worst_index=(177, 54, 288), baseline=1.374319, optimized=1.3756123
+  failed output feature dims=[4, 11, 12, 43, 83, 90, 111, 113, 173, 176, 183, 234, 237, 264, 296, 302]...
+trial 13/40: FAIL | max_abs=0.00124717 | max_rel=4869.16 | failed=12/16777216
+  worst_index=(25, 31, 487), baseline=-1.1591883, optimized=-1.1604354
+  failed output feature dims=[68, 104, 120, 121, 170, 178, 191, 218, 225, 281, 410, 466]
+trial 14/40: FAIL | max_abs=0.00123 | max_rel=3025.92 | failed=19/16777216
+  worst_index=(249, 91, 296), baseline=0.73804307, optimized=0.73681307
+  failed output feature dims=[16, 43, 102, 182, 183, 208, 215, 235, 238, 240, 247, 251, 270, 276, 305, 375]...
+trial 15/40: FAIL | max_abs=0.00132298 | max_rel=1985.87 | failed=17/16777216
+  worst_index=(39, 100, 246), baseline=-0.75706565, optimized=-0.75574267
+  failed output feature dims=[60, 66, 71, 121, 128, 152, 196, 210, 289, 294, 303, 326, 397, 407, 412, 481]...
+trial 16/40: FAIL | max_abs=0.00133872 | max_rel=3161.99 | failed=15/16777216
+  worst_index=(159, 45, 180), baseline=-2.7031519, optimized=-2.7018132
+  failed output feature dims=[129, 133, 156, 163, 199, 340, 362, 388, 404, 406, 460, 482, 490, 498, 501]
+trial 17/40: FAIL | max_abs=0.0012145 | max_rel=28220.8 | failed=14/16777216
+  worst_index=(30, 69, 213), baseline=0.55860567, optimized=0.55982018
+  failed output feature dims=[15, 27, 46, 52, 68, 71, 168, 185, 263, 335, 412, 419, 420, 468]
+trial 18/40: FAIL | max_abs=0.00116289 | max_rel=9851.46 | failed=16/16777216
+  worst_index=(105, 50, 453), baseline=-1.1342599, optimized=-1.1354228
+  failed output feature dims=[33, 51, 82, 101, 150, 162, 177, 229, 299, 327, 353, 388, 450, 468, 486]
+trial 19/40: FAIL | max_abs=0.00137156 | max_rel=1887.94 | failed=16/16777216
+  worst_index=(62, 16, 395), baseline=0.32576287, optimized=0.32439131
+  failed output feature dims=[10, 26, 95, 121, 187, 195, 235, 239, 347, 365, 392, 431, 444, 476, 492]
+trial 20/40: FAIL | max_abs=0.00120187 | max_rel=81781.4 | failed=16/16777216
+  worst_index=(28, 104, 287), baseline=-0.44939712, optimized=-0.45059898
+  failed output feature dims=[4, 160, 175, 200, 214, 220, 221, 222, 289, 330, 369, 397, 412, 435, 453, 474]
+trial 21/40: FAIL | max_abs=0.00122249 | max_rel=16829.4 | failed=11/16777216
+  worst_index=(174, 31, 220), baseline=-0.55923289, optimized=-0.5580104
+  failed output feature dims=[21, 59, 67, 90, 91, 122, 160, 240, 280, 408, 460]
+trial 22/40: FAIL | max_abs=0.00126636 | max_rel=646.537 | failed=17/16777216
+  worst_index=(25, 100, 484), baseline=-1.4930955, optimized=-1.4943619
+  failed output feature dims=[91, 95, 115, 186, 191, 217, 255, 271, 284, 318, 333, 353, 381, 405, 460, 496]...
+trial 23/40: FAIL | max_abs=0.00123352 | max_rel=7313.98 | failed=17/16777216
+  worst_index=(181, 103, 210), baseline=0.74710971, optimized=0.74834323
+  failed output feature dims=[10, 12, 25, 28, 57, 71, 144, 155, 185, 240, 284, 335, 366, 420, 440, 456]
+trial 24/40: FAIL | max_abs=0.00120375 | max_rel=4827.6 | failed=17/16777216
+  worst_index=(48, 6, 341), baseline=0.14591309, optimized=0.14711684
+  failed output feature dims=[29, 38, 71, 115, 117, 118, 155, 202, 291, 292, 337, 414, 431, 443, 459, 504]
+trial 25/40: FAIL | max_abs=0.00131139 | max_rel=3892.5 | failed=21/16777216
+  worst_index=(140, 2, 305), baseline=-0.42451721, optimized=-0.42582861
+  failed output feature dims=[19, 22, 53, 56, 111, 135, 171, 176, 206, 237, 242, 321, 329, 348, 360, 411]...
+trial 26/40: FAIL | max_abs=0.00121605 | max_rel=6335.89 | failed=19/16777216
+  worst_index=(32, 55, 388), baseline=-1.2251295, optimized=-1.2263455
+  failed output feature dims=[11, 12, 52, 59, 85, 115, 122, 153, 157, 162, 164, 174, 188, 228, 268, 289]...
+trial 27/40: FAIL | max_abs=0.0012449 | max_rel=2388.02 | failed=14/16777216
+  worst_index=(77, 51, 57), baseline=1.6898079, optimized=1.688563
+  failed output feature dims=[10, 28, 59, 66, 67, 80, 162, 219, 229, 301, 437, 451, 454, 503]
+trial 28/40: FAIL | max_abs=0.00130898 | max_rel=1247.14 | failed=9/16777216
+  worst_index=(66, 38, 281), baseline=-0.16738069, optimized=-0.16607171
+  failed output feature dims=[1, 55, 143, 357, 369, 375, 451, 487, 503]
+trial 29/40: FAIL | max_abs=0.00124383 | max_rel=6508.24 | failed=22/16777216
+  worst_index=(152, 29, 87), baseline=2.9786315, optimized=2.9773877
+  failed output feature dims=[26, 31, 54, 72, 109, 156, 177, 191, 203, 216, 233, 236, 293, 305, 323, 374]...
+trial 30/40: FAIL | max_abs=0.00134414 | max_rel=909.538 | failed=16/16777216
+  worst_index=(207, 73, 488), baseline=-0.64530027, optimized=-0.64664441
+  failed output feature dims=[14, 18, 22, 52, 123, 162, 191, 319, 321, 338, 374, 399, 425, 466, 481, 511]
+trial 31/40: FAIL | max_abs=0.00122845 | max_rel=1.02913e+07 | failed=12/16777216
+  worst_index=(21, 54, 55), baseline=-0.6090135, optimized=-0.60778505
+  failed output feature dims=[3, 8, 23, 108, 172, 279, 285, 324, 388, 398, 401, 440]
+trial 32/40: FAIL | max_abs=0.00123322 | max_rel=1158.93 | failed=19/16777216
+  worst_index=(241, 23, 380), baseline=1.4040035, optimized=1.4027703
+  failed output feature dims=[52, 85, 128, 155, 156, 250, 254, 259, 267, 295, 303, 346, 361, 373, 381, 389]...
+trial 33/40: FAIL | max_abs=0.0012666 | max_rel=3722.54 | failed=11/16777216
+  worst_index=(1, 35, 387), baseline=0.87688559, optimized=0.87815219
+  failed output feature dims=[33, 75, 192, 261, 276, 395, 419, 434, 437, 458, 492]
+trial 34/40: FAIL | max_abs=0.00119174 | max_rel=77693.6 | failed=9/16777216
+  worst_index=(235, 11, 352), baseline=-0.65353388, optimized=-0.65472561
+  failed output feature dims=[55, 71, 72, 100, 123, 155, 215, 226, 276]
+trial 35/40: FAIL | max_abs=0.00126046 | max_rel=833.372 | failed=16/16777216
+  worst_index=(171, 62, 430), baseline=0.57400435, optimized=0.57274389
+  failed output feature dims=[15, 114, 151, 212, 217, 254, 263, 274, 299, 305, 346, 359, 400, 436, 442, 452]
+trial 36/40: FAIL | max_abs=0.00121439 | max_rel=731.183 | failed=20/16777216
+  worst_index=(54, 40, 82), baseline=-0.57412297, optimized=-0.57533735
+  failed output feature dims=[27, 62, 130, 183, 203, 234, 237, 265, 323, 325, 370, 395, 400, 408, 420, 427]...
+trial 37/40: FAIL | max_abs=0.00130054 | max_rel=2077.07 | failed=20/16777216
+  worst_index=(187, 14, 484), baseline=-0.27866778, optimized=-0.27996832
+  failed output feature dims=[7, 48, 49, 71, 109, 166, 173, 187, 229, 235, 269, 275, 284, 325, 352, 362]...
+trial 38/40: FAIL | max_abs=0.00125527 | max_rel=55848.4 | failed=15/16777216
+  worst_index=(234, 95, 508), baseline=-1.7671875, optimized=-1.7684427
+  failed output feature dims=[10, 99, 179, 194, 209, 320, 340, 373, 403, 462, 479, 485, 487, 501, 508]
+trial 39/40: FAIL | max_abs=0.00129002 | max_rel=705.717 | failed=12/16777216
+  worst_index=(61, 49, 12), baseline=-0.56046987, optimized=-0.56175989
+  failed output feature dims=[0, 24, 39, 170, 171, 203, 225, 243, 309, 356, 436, 444]
+trial 40/40: FAIL | max_abs=0.00127709 | max_rel=70455.2 | failed=12/16777216
+  worst_index=(9, 15, 191), baseline=1.1272184, optimized=1.1259413
+  failed output feature dims=[1, 32, 47, 61, 70, 90, 104, 185, 262, 311, 390, 441]
+summary: FAIL | max_abs=0.00137156 | max_rel=1.02913e+07 | failed=637/671088640
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=41.8901 ms | mean=41.8912 ms | p90=41.9011 ms | min=41.8673 ms | throughput=782237.43 token/s
+optimized: median=18.6923 ms | mean=18.6945 ms | p90=18.7023 ms | min=18.6726 ms | throughput=1753023.91 token/s
+speedup  : 2.241x based on median latency
+
+=== SHAPE: default_padded ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.00103784 | max_rel=43.4904 | failed=0/524288
+trial 02/40: PASS | max_abs=0.00109574 | max_rel=62.9588 | failed=0/524288
+trial 03/40: FAIL | max_abs=0.00108469 | max_rel=65.7838 | failed=1/524288
+  worst_index=(6, 64, 143), baseline=1.2280272, optimized=1.2291119
+  failed output feature dims=[68]
+trial 04/40: PASS | max_abs=0.00119323 | max_rel=482.388 | failed=0/524288
+trial 05/40: FAIL | max_abs=0.00116432 | max_rel=82.3353 | failed=1/524288
+  worst_index=(4, 15, 387), baseline=-1.1982052, optimized=-1.1970409
+  failed output feature dims=[218]
+trial 06/40: PASS | max_abs=0.00111723 | max_rel=536.031 | failed=0/524288
+trial 07/40: FAIL | max_abs=0.00111309 | max_rel=603.335 | failed=1/524288
+  worst_index=(3, 6, 388), baseline=0.21714085, optimized=0.21602777
+  failed output feature dims=[226]
+trial 08/40: PASS | max_abs=0.00120771 | max_rel=25.6846 | failed=0/524288
+trial 09/40: PASS | max_abs=0.00109947 | max_rel=50.7445 | failed=0/524288
+trial 10/40: FAIL | max_abs=0.00110567 | max_rel=28.7551 | failed=1/524288
+  worst_index=(6, 43, 510), baseline=-1.6397429, optimized=-1.6408485
+  failed output feature dims=[412]
+trial 11/40: PASS | max_abs=0.00106241 | max_rel=37.8421 | failed=0/524288
+trial 12/40: PASS | max_abs=0.00107786 | max_rel=29.6443 | failed=0/524288
+trial 13/40: FAIL | max_abs=0.00111188 | max_rel=1285 | failed=2/524288
+  worst_index=(2, 101, 160), baseline=0.0461982, optimized=0.045086324
+  failed output feature dims=[72, 160]
+trial 14/40: FAIL | max_abs=0.00107957 | max_rel=69.4982 | failed=2/524288
+  worst_index=(3, 56, 244), baseline=-0.073633254, optimized=-0.074712828
+  failed output feature dims=[244, 465]
+trial 15/40: FAIL | max_abs=0.00107719 | max_rel=36.0073 | failed=1/524288
+  worst_index=(7, 98, 292), baseline=-0.062706694, optimized=-0.061629508
+  failed output feature dims=[292]
+trial 16/40: FAIL | max_abs=0.0011065 | max_rel=317.941 | failed=1/524288
+  worst_index=(5, 35, 164), baseline=2.220896, optimized=2.2197895
+  failed output feature dims=[164]
+trial 17/40: PASS | max_abs=0.00103283 | max_rel=30.3203 | failed=0/524288
+trial 18/40: FAIL | max_abs=0.00104547 | max_rel=178.366 | failed=1/524288
+  worst_index=(3, 6, 365), baseline=1.3293521, optimized=1.3303976
+  failed output feature dims=[292]
+trial 19/40: PASS | max_abs=0.0010879 | max_rel=689.983 | failed=0/524288
+trial 20/40: PASS | max_abs=0.00117165 | max_rel=23.4335 | failed=0/524288
+trial 21/40: FAIL | max_abs=0.00121886 | max_rel=56.229 | failed=1/524288
+  worst_index=(0, 61, 391), baseline=0.32465744, optimized=0.3258763
+  failed output feature dims=[271]
+trial 22/40: PASS | max_abs=0.00112969 | max_rel=63.4179 | failed=0/524288
+trial 23/40: PASS | max_abs=0.00121236 | max_rel=135.53 | failed=0/524288
+trial 24/40: FAIL | max_abs=0.00114501 | max_rel=182.688 | failed=1/524288
+  worst_index=(7, 6, 509), baseline=-1.2816857, optimized=-1.2805407
+  failed output feature dims=[11]
+trial 25/40: FAIL | max_abs=0.00108433 | max_rel=45.5199 | failed=1/524288
+  worst_index=(5, 32, 475), baseline=1.8046334, optimized=1.8035491
+  failed output feature dims=[417]
+trial 26/40: FAIL | max_abs=0.00113049 | max_rel=1808.78 | failed=3/524288
+  worst_index=(6, 84, 314), baseline=-0.38369748, optimized=-0.38482797
+  failed output feature dims=[59, 192, 232]
+trial 27/40: FAIL | max_abs=0.0010739 | max_rel=467.067 | failed=1/524288
+  worst_index=(0, 74, 354), baseline=-0.039743248, optimized=-0.038669351
+  failed output feature dims=[354]
+trial 28/40: FAIL | max_abs=0.00114137 | max_rel=39.0803 | failed=1/524288
+  worst_index=(2, 49, 60), baseline=0.55190015, optimized=0.55075878
+  failed output feature dims=[376]
+trial 29/40: PASS | max_abs=0.0011065 | max_rel=33.9654 | failed=0/524288
+trial 30/40: PASS | max_abs=0.00108525 | max_rel=34.4357 | failed=0/524288
+trial 31/40: PASS | max_abs=0.00106621 | max_rel=338.674 | failed=0/524288
+trial 32/40: FAIL | max_abs=0.00116456 | max_rel=87.6881 | failed=1/524288
+  worst_index=(7, 57, 452), baseline=-0.64135808, optimized=-0.64252263
+  failed output feature dims=[164]
+trial 33/40: FAIL | max_abs=0.00105011 | max_rel=21.3464 | failed=1/524288
+  worst_index=(1, 44, 90), baseline=-1.2851149, optimized=-1.2840648
+  failed output feature dims=[501]
+trial 34/40: PASS | max_abs=0.00108427 | max_rel=226.604 | failed=0/524288
+trial 35/40: PASS | max_abs=0.00107515 | max_rel=66.7591 | failed=0/524288
+trial 36/40: PASS | max_abs=0.0011279 | max_rel=76.3089 | failed=0/524288
+trial 37/40: PASS | max_abs=0.00109942 | max_rel=217.191 | failed=0/524288
+trial 38/40: PASS | max_abs=0.00105475 | max_rel=764.977 | failed=0/524288
+trial 39/40: FAIL | max_abs=0.00117135 | max_rel=15.2264 | failed=1/524288
+  worst_index=(4, 37, 61), baseline=-2.2280529, optimized=-2.2292242
+  failed output feature dims=[57]
+trial 40/40: FAIL | max_abs=0.00104748 | max_rel=200.121 | failed=1/524288
+  worst_index=(5, 4, 179), baseline=0.11106521, optimized=0.11211269
+  failed output feature dims=[458]
+summary: FAIL | max_abs=0.00121886 | max_rel=1808.78 | failed=23/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.3865 ms | mean=1.3898 ms | p90=1.3988 ms | min=1.3701 ms | throughput=738552.47 token/s
+optimized: median=0.7619 ms | mean=0.7626 ms | p90=0.7639 ms | min=0.7588 ms | throughput=1344085.99 token/s
+speedup  : 1.820x based on median latency
+
+=== SHAPE: long_seq_padded ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: FAIL | max_abs=0.00116396 | max_rel=3971.94 | failed=6/4194304
+  worst_index=(4, 588, 183), baseline=-0.47851983, optimized=-0.47735587
+  failed output feature dims=[79, 235, 248, 352, 421, 510]
+trial 02/40: FAIL | max_abs=0.00129473 | max_rel=419.512 | failed=2/4194304
+  worst_index=(4, 170, 89), baseline=0.58299881, optimized=0.58429354
+  failed output feature dims=[145, 278]
+trial 03/40: FAIL | max_abs=0.00117719 | max_rel=598.68 | failed=4/4194304
+  worst_index=(4, 536, 45), baseline=-1.3844817, optimized=-1.3856589
+  failed output feature dims=[66, 103, 177, 363]
+trial 04/40: FAIL | max_abs=0.00115371 | max_rel=147.217 | failed=2/4194304
+  worst_index=(5, 398, 476), baseline=-2.4544773, optimized=-2.4533236
+  failed output feature dims=[23, 291]
+trial 05/40: FAIL | max_abs=0.00119199 | max_rel=267.337 | failed=3/4194304
+  worst_index=(1, 415, 40), baseline=0.18237747, optimized=0.18356946
+  failed output feature dims=[27, 179, 483]
+trial 06/40: FAIL | max_abs=0.00129664 | max_rel=1221.58 | failed=2/4194304
+  worst_index=(4, 113, 206), baseline=-0.58038712, optimized=-0.57909048
+  failed output feature dims=[260, 449]
+trial 07/40: FAIL | max_abs=0.00111258 | max_rel=1018.78 | failed=4/4194304
+  worst_index=(3, 599, 377), baseline=-1.684692, optimized=-1.6835794
+  failed output feature dims=[95, 131, 137, 178]
+trial 08/40: FAIL | max_abs=0.00138241 | max_rel=558.145 | failed=1/4194304
+  worst_index=(6, 361, 61), baseline=-0.8442992, optimized=-0.84291679
+  failed output feature dims=[179]
+trial 09/40: FAIL | max_abs=0.00117579 | max_rel=387.126 | failed=4/4194304
+  worst_index=(3, 152, 4), baseline=0.21769361, optimized=0.21651782
+  failed output feature dims=[103, 201, 384, 422]
+trial 10/40: FAIL | max_abs=0.00119817 | max_rel=173.986 | failed=4/4194304
+  worst_index=(2, 417, 387), baseline=-0.5590241, optimized=-0.56022227
+  failed output feature dims=[93, 127, 454, 480]
+trial 11/40: FAIL | max_abs=0.00133908 | max_rel=430.324 | failed=3/4194304
+  worst_index=(7, 174, 161), baseline=-0.93794221, optimized=-0.93928128
+  failed output feature dims=[219, 422, 423]
+trial 12/40: FAIL | max_abs=0.00113082 | max_rel=4576.67 | failed=1/4194304
+  worst_index=(2, 287, 107), baseline=0.86368489, optimized=0.86255407
+  failed output feature dims=[159]
+trial 13/40: FAIL | max_abs=0.00121078 | max_rel=175.063 | failed=3/4194304
+  worst_index=(2, 228, 135), baseline=-0.4924123, optimized=-0.49120152
+  failed output feature dims=[57, 146, 378]
+trial 14/40: FAIL | max_abs=0.00116777 | max_rel=425.162 | failed=7/4194304
+  worst_index=(4, 852, 43), baseline=-2.0652251, optimized=-2.0640574
+  failed output feature dims=[53, 59, 139, 149, 254, 340, 366]
+trial 15/40: FAIL | max_abs=0.00124252 | max_rel=464.103 | failed=1/4194304
+  worst_index=(7, 571, 404), baseline=-1.9354913, optimized=-1.9342488
+  failed output feature dims=[487]
+trial 16/40: FAIL | max_abs=0.00115538 | max_rel=1039.46 | failed=3/4194304
+  worst_index=(2, 910, 49), baseline=-1.4482373, optimized=-1.4470819
+  failed output feature dims=[319, 350, 508]
+trial 17/40: FAIL | max_abs=0.001261 | max_rel=12327 | failed=3/4194304
+  worst_index=(5, 54, 344), baseline=-0.55219686, optimized=-0.55093586
+  failed output feature dims=[7, 57, 414]
+trial 18/40: FAIL | max_abs=0.00118268 | max_rel=738.843 | failed=4/4194304
+  worst_index=(5, 921, 19), baseline=-1.1778705, optimized=-1.1766878
+  failed output feature dims=[118, 148, 230, 489]
+trial 19/40: FAIL | max_abs=0.00113752 | max_rel=21037 | failed=2/4194304
+  worst_index=(6, 503, 248), baseline=-0.37166691, optimized=-0.37052938
+  failed output feature dims=[14, 311]
+trial 20/40: FAIL | max_abs=0.00131992 | max_rel=290.3 | failed=1/4194304
+  worst_index=(0, 70, 252), baseline=-0.42089134, optimized=-0.41957143
+  failed output feature dims=[287]
+trial 21/40: FAIL | max_abs=0.00121343 | max_rel=333.729 | failed=2/4194304
+  worst_index=(4, 534, 235), baseline=0.72309947, optimized=0.7243129
+  failed output feature dims=[157, 426]
+trial 22/40: FAIL | max_abs=0.00117844 | max_rel=505.152 | failed=6/4194304
+  worst_index=(0, 340, 443), baseline=-0.88408285, optimized=-0.88290441
+  failed output feature dims=[69, 228, 281, 356, 367, 411]
+trial 23/40: FAIL | max_abs=0.00128031 | max_rel=857.136 | failed=2/4194304
+  worst_index=(4, 387, 430), baseline=0.61677229, optimized=0.6180526
+  failed output feature dims=[53, 453]
+trial 24/40: FAIL | max_abs=0.00112253 | max_rel=1681.16 | failed=5/4194304
+  worst_index=(2, 693, 137), baseline=0.96508121, optimized=0.96395868
+  failed output feature dims=[1, 18, 216, 409, 459]
+trial 25/40: FAIL | max_abs=0.00116476 | max_rel=706.23 | failed=2/4194304
+  worst_index=(3, 203, 386), baseline=-0.40826178, optimized=-0.40709701
+  failed output feature dims=[82, 388]
+trial 26/40: FAIL | max_abs=0.00120841 | max_rel=368.34 | failed=3/4194304
+  worst_index=(5, 58, 439), baseline=0.081103243, optimized=0.079894833
+  failed output feature dims=[114, 162, 439]
+trial 27/40: FAIL | max_abs=0.00120911 | max_rel=446.877 | failed=5/4194304
+  worst_index=(6, 848, 212), baseline=-0.47886565, optimized=-0.48007476
+  failed output feature dims=[15, 51, 147, 374, 450]
+trial 28/40: FAIL | max_abs=0.00114343 | max_rel=2579.77 | failed=1/4194304
+  worst_index=(4, 186, 21), baseline=0.21487419, optimized=0.21601762
+  failed output feature dims=[167]
+trial 29/40: FAIL | max_abs=0.00114942 | max_rel=705.18 | failed=2/4194304
+  worst_index=(5, 203, 299), baseline=2.1386023, optimized=2.1374528
+  failed output feature dims=[67, 353]
+trial 30/40: PASS | max_abs=0.00115168 | max_rel=1368.25 | failed=0/4194304
+trial 31/40: FAIL | max_abs=0.00110143 | max_rel=1994.96 | failed=2/4194304
+  worst_index=(4, 535, 0), baseline=0.16562392, optimized=0.16452248
+  failed output feature dims=[191, 332]
+trial 32/40: FAIL | max_abs=0.00121266 | max_rel=1433.2 | failed=3/4194304
+  worst_index=(6, 261, 274), baseline=-0.4564479, optimized=-0.45523524
+  failed output feature dims=[237, 259, 306]
+trial 33/40: FAIL | max_abs=0.00129956 | max_rel=1049.37 | failed=6/4194304
+  worst_index=(5, 29, 430), baseline=-0.88888484, optimized=-0.8901844
+  failed output feature dims=[118, 177, 227, 297, 376, 489]
+trial 34/40: PASS | max_abs=0.00115299 | max_rel=418.603 | failed=0/4194304
+trial 35/40: FAIL | max_abs=0.00117141 | max_rel=244.799 | failed=3/4194304
+  worst_index=(2, 318, 348), baseline=-0.39054644, optimized=-0.38937503
+  failed output feature dims=[39, 98, 351]
+trial 36/40: FAIL | max_abs=0.00116752 | max_rel=284.712 | failed=3/4194304
+  worst_index=(0, 176, 273), baseline=-0.12513012, optimized=-0.12629764
+  failed output feature dims=[9, 79, 106]
+trial 37/40: FAIL | max_abs=0.00112534 | max_rel=269.608 | failed=1/4194304
+  worst_index=(6, 78, 469), baseline=-1.3641417, optimized=-1.365267
+  failed output feature dims=[232]
+trial 38/40: FAIL | max_abs=0.00117135 | max_rel=16208.9 | failed=1/4194304
+  worst_index=(5, 412, 341), baseline=-1.4377156, optimized=-1.4365443
+  failed output feature dims=[37]
+trial 39/40: FAIL | max_abs=0.00132561 | max_rel=6719.8 | failed=1/4194304
+  worst_index=(3, 370, 39), baseline=0.62716651, optimized=0.6258409
+  failed output feature dims=[243]
+trial 40/40: FAIL | max_abs=0.00112791 | max_rel=227.142 | failed=1/4194304
+  worst_index=(1, 835, 248), baseline=0.18500377, optimized=0.18387586
+  failed output feature dims=[354]
+summary: FAIL | max_abs=0.00138241 | max_rel=21037 | failed=109/167772160
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.6917 ms | mean=24.6931 ms | p90=24.6979 ms | min=24.6733 ms | throughput=331771.25 token/s
+optimized: median=9.3624 ms | mean=9.3644 ms | p90=9.3696 ms | min=9.3481 ms | throughput=874986.37 token/s
+speedup  : 2.637x based on median latency
+

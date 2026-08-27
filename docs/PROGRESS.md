@@ -1521,3 +1521,71 @@ step 24's state.
 Closes Tier 1 entirely: all three items tried (max-autotune: accuracy
 failure; inductor knobs: moot; cudnn.benchmark: null result). Moving to
 Tier 2 (FP16), the most research-grounded remaining candidate.
+
+### 27. G6.4a (FP16 FFN) — genuinely close, real speedup, closes on a statistical tail rather than a decisive miss
+
+**What was tried:** plain FP16 (not BF16) for the FFN, narrowest-first per
+the plan. Confirmed via grep this was genuinely untried this session —
+BF16 was tested exhaustively (G2.1/G2.1b, both failed ~11x over budget);
+FP16 never was. `torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction`
+explicitly set `False` in `__init__` (not left to `main()`, so it holds
+regardless of entry point) to isolate FP16's storage/rounding precision
+from a confound of also losing FP32 accumulation.
+
+**v1 (both FFN GEMMs in FP16, `results/g6_4a_smoke_run58.log` then
+`results/g6_4a_both_gemms_FAILED_run60.log`):** 5-trial smoke test on
+tiny PASSED cleanly — but `max_abs` up to 0.00133, already over CLAUDE.md's
+5e-4 internal-investigate threshold and even over the 0.001 atol alone
+(saved only by the disjunctive `rel<=1%` on those elements), which by
+this session's own established practice (step 13) demands a higher-seed
+check before trusting a smoke pass. **The 40-seed, 6-shape rigor probe
+caught what the smoke test missed**: every shape genuinely fails —
+tiny 12/40 trials (30%) with a real failing element, default/long_seq/
+large_batch/padded all fail too, always by rare single-to-low-double-digit
+element counts against tensors of 1.3M-671M elements. Real speedups
+alongside the failure: default 1.894x vs shipped 1.604x (+18%), large_batch
+2.241x vs shipped 1.610x (+39%), long_seq 2.784x vs shipped 2.353x (+18%)
+— a large win if it had passed.
+
+**v2 (FP16 for `ffn_in` only, `ffn_out` exact FP32 —
+`results/g6_4a_v2_ffnin_only_FAILED_run61.log`):** narrowing to one
+low-precision GEMM boundary per layer (same "isolate before compounding"
+logic as G2.1→G2.1b) measurably helped, not just marginally: failing-
+element counts dropped roughly 10x at every shape (default 13→1, long_seq
+118→6, large_batch 637→61, long_seq_padded 109→7), and **tiny and
+default_padded now pass cleanly** (0 failures across 40 seeds each).
+But default, long_seq, large_batch, and long_seq_padded still fail —
+CLAUDE.md invariant #6 ("validate on the full sweep, not one shape") and
+invariant #2 (any real accuracy failure skips the benchmark) both apply
+regardless of how rare the failing elements are.
+
+**Why this is closed, not "try harder":** the failure pattern itself is
+the evidence. Failure counts scale with element count (large_batch's 671M
+elements is worst; tiny/padded, with far fewer real (unmasked) elements,
+pass outright) and the errors involved are all small, un-clustered,
+random-looking (no shared feature dimension, no shared magnitude range) —
+the signature of a fixed per-element error *rate* from FP16's 10-bit
+mantissa quantization noise floor being sampled by a huge number of
+elements, not a systematic bias a further architectural change could
+target. The natural next lever (real split-precision, hi+lo terms on both
+operands, same technique validated for FP8 in step 22) was priced out
+before building: G2.8's own triangular-truncation arithmetic
+(2 terms/operand -> 3 GEMMs, confirmed for real in step 24) means
+"fixing" `ffn_in` this way would triple that GEMM's cost — on a single
+FP16 GEMM whose only purpose was being *cheaper* than the TF32 GEMM it
+replaced. There's no version of this fix that both clears the tail and
+keeps the win; the win and the risk are the same knob.
+
+**Reverted** (`git checkout -- benchmark.py`, verified clean, validity
+gate passes). Committed alongside this write-up: both rigor-probe job
+scripts and all three result logs (smoke, v1 full-sweep, v2 full-sweep).
+No archive cell touched.
+
+**Genuinely informative for the next candidate (attention-only FP16,
+plan Tier 2b):** this closes "FP16 in the FFN" specifically — the FFN's
+large weight matrices (2048-wide reductions) are where the tail risk
+concentrated. Attention hasn't been tested in FP16 at all and has
+different structure (softmax renormalizes before the value matmul,
+which could behave very differently under the same quantization noise
+floor) — not assumed to inherit this result, worth testing on its own
+evidence exactly as the plan scoped it.

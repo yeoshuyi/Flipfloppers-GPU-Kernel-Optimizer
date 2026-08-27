@@ -1,0 +1,432 @@
+=== SHAPE: tiny ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=1, seq_len=64, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.000837684 | max_rel=97.9507 | failed=0/32768
+trial 02/40: PASS | max_abs=0.000926733 | max_rel=41.6937 | failed=0/32768
+trial 03/40: PASS | max_abs=0.000795215 | max_rel=6.46943 | failed=0/32768
+trial 04/40: PASS | max_abs=0.000838339 | max_rel=6.60032 | failed=0/32768
+trial 05/40: PASS | max_abs=0.000869632 | max_rel=6.86683 | failed=0/32768
+trial 06/40: PASS | max_abs=0.000815868 | max_rel=121.414 | failed=0/32768
+trial 07/40: PASS | max_abs=0.000792503 | max_rel=14.3656 | failed=0/32768
+trial 08/40: PASS | max_abs=0.000845313 | max_rel=1.48802 | failed=0/32768
+trial 09/40: PASS | max_abs=0.000850737 | max_rel=2.33884 | failed=0/32768
+trial 10/40: PASS | max_abs=0.000874996 | max_rel=3.87292 | failed=0/32768
+trial 11/40: PASS | max_abs=0.000981092 | max_rel=16.2905 | failed=0/32768
+trial 12/40: PASS | max_abs=0.000881791 | max_rel=5.63649 | failed=0/32768
+trial 13/40: PASS | max_abs=0.000800908 | max_rel=91.51 | failed=0/32768
+trial 14/40: PASS | max_abs=0.000841945 | max_rel=10.9301 | failed=0/32768
+trial 15/40: PASS | max_abs=0.000885785 | max_rel=2.81341 | failed=0/32768
+trial 16/40: PASS | max_abs=0.00084579 | max_rel=3.69453 | failed=0/32768
+trial 17/40: PASS | max_abs=0.000906467 | max_rel=15.5635 | failed=0/32768
+trial 18/40: PASS | max_abs=0.00089395 | max_rel=1.11698 | failed=0/32768
+trial 19/40: PASS | max_abs=0.000971913 | max_rel=8.16169 | failed=0/32768
+trial 20/40: PASS | max_abs=0.000956222 | max_rel=43.2412 | failed=0/32768
+trial 21/40: PASS | max_abs=0.00103116 | max_rel=60.2893 | failed=0/32768
+trial 22/40: PASS | max_abs=0.000860929 | max_rel=0.690793 | failed=0/32768
+trial 23/40: PASS | max_abs=0.000972867 | max_rel=2.28161 | failed=0/32768
+trial 24/40: PASS | max_abs=0.000951517 | max_rel=8.03486 | failed=0/32768
+trial 25/40: PASS | max_abs=0.000883315 | max_rel=8.6971 | failed=0/32768
+trial 26/40: PASS | max_abs=0.000876307 | max_rel=19.9891 | failed=0/32768
+trial 27/40: PASS | max_abs=0.000827188 | max_rel=171.917 | failed=0/32768
+trial 28/40: PASS | max_abs=0.00101292 | max_rel=6.15781 | failed=0/32768
+trial 29/40: PASS | max_abs=0.000875831 | max_rel=7.58558 | failed=0/32768
+trial 30/40: PASS | max_abs=0.000963777 | max_rel=5.23407 | failed=0/32768
+trial 31/40: PASS | max_abs=0.000923634 | max_rel=3.72501 | failed=0/32768
+trial 32/40: PASS | max_abs=0.000934124 | max_rel=4.90596 | failed=0/32768
+trial 33/40: PASS | max_abs=0.000841707 | max_rel=4.58166 | failed=0/32768
+trial 34/40: PASS | max_abs=0.000875235 | max_rel=2.18672 | failed=0/32768
+trial 35/40: PASS | max_abs=0.000868693 | max_rel=6.79229 | failed=0/32768
+trial 36/40: PASS | max_abs=0.000859842 | max_rel=85.1076 | failed=0/32768
+trial 37/40: PASS | max_abs=0.000918359 | max_rel=3.08173 | failed=0/32768
+trial 38/40: PASS | max_abs=0.000892639 | max_rel=1.13407 | failed=0/32768
+trial 39/40: PASS | max_abs=0.000863791 | max_rel=6.81827 | failed=0/32768
+trial 40/40: PASS | max_abs=0.000899196 | max_rel=80.4779 | failed=0/32768
+summary: PASS | max_abs=0.00103116 | max_rel=171.917 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.4438 ms | mean=1.4515 ms | p90=1.4671 ms | min=1.4203 ms | throughput=44326.73 token/s
+optimized: median=0.2765 ms | mean=0.2787 ms | p90=0.2779 ms | min=0.2755 ms | throughput=231481.49 token/s
+speedup  : 5.222x based on median latency
+
+=== SHAPE: default ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.000999928 | max_rel=27.9496 | failed=0/524288
+trial 02/40: PASS | max_abs=0.000997305 | max_rel=313.55 | failed=0/524288
+trial 03/40: PASS | max_abs=0.000936329 | max_rel=647.789 | failed=0/524288
+trial 04/40: PASS | max_abs=0.000970244 | max_rel=164.331 | failed=0/524288
+trial 05/40: PASS | max_abs=0.000938177 | max_rel=101.546 | failed=0/524288
+trial 06/40: PASS | max_abs=0.00104043 | max_rel=19.1159 | failed=0/524288
+trial 07/40: PASS | max_abs=0.000970714 | max_rel=70.1801 | failed=0/524288
+trial 08/40: PASS | max_abs=0.000950217 | max_rel=51.1852 | failed=0/524288
+trial 09/40: PASS | max_abs=0.00096485 | max_rel=289.325 | failed=0/524288
+trial 10/40: PASS | max_abs=0.000954568 | max_rel=66.6992 | failed=0/524288
+trial 11/40: PASS | max_abs=0.000990078 | max_rel=186.399 | failed=0/524288
+trial 12/40: PASS | max_abs=0.000904202 | max_rel=1166.18 | failed=0/524288
+trial 13/40: PASS | max_abs=0.000961959 | max_rel=62.272 | failed=0/524288
+trial 14/40: PASS | max_abs=0.000943124 | max_rel=279.793 | failed=0/524288
+trial 15/40: PASS | max_abs=0.00102556 | max_rel=55.2228 | failed=0/524288
+trial 16/40: PASS | max_abs=0.000999153 | max_rel=80.0113 | failed=0/524288
+trial 17/40: PASS | max_abs=0.000948055 | max_rel=537.349 | failed=0/524288
+trial 18/40: PASS | max_abs=0.000931285 | max_rel=154.545 | failed=0/524288
+trial 19/40: PASS | max_abs=0.00100201 | max_rel=90.3176 | failed=0/524288
+trial 20/40: PASS | max_abs=0.000947714 | max_rel=42.7931 | failed=0/524288
+trial 21/40: PASS | max_abs=0.000983331 | max_rel=75.7266 | failed=0/524288
+trial 22/40: PASS | max_abs=0.000967681 | max_rel=196.189 | failed=0/524288
+trial 23/40: PASS | max_abs=0.000995964 | max_rel=85.1117 | failed=0/524288
+trial 24/40: PASS | max_abs=0.000949025 | max_rel=30.6877 | failed=0/524288
+trial 25/40: PASS | max_abs=0.00103617 | max_rel=128.065 | failed=0/524288
+trial 26/40: PASS | max_abs=0.000953257 | max_rel=137.38 | failed=0/524288
+trial 27/40: PASS | max_abs=0.000950933 | max_rel=20.5764 | failed=0/524288
+trial 28/40: PASS | max_abs=0.00095439 | max_rel=502.334 | failed=0/524288
+trial 29/40: PASS | max_abs=0.00113821 | max_rel=32.5019 | failed=0/524288
+trial 30/40: PASS | max_abs=0.000972886 | max_rel=149.815 | failed=0/524288
+trial 31/40: PASS | max_abs=0.000968918 | max_rel=61.4144 | failed=0/524288
+trial 32/40: PASS | max_abs=0.000958025 | max_rel=27.4228 | failed=0/524288
+trial 33/40: PASS | max_abs=0.00100458 | max_rel=200.426 | failed=0/524288
+trial 34/40: PASS | max_abs=0.000937641 | max_rel=29.9506 | failed=0/524288
+trial 35/40: FAIL | max_abs=0.00101826 | max_rel=205.187 | failed=1/524288
+  worst_index=(3, 118, 61), baseline=-0.29373822, optimized=-0.29271996
+  failed output feature dims=[187]
+trial 36/40: PASS | max_abs=0.000956655 | max_rel=89.2893 | failed=0/524288
+trial 37/40: PASS | max_abs=0.000995994 | max_rel=76.1779 | failed=0/524288
+trial 38/40: PASS | max_abs=0.000931501 | max_rel=299.589 | failed=0/524288
+trial 39/40: PASS | max_abs=0.000971407 | max_rel=32.1143 | failed=0/524288
+trial 40/40: PASS | max_abs=0.000951678 | max_rel=2637.99 | failed=0/524288
+summary: FAIL | max_abs=0.00113821 | max_rel=2637.99 | failed=1/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.4107 ms | mean=1.4139 ms | p90=1.4223 ms | min=1.3959 ms | throughput=725895.17 token/s
+optimized: median=0.7839 ms | mean=0.7849 ms | p90=0.7864 ms | min=0.7803 ms | throughput=1306335.71 token/s
+speedup  : 1.800x based on median latency
+
+=== SHAPE: long_seq ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.00102834 | max_rel=57509.3 | failed=0/4194304
+trial 02/40: PASS | max_abs=0.00103521 | max_rel=1782.89 | failed=0/4194304
+trial 03/40: PASS | max_abs=0.00106382 | max_rel=305.318 | failed=0/4194304
+trial 04/40: PASS | max_abs=0.00102633 | max_rel=93.5198 | failed=0/4194304
+trial 05/40: PASS | max_abs=0.0011006 | max_rel=317.146 | failed=0/4194304
+trial 06/40: PASS | max_abs=0.0010705 | max_rel=1029.91 | failed=0/4194304
+trial 07/40: FAIL | max_abs=0.00102946 | max_rel=829.457 | failed=2/4194304
+  worst_index=(0, 121, 18), baseline=0.084217474, optimized=0.083188012
+  failed output feature dims=[18, 139]
+trial 08/40: PASS | max_abs=0.00099659 | max_rel=348.904 | failed=0/4194304
+trial 09/40: PASS | max_abs=0.00101629 | max_rel=1511.26 | failed=0/4194304
+trial 10/40: PASS | max_abs=0.0011763 | max_rel=970.769 | failed=0/4194304
+trial 11/40: PASS | max_abs=0.00112182 | max_rel=820.358 | failed=0/4194304
+trial 12/40: PASS | max_abs=0.0010888 | max_rel=1664.83 | failed=0/4194304
+trial 13/40: PASS | max_abs=0.00098455 | max_rel=889.008 | failed=0/4194304
+trial 14/40: PASS | max_abs=0.00102851 | max_rel=170.363 | failed=0/4194304
+trial 15/40: PASS | max_abs=0.0011377 | max_rel=404.622 | failed=0/4194304
+trial 16/40: PASS | max_abs=0.00107057 | max_rel=3242.91 | failed=0/4194304
+trial 17/40: PASS | max_abs=0.00107762 | max_rel=8809.43 | failed=0/4194304
+trial 18/40: FAIL | max_abs=0.00107233 | max_rel=401.555 | failed=1/4194304
+  worst_index=(3, 337, 310), baseline=-0.059106946, optimized=-0.058034617
+  failed output feature dims=[310]
+trial 19/40: PASS | max_abs=0.000999212 | max_rel=302.578 | failed=0/4194304
+trial 20/40: PASS | max_abs=0.00105679 | max_rel=1910.52 | failed=0/4194304
+trial 21/40: PASS | max_abs=0.00103581 | max_rel=1282.59 | failed=0/4194304
+trial 22/40: PASS | max_abs=0.00100034 | max_rel=919.158 | failed=0/4194304
+trial 23/40: PASS | max_abs=0.0010578 | max_rel=3402.12 | failed=0/4194304
+trial 24/40: PASS | max_abs=0.000997603 | max_rel=168.928 | failed=0/4194304
+trial 25/40: FAIL | max_abs=0.00105085 | max_rel=1250.7 | failed=1/4194304
+  worst_index=(1, 511, 173), baseline=-0.043483902, optimized=-0.04243305
+  failed output feature dims=[173]
+trial 26/40: PASS | max_abs=0.00105447 | max_rel=1432.86 | failed=0/4194304
+trial 27/40: PASS | max_abs=0.00107911 | max_rel=3164.35 | failed=0/4194304
+trial 28/40: PASS | max_abs=0.00101054 | max_rel=1687.18 | failed=0/4194304
+trial 29/40: PASS | max_abs=0.00101501 | max_rel=350.218 | failed=0/4194304
+trial 30/40: PASS | max_abs=0.00101593 | max_rel=916.762 | failed=0/4194304
+trial 31/40: PASS | max_abs=0.00102252 | max_rel=320.317 | failed=0/4194304
+trial 32/40: PASS | max_abs=0.00106454 | max_rel=674.062 | failed=0/4194304
+trial 33/40: PASS | max_abs=0.00103581 | max_rel=519.898 | failed=0/4194304
+trial 34/40: FAIL | max_abs=0.00106061 | max_rel=604.514 | failed=1/4194304
+  worst_index=(0, 340, 274), baseline=0.014697314, optimized=0.013636706
+  failed output feature dims=[274]
+trial 35/40: PASS | max_abs=0.00111318 | max_rel=160.044 | failed=0/4194304
+trial 36/40: PASS | max_abs=0.00105689 | max_rel=2856.17 | failed=0/4194304
+trial 37/40: FAIL | max_abs=0.00109188 | max_rel=364.296 | failed=1/4194304
+  worst_index=(0, 1013, 448), baseline=-0.038617346, optimized=-0.039709229
+  failed output feature dims=[448]
+trial 38/40: PASS | max_abs=0.00105488 | max_rel=293.035 | failed=0/4194304
+trial 39/40: PASS | max_abs=0.00109196 | max_rel=692.046 | failed=0/4194304
+trial 40/40: PASS | max_abs=0.000991419 | max_rel=3834.94 | failed=0/4194304
+summary: FAIL | max_abs=0.0011763 | max_rel=57509.3 | failed=6/167772160
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.7062 ms | mean=24.7098 ms | p90=24.7204 ms | min=24.6927 ms | throughput=331577.23 token/s
+optimized: median=9.7509 ms | mean=9.7532 ms | p90=9.7599 ms | min=9.7375 ms | throughput=840125.17 token/s
+speedup  : 2.534x based on median latency
+
+=== SHAPE: large_batch ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.00111592 | max_rel=25432.9 | failed=0/16777216
+trial 02/40: FAIL | max_abs=0.00115895 | max_rel=13169.9 | failed=2/16777216
+  worst_index=(45, 72, 131), baseline=0.76292717, optimized=0.76176822
+  failed output feature dims=[50, 415]
+trial 03/40: FAIL | max_abs=0.00111699 | max_rel=3160.52 | failed=3/16777216
+  worst_index=(41, 84, 454), baseline=2.6888752, optimized=2.6899922
+  failed output feature dims=[216, 337, 360]
+trial 04/40: PASS | max_abs=0.00116809 | max_rel=3132.06 | failed=0/16777216
+trial 05/40: FAIL | max_abs=0.00113696 | max_rel=46285 | failed=2/16777216
+  worst_index=(91, 105, 190), baseline=0.54936826, optimized=0.55050522
+  failed output feature dims=[218, 452]
+trial 06/40: FAIL | max_abs=0.00107729 | max_rel=3506.71 | failed=2/16777216
+  worst_index=(16, 81, 246), baseline=-0.62906379, optimized=-0.63014108
+  failed output feature dims=[161, 432]
+trial 07/40: FAIL | max_abs=0.00117505 | max_rel=6253.22 | failed=2/16777216
+  worst_index=(120, 36, 365), baseline=1.4722775, optimized=1.4711025
+  failed output feature dims=[93, 333]
+trial 08/40: FAIL | max_abs=0.00118259 | max_rel=2078.96 | failed=1/16777216
+  worst_index=(118, 110, 387), baseline=-0.42894137, optimized=-0.42775878
+  failed output feature dims=[342]
+trial 09/40: FAIL | max_abs=0.00106854 | max_rel=12346.4 | failed=1/16777216
+  worst_index=(160, 70, 483), baseline=-0.027076105, optimized=-0.028144645
+  failed output feature dims=[483]
+trial 10/40: FAIL | max_abs=0.0011735 | max_rel=1003.25 | failed=2/16777216
+  worst_index=(4, 10, 326), baseline=0.4258157, optimized=0.4269892
+  failed output feature dims=[8, 341]
+trial 11/40: FAIL | max_abs=0.00112894 | max_rel=1101 | failed=2/16777216
+  worst_index=(218, 43, 247), baseline=0.35392264, optimized=0.35279369
+  failed output feature dims=[136, 173]
+trial 12/40: FAIL | max_abs=0.00115841 | max_rel=5529.63 | failed=2/16777216
+  worst_index=(229, 88, 493), baseline=0.084749848, optimized=0.085908256
+  failed output feature dims=[121, 493]
+trial 13/40: PASS | max_abs=0.00113654 | max_rel=2827.42 | failed=0/16777216
+trial 14/40: FAIL | max_abs=0.00113195 | max_rel=10599.8 | failed=2/16777216
+  worst_index=(81, 67, 265), baseline=0.42946157, optimized=0.43059352
+  failed output feature dims=[79, 500]
+trial 15/40: FAIL | max_abs=0.00111928 | max_rel=600.841 | failed=2/16777216
+  worst_index=(81, 21, 112), baseline=0.07627216, optimized=0.077391438
+  failed output feature dims=[112, 425]
+trial 16/40: FAIL | max_abs=0.00113314 | max_rel=3051.21 | failed=1/16777216
+  worst_index=(213, 79, 392), baseline=-0.27396783, optimized=-0.27510098
+  failed output feature dims=[498]
+trial 17/40: FAIL | max_abs=0.00114131 | max_rel=31891.2 | failed=3/16777216
+  worst_index=(215, 86, 230), baseline=-2.4951017, optimized=-2.4939604
+  failed output feature dims=[46, 149, 492]
+trial 18/40: PASS | max_abs=0.00111282 | max_rel=6170.31 | failed=0/16777216
+trial 19/40: FAIL | max_abs=0.00114363 | max_rel=1224.39 | failed=2/16777216
+  worst_index=(135, 33, 450), baseline=-0.52232766, optimized=-0.5234713
+  failed output feature dims=[47, 457]
+trial 20/40: PASS | max_abs=0.00116104 | max_rel=11329.1 | failed=0/16777216
+trial 21/40: FAIL | max_abs=0.00113916 | max_rel=2777.99 | failed=3/16777216
+  worst_index=(132, 12, 244), baseline=-0.28680378, optimized=-0.28794295
+  failed output feature dims=[90, 406, 480]
+trial 22/40: FAIL | max_abs=0.00112641 | max_rel=2064.36 | failed=1/16777216
+  worst_index=(181, 90, 399), baseline=-1.3843232, optimized=-1.3831968
+  failed output feature dims=[496]
+trial 23/40: FAIL | max_abs=0.00111699 | max_rel=1675.74 | failed=1/16777216
+  worst_index=(189, 20, 146), baseline=0.67493427, optimized=0.67605126
+  failed output feature dims=[474]
+trial 24/40: PASS | max_abs=0.00113189 | max_rel=10095 | failed=0/16777216
+trial 25/40: FAIL | max_abs=0.00117087 | max_rel=8796.08 | failed=2/16777216
+  worst_index=(184, 26, 13), baseline=1.3785973, optimized=1.3774264
+  failed output feature dims=[55, 419]
+trial 26/40: FAIL | max_abs=0.00114655 | max_rel=4296.27 | failed=3/16777216
+  worst_index=(212, 45, 428), baseline=1.0685414, optimized=1.0673949
+  failed output feature dims=[169, 323, 413]
+trial 27/40: FAIL | max_abs=0.00113627 | max_rel=2439.04 | failed=3/16777216
+  worst_index=(198, 115, 434), baseline=-0.44603854, optimized=-0.44490227
+  failed output feature dims=[162, 249, 341]
+trial 28/40: FAIL | max_abs=0.00113273 | max_rel=1414.21 | failed=3/16777216
+  worst_index=(112, 28, 64), baseline=-0.63256872, optimized=-0.63143599
+  failed output feature dims=[115, 334, 496]
+trial 29/40: FAIL | max_abs=0.00111157 | max_rel=3089.95 | failed=2/16777216
+  worst_index=(40, 79, 181), baseline=-0.33724982, optimized=-0.33613825
+  failed output feature dims=[219, 403]
+trial 30/40: FAIL | max_abs=0.00109994 | max_rel=1097.67 | failed=2/16777216
+  worst_index=(70, 108, 354), baseline=1.5539099, optimized=1.5550098
+  failed output feature dims=[1, 358]
+trial 31/40: PASS | max_abs=0.00113356 | max_rel=2.44781e+07 | failed=0/16777216
+trial 32/40: FAIL | max_abs=0.00112307 | max_rel=2994.58 | failed=2/16777216
+  worst_index=(244, 73, 453), baseline=-0.41504684, optimized=-0.41392377
+  failed output feature dims=[24, 194]
+trial 33/40: FAIL | max_abs=0.00126529 | max_rel=12396.6 | failed=1/16777216
+  worst_index=(108, 33, 392), baseline=-1.4286503, optimized=-1.427385
+  failed output feature dims=[319]
+trial 34/40: FAIL | max_abs=0.00108606 | max_rel=179198 | failed=3/16777216
+  worst_index=(77, 105, 420), baseline=0.32638654, optimized=0.3274726
+  failed output feature dims=[125, 149, 351]
+trial 35/40: FAIL | max_abs=0.00111055 | max_rel=1065.14 | failed=1/16777216
+  worst_index=(187, 109, 511), baseline=-0.25363407, optimized=-0.25474462
+  failed output feature dims=[274]
+trial 36/40: FAIL | max_abs=0.00111786 | max_rel=1857.75 | failed=3/16777216
+  worst_index=(214, 36, 497), baseline=-0.087239429, optimized=-0.088357285
+  failed output feature dims=[434, 441, 497]
+trial 37/40: PASS | max_abs=0.00108825 | max_rel=1534.61 | failed=0/16777216
+trial 38/40: PASS | max_abs=0.00116915 | max_rel=2429.91 | failed=0/16777216
+trial 39/40: PASS | max_abs=0.00111878 | max_rel=4162.94 | failed=0/16777216
+trial 40/40: FAIL | max_abs=0.00116968 | max_rel=63086.2 | failed=2/16777216
+  worst_index=(41, 2, 214), baseline=1.6477976, optimized=1.6489673
+  failed output feature dims=[262, 421]
+summary: FAIL | max_abs=0.00126529 | max_rel=2.44781e+07 | failed=61/671088640
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=41.9185 ms | mean=41.9192 ms | p90=41.9287 ms | min=41.8951 ms | throughput=781708.02 token/s
+optimized: median=22.0785 ms | mean=22.0802 ms | p90=22.0846 ms | min=22.0654 ms | throughput=1484161.18 token/s
+speedup  : 1.899x based on median latency
+
+=== SHAPE: default_padded ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.000996947 | max_rel=28.5252 | failed=0/524288
+trial 02/40: PASS | max_abs=0.00101149 | max_rel=30.1503 | failed=0/524288
+trial 03/40: PASS | max_abs=0.001073 | max_rel=10.2826 | failed=0/524288
+trial 04/40: PASS | max_abs=0.000988424 | max_rel=557.875 | failed=0/524288
+trial 05/40: PASS | max_abs=0.000949025 | max_rel=135.429 | failed=0/524288
+trial 06/40: PASS | max_abs=0.000988752 | max_rel=637.964 | failed=0/524288
+trial 07/40: PASS | max_abs=0.00100803 | max_rel=384.225 | failed=0/524288
+trial 08/40: PASS | max_abs=0.00104767 | max_rel=13.1676 | failed=0/524288
+trial 09/40: PASS | max_abs=0.000951737 | max_rel=63.3844 | failed=0/524288
+trial 10/40: PASS | max_abs=0.00106269 | max_rel=59.1298 | failed=0/524288
+trial 11/40: PASS | max_abs=0.00107893 | max_rel=63.3695 | failed=0/524288
+trial 12/40: PASS | max_abs=0.000931561 | max_rel=20.9504 | failed=0/524288
+trial 13/40: PASS | max_abs=0.000942409 | max_rel=196.202 | failed=0/524288
+trial 14/40: PASS | max_abs=0.000968695 | max_rel=69.8536 | failed=0/524288
+trial 15/40: PASS | max_abs=0.00105053 | max_rel=44.2498 | failed=0/524288
+trial 16/40: PASS | max_abs=0.00101957 | max_rel=344.352 | failed=0/524288
+trial 17/40: PASS | max_abs=0.000940561 | max_rel=22.5864 | failed=0/524288
+trial 18/40: PASS | max_abs=0.000946522 | max_rel=109.902 | failed=0/524288
+trial 19/40: PASS | max_abs=0.000977278 | max_rel=304.833 | failed=0/524288
+trial 20/40: PASS | max_abs=0.000986636 | max_rel=23.97 | failed=0/524288
+trial 21/40: PASS | max_abs=0.000911057 | max_rel=75.7266 | failed=0/524288
+trial 22/40: PASS | max_abs=0.0011071 | max_rel=145.755 | failed=0/524288
+trial 23/40: PASS | max_abs=0.00120229 | max_rel=172.878 | failed=0/524288
+trial 24/40: PASS | max_abs=0.000980034 | max_rel=223.036 | failed=0/524288
+trial 25/40: PASS | max_abs=0.00100875 | max_rel=46.3692 | failed=0/524288
+trial 26/40: PASS | max_abs=0.00099206 | max_rel=871.839 | failed=0/524288
+trial 27/40: PASS | max_abs=0.000998676 | max_rel=556.696 | failed=0/524288
+trial 28/40: PASS | max_abs=0.00104603 | max_rel=53.0368 | failed=0/524288
+trial 29/40: PASS | max_abs=0.0010128 | max_rel=36.7257 | failed=0/524288
+trial 30/40: PASS | max_abs=0.00106961 | max_rel=44.0387 | failed=0/524288
+trial 31/40: PASS | max_abs=0.000968337 | max_rel=111.253 | failed=0/524288
+trial 32/40: PASS | max_abs=0.00111878 | max_rel=126.391 | failed=0/524288
+trial 33/40: PASS | max_abs=0.000996292 | max_rel=28.3385 | failed=0/524288
+trial 34/40: PASS | max_abs=0.000926636 | max_rel=154.305 | failed=0/524288
+trial 35/40: PASS | max_abs=0.00102666 | max_rel=35.8551 | failed=0/524288
+trial 36/40: PASS | max_abs=0.000927418 | max_rel=142.179 | failed=0/524288
+trial 37/40: PASS | max_abs=0.00100923 | max_rel=75.8631 | failed=0/524288
+trial 38/40: PASS | max_abs=0.000920653 | max_rel=675.894 | failed=0/524288
+trial 39/40: PASS | max_abs=0.000974584 | max_rel=20.6251 | failed=0/524288
+trial 40/40: PASS | max_abs=0.000957251 | max_rel=236.016 | failed=0/524288
+summary: PASS | max_abs=0.00120229 | max_rel=871.839 | failed=0/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.4049 ms | mean=1.4075 ms | p90=1.4182 ms | min=1.3783 ms | throughput=728862.99 token/s
+optimized: median=0.7936 ms | mean=0.7946 ms | p90=0.7956 ms | min=0.7905 ms | throughput=1290322.54 token/s
+speedup  : 1.770x based on median latency
+
+=== SHAPE: long_seq_padded ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/40: PASS | max_abs=0.00114083 | max_rel=3411.31 | failed=0/4194304
+trial 02/40: PASS | max_abs=0.00107694 | max_rel=314.817 | failed=0/4194304
+trial 03/40: PASS | max_abs=0.00108004 | max_rel=625.785 | failed=0/4194304
+trial 04/40: PASS | max_abs=0.000998318 | max_rel=146.13 | failed=0/4194304
+trial 05/40: PASS | max_abs=0.00102574 | max_rel=256.901 | failed=0/4194304
+trial 06/40: PASS | max_abs=0.0010033 | max_rel=971.603 | failed=0/4194304
+trial 07/40: FAIL | max_abs=0.00106196 | max_rel=959.206 | failed=1/4194304
+  worst_index=(2, 564, 52), baseline=0.075743645, optimized=0.076805606
+  failed output feature dims=[52]
+trial 08/40: FAIL | max_abs=0.00106722 | max_rel=233.69 | failed=1/4194304
+  worst_index=(5, 957, 474), baseline=-0.50745082, optimized=-0.5063836
+  failed output feature dims=[210]
+trial 09/40: PASS | max_abs=0.00105214 | max_rel=282.712 | failed=0/4194304
+trial 10/40: PASS | max_abs=0.00106472 | max_rel=255.722 | failed=0/4194304
+trial 11/40: PASS | max_abs=0.00105739 | max_rel=1164.22 | failed=0/4194304
+trial 12/40: PASS | max_abs=0.00105408 | max_rel=4410.08 | failed=0/4194304
+trial 13/40: PASS | max_abs=0.00112116 | max_rel=392.476 | failed=0/4194304
+trial 14/40: PASS | max_abs=0.00113559 | max_rel=446.193 | failed=0/4194304
+trial 15/40: PASS | max_abs=0.00100082 | max_rel=413.615 | failed=0/4194304
+trial 16/40: PASS | max_abs=0.00104773 | max_rel=860.456 | failed=0/4194304
+trial 17/40: FAIL | max_abs=0.00106619 | max_rel=14382.4 | failed=1/4194304
+  worst_index=(6, 611, 250), baseline=0.10230882, optimized=0.10124263
+  failed output feature dims=[250]
+trial 18/40: PASS | max_abs=0.0011487 | max_rel=881.691 | failed=0/4194304
+trial 19/40: PASS | max_abs=0.00113133 | max_rel=7583.24 | failed=0/4194304
+trial 20/40: PASS | max_abs=0.00104624 | max_rel=261.011 | failed=0/4194304
+trial 21/40: PASS | max_abs=0.00112998 | max_rel=281.617 | failed=0/4194304
+trial 22/40: FAIL | max_abs=0.00104414 | max_rel=162.067 | failed=2/4194304
+  worst_index=(5, 377, 228), baseline=0.011721373, optimized=0.012765517
+  failed output feature dims=[228, 401]
+trial 23/40: PASS | max_abs=0.000989676 | max_rel=249.224 | failed=0/4194304
+trial 24/40: PASS | max_abs=0.00111663 | max_rel=236.471 | failed=0/4194304
+trial 25/40: FAIL | max_abs=0.00101251 | max_rel=935.834 | failed=1/4194304
+  worst_index=(0, 329, 224), baseline=-0.021066703, optimized=-0.020054195
+  failed output feature dims=[224]
+trial 26/40: PASS | max_abs=0.00107622 | max_rel=540.144 | failed=0/4194304
+trial 27/40: PASS | max_abs=0.0010317 | max_rel=665.312 | failed=0/4194304
+trial 28/40: PASS | max_abs=0.00110412 | max_rel=1067.39 | failed=0/4194304
+trial 29/40: PASS | max_abs=0.00108552 | max_rel=879.101 | failed=0/4194304
+trial 30/40: PASS | max_abs=0.00110981 | max_rel=356.216 | failed=0/4194304
+trial 31/40: PASS | max_abs=0.00106192 | max_rel=701.736 | failed=0/4194304
+trial 32/40: PASS | max_abs=0.0010494 | max_rel=1162.47 | failed=0/4194304
+trial 33/40: PASS | max_abs=0.0010151 | max_rel=106.544 | failed=0/4194304
+trial 34/40: PASS | max_abs=0.00109994 | max_rel=483.164 | failed=0/4194304
+trial 35/40: PASS | max_abs=0.00102864 | max_rel=400.124 | failed=0/4194304
+trial 36/40: FAIL | max_abs=0.00104275 | max_rel=217.482 | failed=1/4194304
+  worst_index=(3, 545, 121), baseline=-0.33683646, optimized=-0.33787921
+  failed output feature dims=[162]
+trial 37/40: PASS | max_abs=0.00106025 | max_rel=204.781 | failed=0/4194304
+trial 38/40: PASS | max_abs=0.00104326 | max_rel=12778.3 | failed=0/4194304
+trial 39/40: PASS | max_abs=0.00107861 | max_rel=2329.24 | failed=0/4194304
+trial 40/40: PASS | max_abs=0.00102615 | max_rel=373.38 | failed=0/4194304
+summary: FAIL | max_abs=0.0011487 | max_rel=14382.4 | failed=7/167772160
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.6979 ms | mean=24.6999 ms | p90=24.7081 ms | min=24.6815 ms | throughput=331688.70 token/s
+optimized: median=10.2813 ms | mean=10.2835 ms | p90=10.2893 ms | min=10.2656 ms | throughput=796787.98 token/s
+speedup  : 2.402x based on median latency
+
