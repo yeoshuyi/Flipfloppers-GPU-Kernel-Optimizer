@@ -11,21 +11,28 @@ sbatch only; no git remote (local commits ARE the deliverable); document while a
 ## NOW
 
 - **Iteration:** 7 — **G5.MEGA**: per-sequence fused megakernel for official row 6 (user: "try 1 then 2")
-- **Phase:** 0 — correctness probe running (job in flight)
-- **Written:** `csrc/g5_mega_causal.{cu,cpp}` (correctness-first: 128 threads/block = 1 per query row,
-  scalar loops, shared `xs`[128][128]fp32 + `kh`/`vh`[128][32]fp16 head buffers, `ctx`/`n1`/`n2`/`g`
-  in registers, online softmax). `probes/g5_5_mega_correct.py` + `jobs/g5_5_mega_correct.sbatch`.
-  Committed `<hash>`.
-- **Next concrete action:** read `results/g5_5_mega_correct_run<J>.log`.
-  - compile error → fix the .cu, resubmit.
-  - `max|mega - shipped_ref| ≤ 5e-4` and `fail_mega == 0` on all 5 trials → Phase 0 PASS. Commit,
-    move to Phase 1 (speed: mma.sync GEMMs / flash-tiled attention / occupancy; `probes/g5_5_mega_sweep.py`
-    vs the shipped path at row-6 shape).
-  - diverges from the shipped ref → debug which stage (add per-stage dumps to the probe). Likely
-    suspects: LN eps, qkv weight layout/transpose, head split indexing, GELU rounding point,
-    ffn_out fp32-vs-TF32, final_norm affine.
-- **In-flight jobs:** g5_5 mega correctness — sbatch `jobs/g5_5_mega_correct.sbatch` →
-  `results/g5_5_mega_correct_run<J>.log`. ~10 min (includes the nvcc build).
+- **Phase:** 0 PASS (correctness). Phase 1 = speed — probe in flight.
+- **Phase 0 result (g5_5 run157):** the scalar megakernel is CORRECT — max|mega - fp64| =
+  1.05-1.39e-3 across 5 trials, `fail 0`, passes the 0.002 budget with MORE headroom than the
+  shipped path (1.28-1.49e-3). It does fp32 attention (vs the shipped fp16 flash), so it differs
+  from the shipped path by ~1e-3 — a lateral/slightly-better rounding, not a bug.
+- **Kernel compiled clean** (no spills reported). `csrc/g5_mega_causal.{cu,cpp}`: 128 threads/block
+  = 1 per query row, scalar loops, shared `xs`[128][128]fp32 + `kh`/`vh`[128][32]fp16, `ctx`/`n1`/`n2`/`g`
+  in registers, online softmax. Committed through `<hash>`.
+- **In-flight:** g5_6 speed — `jobs/g5_6_mega_speed.sbatch` (runs g5_5 then g5_6) →
+  `results/g5_6_mega_speed_run<J>.log`. Times the SCALAR megakernel vs the shipped compiled causal
+  forward at B=10000 via CUDA-graph replay. ~15 min.
+- **Next concrete action:** read the speed number.
+  - mega already ≥ x1.5 shipped → skip most of Phase 1; go straight to integration (Phase 2).
+  - mega x0.5-1.5 → Phase 1: replace the scalar GEMMs with `mma.sync` (the 3 fp16 GEMMs are
+    128x128x128 / 128x384x128 -- warp-cooperative), keep attention scalar (tiny), re-measure.
+  - mega << shipped (e.g. x0.1) → the scalar inner loops are the bottleneck; mma.sync + maybe
+    a warp-per-query-row layout instead of thread-per-row. Iterate.
+- **Phase 2 (after a speed win):** `_ensure_mega_plan` eager gate (hard row-6 specialist:
+  causal ∧ d_model==128 ∧ num_heads==4 ∧ seq_len==128 ∧ num_layers==4 ∧ ffn_dim==128 ∧ tok≥2^19),
+  OUT-PARAM custom op `g5::mega_causal_forward`, whole-body replacement in `_optimized_forward_causal`.
+  Capture-verify (g5_3 pattern) + 40-trial ship-verify row 6 + controls.
+- **THEN lever 2:** fused GELU→ffn_out→+residual kernel.
 - **Why:** step 43 — row 6's 52.5ms forward is 38.9% LN/residual traffic + 8% standalone GELU. The
   fp32 residual `x` [1.28M,128] (655MB) round-trips HBM ~2 reads + 2 writes per layer × 4. A megakernel
   with **one CUDA block per sequence** (S=128, d=128 → one sequence fits on-chip) does all 4 layers
