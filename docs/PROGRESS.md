@@ -1649,3 +1649,34 @@ all 6 regime cells (`tiny/fp16`, `default/fp16`, `long-seq/fp16`,
 diff didn't touch causal). This is the largest single-iteration
 improvement of the whole session, and the first time a precision
 reduction beyond TF32 has shipped.
+
+### 29. G6.5 (INT8 FFN) — cheap precheck, decisive failure, closes Tier 2
+
+**What was tried:** `docs/CATALOGUE.md` G2.7 — never triggered this
+session (Phase-0 showed FP8 was available, so the catalogue's own "use
+only if FP8 unavailable" condition never fired). Given INT8's uniform
+fixed-point quantization is structurally different from FP8's floating-
+point scheme (which failed, step 18) and FP16's (which came within a
+hair of passing in the FFN, step 27), worth checking on its own evidence
+rather than assumed guilty by association. Same cheap-gate methodology as
+`probes/g4_fp8_accuracy_precheck.py` (synthetic quantize-dequant
+simulation, per-channel weight scales, per-tensor dynamic activation
+scale, symmetric `[-127,127]` — no real kernel investment before knowing
+if the precision itself is viable).
+
+**Result: decisive failure, worse than either FP8 or FP16**
+(`results/g6_5_int8_precheck_FAILED_run64.log`, job 64): all 20/20 seeds
+fail, `max_abs` 0.0269-0.0310 — **27-31x over the 0.001 atol budget**,
+roughly 20-25x worse than FP16's FFN near-miss (step 27's 0.0011-0.0014)
+and in the same range as FP8's original decisive failure. INT8's fixed 8-
+bit linear step size, with no floating exponent to auto-range around each
+value's own magnitude, is simply too coarse for these O(1)-magnitude,
+roughly-Gaussian activations — the opposite conclusion from FP16, which
+benefits from mantissa bits comparable to TF32's own.
+
+**No further probing needed** — same logic as G2.1's original closure
+(step 14): a gap this large doesn't need more seeds to be judged unsafe.
+Closes Tier 2 entirely: FP16 attention shipped (step 28), FP16 FFN closed
+(step 27), INT8 FFN closed (this step). Committed alongside this write-up:
+the probe script and job log. No `benchmark.py` changes (precheck only,
+never wired into the model).

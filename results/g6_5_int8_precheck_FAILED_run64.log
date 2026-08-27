@@ -1,0 +1,2 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+seeds=20 true_failures=20 max=0.030981 mean=0.028662 min=0.026893
