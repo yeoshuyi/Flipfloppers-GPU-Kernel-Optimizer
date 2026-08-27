@@ -47,28 +47,22 @@ def stacked(model):
         fn_b=model.final_norm.bias.detach().float().contiguous())
 
 
-def gtime(call, iters=5, replays=20, warm=8):
-    s = torch.cuda.Stream(); s.wait_stream(torch.cuda.current_stream())
-    with torch.cuda.stream(s):
-        for _ in range(warm):
-            call()
-    torch.cuda.current_stream().wait_stream(s); torch.cuda.synchronize()
-    g = torch.cuda.CUDAGraph()
-    with torch.cuda.graph(g):
-        for _ in range(iters):
-            call()
+def etime(call, iters=30, warm=15):
+    # plain event timing -- do NOT wrap in torch.cuda.graph: the compiled
+    # model already self-captures under reduce-overhead and a nested capture
+    # errors. The megakernel is one launch; a warmed event-timed loop is
+    # accurate to well under a %.
+    for _ in range(warm):
+        call()
     torch.cuda.synchronize()
     best = 1e30
-    for _ in range(5):
-        for _ in range(2):
-            g.replay()
-        torch.cuda.synchronize()
+    for _ in range(6):
         e0, e1 = (torch.cuda.Event(enable_timing=True) for _ in range(2))
         e0.record()
-        for _ in range(replays):
-            g.replay()
+        for _ in range(iters):
+            call()
         e1.record(); torch.cuda.synchronize()
-        best = min(best, e0.elapsed_time(e1) / replays / iters)
+        best = min(best, e0.elapsed_time(e1) / iters)
     return best
 
 
@@ -101,8 +95,8 @@ def main():
     print(f"max|mega - compiled_shipped| over [10000,128,128] = "
           f"{(out - y_ref).abs().max().item():.3e}", flush=True)
 
-    t_ship = gtime(lambda: compiled(x, mask, True))
-    t_mega = gtime(lambda: ext.mega_causal_forward(
+    t_ship = etime(lambda: compiled(x, mask, True))
+    t_mega = etime(lambda: ext.mega_causal_forward(
         x, out, W["qkv_w"], W["qkv_b"], W["op_w"], W["op_b"], W["fi_w"],
         W["fi_b"], W["fo_w"], W["fo_b"], W["fn_w"], W["fn_b"]))
     print(f"\nrow 6 (B=10000):")

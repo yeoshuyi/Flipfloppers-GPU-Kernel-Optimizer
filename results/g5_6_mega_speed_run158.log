@@ -1,0 +1,108 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+ninja: no work to do.
+  qkv_w  (4, 384, 128) torch.float16
+  qkv_b  (4, 384) torch.float16
+  op_w   (4, 128, 128) torch.float16
+  op_b   (4, 128) torch.float16
+  fi_w   (4, 128, 128) torch.float16
+  fi_b   (4, 128) torch.float16
+  fo_w   (4, 128, 128) torch.float32
+  fo_b   (4, 128) torch.float32
+  fn_w   (128,) torch.float32
+  fn_b   (128,) torch.float32
+  norm1.eps = 1e-05  norm2.eps = 1e-05  final_norm.eps = 1e-05
+trial 0: max|mega-shipped_ref|=1.148e-03  max|mega-fp64|=1.113e-03 (fail 0)  | shipped max|.-fp64|=1.276e-03 (fail 0)
+trial 1: max|mega-shipped_ref|=1.461e-03  max|mega-fp64|=1.387e-03 (fail 0)  | shipped max|.-fp64|=1.278e-03 (fail 0)
+trial 2: max|mega-shipped_ref|=1.200e-03  max|mega-fp64|=1.162e-03 (fail 0)  | shipped max|.-fp64|=1.457e-03 (fail 0)
+trial 3: max|mega-shipped_ref|=1.250e-03  max|mega-fp64|=1.174e-03 (fail 0)  | shipped max|.-fp64|=1.405e-03 (fail 0)
+trial 4: max|mega-shipped_ref|=1.158e-03  max|mega-fp64|=1.054e-03 (fail 0)  | shipped max|.-fp64|=1.492e-03 (fail 0)
+OVERALL: PASS
+======================== SPEED ========================
+max|mega - compiled_shipped| over [10000,128,128] = 1.469e-03
+Traceback (most recent call last):
+  File "/work/probes/g5_6_mega_speed.py", line 59, in gtime
+    call()
+  File "/work/probes/g5_6_mega_speed.py", line 104, in <lambda>
+    t_ship = gtime(lambda: compiled(x, mask, True))
+                           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1073, in _optimized_forward_causal
+    def _optimized_forward_causal(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/aot_autograd.py", line 1277, in forward
+    return compiled_fn(full_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2548, in __call__
+    return self.compiled_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1141, in runtime_wrapper
+    result = _codegen_runtime_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/subclass_codegen.py:codegen(runtime_wrapper_orchestration)", line 8, in _runtime_wrapper
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/output_code.py", line 763, in __call__
+    return self.current_callable(inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/torchinductor_techjam2/lr/clre6ojwjqwpznol5qpcvpddkra3glo4fyzm7jnizmenm57rv3k3.py", line 1042, in call
+    (buf81,) = self.partitions[0](partition0_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/compile_fx.py", line 1925, in run
+    return compiled_fn(new_inputs)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 440, in deferred_cudagraphify
+    return fn(inputs)
+           ^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/utils.py", line 3835, in run
+    out = model(new_inputs)
+          ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2178, in run
+    out = self._run(new_inputs, function_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2330, in _run
+    return self.run(new_inputs, function_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2178, in run
+    out = self._run(new_inputs, function_id)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2296, in _run
+    return self.execute_node(child, new_inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 2440, in execute_node
+    return node.run(new_inputs)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 1212, in run
+    self.run_graph()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/cudagraph_trees.py", line 1323, in run_graph
+    self.graph.replay()
+  File "/usr/local/lib/python3.12/dist-packages/torch/cuda/graphs.py", line 186, in replay
+    super().replay()
+torch.AcceleratorError: CUDA error: operation not permitted when stream is capturing
+Search for `cudaErrorStreamCaptureUnsupported' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+For more detailed error information, run with CUDA_LOG_FILE=stderr
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/work/probes/g5_6_mega_speed.py", line 116, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_6_mega_speed.py", line 104, in main
+    t_ship = gtime(lambda: compiled(x, mask, True))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_6_mega_speed.py", line 57, in gtime
+    with torch.cuda.graph(g):
+  File "/usr/local/lib/python3.12/dist-packages/torch/cuda/graphs.py", line 477, in __exit__
+    self.cuda_graph.capture_end()
+  File "/usr/local/lib/python3.12/dist-packages/torch/cuda/graphs.py", line 169, in capture_end
+    super().capture_end()
+torch.AcceleratorError: CUDA error: operation failed due to a previous error during capture
+Search for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+For more detailed error information, run with CUDA_LOG_FILE=stderr
+
