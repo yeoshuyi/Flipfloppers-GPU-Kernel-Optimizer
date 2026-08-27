@@ -9,17 +9,21 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 2 — T1: SDPA backend audit + CUDA-graph/recompile audit (cheap, whole-matrix)
-- **Phase:** T1 audit job running
-- **Last completed:** iter 1 committed (`852379b`, `84ed40a`). Wrote + committed
-  `probes/g5_0_sdpa_backend_audit.py` + `jobs/g5_0_sdpa_audit.sbatch` (commit after this).
-- **Next concrete action:** when the SDPA-audit job finishes → read
-  `results/g5_0_sdpa_backend_audit_run<J>.log`. If a backend beats auto >3% on a row → wire a
-  forced-backend path in `_optimized_forward_causal` behind an eager shape gate; else record the
-  negative. If recompiles > ~2 on small rows → investigate the guard. Then move to T2.
-- **In-flight jobs:** SDPA audit (job id in `$SCRATCHPAD/../scratchpad`, check `squeue -u techjam2`;
-  sbatch = `jobs/g5_0_sdpa_audit.sbatch`; output → `results/g5_0_sdpa_backend_audit_run<J>.log`). ~15 min.
-- **Pending decisions:** T3 route (fp16-both-FFN vs fused neutral kernel) — after T1/T2.
+- **Iteration:** 3 — T2: FP32-accum warp-spec GEMM for row-8 (d1024) causal qkv/out_proj/ffn_in
+- **Phase:** Phase-0 microbench job running
+- **Last completed:** T1 double-negative documented (step 44, commit `b69c810`). Wrote + committed
+  (`<hash>`) `probes/g5_1_d1024_gemm_sweep.py` + sbatch, submitted.
+- **Next concrete action:** when the sweep job finishes → read
+  `results/g5_1_d1024_gemm_sweep_run<J>.log`.
+  - If an ACCF32 cfg is >1.03x cuBLAS at M8192/K1024/N{1024,3072} with err ≈ cuBLAS err
+    → Phase 1: add a causal attention-GEMM gate (mirror `_ensure_ffn_plan`, `d_model≥1024 ∧
+    tok≥8192`), wire `torch.ops.g43.ws_linear` into `_optimized_forward_causal`'s qkv + out_proj
+    (+ maybe ffn_in) behind it; correctness probe → check_validity → 40-trial accuracy on rows
+    8 + a d128 control + nc control → matched BEFORE/AFTER bench → PROGRESS step 45 → commit.
+  - If no ACCF32 cfg beats cuBLAS → document negative (step 45), move to T3.
+- **In-flight jobs:** g5_1 d1024 GEMM sweep — `squeue -u techjam2`; sbatch
+  `jobs/g5_1_d1024_gemm_sweep.sbatch`; output → `results/g5_1_d1024_gemm_sweep_run<J>.log`. ~20 min.
+- **Pending decisions:** T3 route (fp16-both-FFN vs fused neutral kernel) — after T2.
 
 ## Iteration 1 result (step 43) — target ranking
 
