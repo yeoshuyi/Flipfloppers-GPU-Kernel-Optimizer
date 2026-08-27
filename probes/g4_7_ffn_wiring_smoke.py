@@ -117,15 +117,22 @@ def main():
         "causal d512/ffn2048 tok8192",
         C(batch_size=8, seq_len=1024, d_model=512, num_heads=8,
           ffn_dim=2048, num_layers=2, causal=True), expect_cfg=58)
-    # official-matrix shapes -- ffn_dim < 2048, must NOT engage (empirical gate)
+    # official-matrix small shapes -- ffn_dim<2048 AND tok below the mem-bound
+    # floor -> must NOT engage
     all_ok &= run_case(
-        "causal d128/ffn128 tok8192 (official row-1 -- gate off, ffn_dim<2048)",
+        "causal d128/ffn128 tok8192 (official row-1 -- gate off)",
         C(batch_size=64, seq_len=128, d_model=128, num_heads=4,
           ffn_dim=128, num_layers=4, causal=True), expect_cfg=None)
     all_ok &= run_case(
-        "causal d1024/ffn1024 tok8192 (official row-8 -- gate off, ffn_dim<2048)",
+        "causal d1024/ffn1024 tok8192 (official row-8 -- gate off)",
         C(batch_size=64, seq_len=128, d_model=1024, num_heads=4,
           ffn_dim=1024, num_layers=4, causal=True), expect_cfg=None)
+    # T3: deeply memory-bound d128/ffn128, tok >= 2^19 -> MUST engage (cfg 58,
+    # precision-neutral). Stand-in for official row 6 (B=10000, tok 1.28M).
+    all_ok &= run_case(
+        "causal d128/ffn128 tok1.05M (official row-6 regime -- MEMBOUND, engages)",
+        C(batch_size=8192, seq_len=128, d_model=128, num_heads=4,
+          ffn_dim=128, num_layers=2, causal=True), expect_cfg=58)
     # below token gate: tok=2048
     all_ok &= run_case(
         "causal d512/ffn2048 tok2048 (below token gate)",

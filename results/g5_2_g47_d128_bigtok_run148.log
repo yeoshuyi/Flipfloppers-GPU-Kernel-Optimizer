@@ -1,0 +1,40 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+
+### row1  M8192   K128 N128   (out 0.00 GiB fp32)
+  BASELINE  cuBLAS addmm fp16          5.077 us
+  BASELINE  compiled cast+GELU         3.016 us
+  BASELINE  chain (SHIPPED path)       8.095 us  <== judged against
+  FP16-fused (ref only)    cfg51       6.443 us   x1.256
+  FP16-fused (ref only)    cfg55       7.046 us   x1.149
+  ACCF32-fused (neutral)   cfg74       8.222 us   x0.985  (neutral, ~parity)
+  ACCF32-fused (neutral)   cfg73       8.318 us   x0.973
+  ACCF32-fused (neutral)   cfg58       8.697 us   x0.931
+  ACCF32-fused (neutral)   cfg54       8.891 us   x0.910
+  ACCF32-fused (neutral)   cfg62      14.170 us   x0.571
+
+### row13 M65536  K128 N128   (out 0.03 GiB fp32)
+  BASELINE  cuBLAS addmm fp16         21.353 us
+  BASELINE  compiled cast+GELU        16.046 us
+  BASELINE  chain (SHIPPED path)      38.296 us  <== judged against
+  FP16-fused (ref only)    cfg51      32.340 us   x1.184
+  FP16-fused (ref only)    cfg55      36.843 us   x1.039
+  ACCF32-fused (neutral)   cfg73      37.845 us   x1.012  (neutral, ~parity)
+  ACCF32-fused (neutral)   cfg74      39.185 us   x0.977
+  ACCF32-fused (neutral)   cfg58      40.427 us   x0.947
+  ACCF32-fused (neutral)   cfg54      41.634 us   x0.920
+  ACCF32-fused (neutral)   cfg62      48.640 us   x0.787
+
+### row6  M1280000 K128 N128   (out 0.61 GiB fp32)
+  BASELINE  cuBLAS addmm fp16        713.268 us
+  BASELINE  compiled cast+GELU      1079.979 us
+  BASELINE  chain (SHIPPED path)    1795.669 us  <== judged against
+  FP16-fused (ref only)    cfg51    1079.292 us   x1.664
+  FP16-fused (ref only)    cfg55    1079.353 us   x1.664
+  ACCF32-fused (neutral)   cfg54    1079.437 us   x1.664  <-- NEUTRAL WIN
+  ACCF32-fused (neutral)   cfg74    1079.723 us   x1.663  <-- NEUTRAL WIN
+  ACCF32-fused (neutral)   cfg58    1080.235 us   x1.662  <-- NEUTRAL WIN
+  ACCF32-fused (neutral)   cfg73    1081.708 us   x1.660  <-- NEUTRAL WIN
+  ACCF32-fused (neutral)   cfg62    1081.941 us   x1.660  <-- NEUTRAL WIN
+
+decision: if an ACCF32-fused cfg is >1.03x the shipped chain at row 6 and/or row 13, extend _ensure_ffn_plan to admit (d_model>=128, ffn_dim>=128, tok>=<threshold>) and ship.

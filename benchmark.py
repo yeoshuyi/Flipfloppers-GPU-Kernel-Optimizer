@@ -238,6 +238,13 @@ _WS_MIN_TOKENS = 8192
 # G4_7_FFN_CFG disables the fusion (falls back to F.gelu(F.linear(...))).
 _FFN_CFG = int(os.environ.get("G4_7_FFN_CFG", "58"))
 _FFN_MIN_TOKENS = int(os.environ.get("G4_7_FFN_MIN_TOKENS", "8192"))
+# Second admit regime for _ensure_ffn_plan: once [tok, ffn_dim] is large
+# enough that cfg 58's fp32 store traffic fully hides the GEMM, the fused
+# ffn_in+GELU wins at ANY ffn_dim (half-rate accumulate stops mattering).
+# Measured crossover (g5_2, run148, d128/ffn128): parity at tok 65536, x1.66
+# at tok 1.28M. Floor set above 65536 so only the clearly-memory-bound
+# regime -- official row 6 (B=10000, d128) -- engages.
+_FFN_MEMBOUND_TOKENS = int(os.environ.get("G4_7_FFN_MEMBOUND_TOKENS", str(1 << 19)))
 _FFN_OP_READY = False
 
 
@@ -849,30 +856,38 @@ class UserOptimizedTransformer(BaselineTransformer):
         precision-reducing step, so the causal budget that blocks G4.3 does
         not apply.
 
-        EMPIRICAL SHAPE GATE -- d_model >= 512 AND ffn_dim >= 2048. This is
-        not a tile-divisibility bound (cfg 58 = BM128 BN128 BK64 tiles any
-        M/N%128, K%64); it is where the fused ACCF32 kernel is measured to be
-        a NET WIN. Microbench (results/g4_7_ffn_sweep_run132.log): ACCF32
-        fused-GELU beats GEMM + compiled cast+GELU by x1.42 (long_seq) / x1.55
-        (large_batch) at d512/ffn2048, but is x0.93-x0.99 (a LOSS) at
-        ffn_dim in {128, 1024} -- fp32-accumulate is half rate on this
-        hardware and the saved elementwise pass over [tok, ffn_dim] only pays
-        for it once ffn_dim is large. Whole-model confirmation
-        (results/g4_7_ship_verify_run139.log): +9.7% long_seq_causal, +12.1%
-        large_batch_causal, max_abs UNCHANGED (0.00161 / 0.00182). At
-        ffn_dim <= 1024 the fused path additionally hit a
-        torch._dynamo recompile_limit interaction under reduce-overhead
-        cudagraphs and silently fell back -- excluded here rather than left
-        as a latent no-op. The official 14-row causal matrix (ffn_dim in
-        {32, 128, 1024}) never engages this path; it is scoped to the
-        project's own d512/ffn2048 causal regime shapes.
+        EMPIRICAL SHAPE GATE -- two regimes where the fused ACCF32 kernel is
+        MEASURED to be a net win vs (cuBLAS `ffn_in` + a compiled cast+GELU).
+        Neither is a tile-divisibility bound (cfg 58 = BM128 BN128 BK64 tiles
+        any M/N%128, K%64); the C++ rejects an untileable shape anyway.
+
+        (1) LARGE ffn_dim: `d_model >= 512 AND ffn_dim >= 2048`. Here the
+            saved full-tensor cast+GELU pass repays the half-rate FP32
+            accumulate. Microbench run132: x1.42 (long_seq) / x1.55
+            (large_batch) at d512/ffn2048, but x0.93-x0.99 (LOSS) at
+            ffn_dim in {128, 1024}. Whole-model run142: +9.5% long_seq_causal,
+            +12.1% large_batch_causal, max_abs UNCHANGED (0.00161 / 0.00182).
+            These are the project's own d512/ffn2048 causal sweep shapes --
+            not the official 14-row matrix.
+
+        (2) DEEPLY MEMORY-BOUND: `tok >= _FFN_MEMBOUND_TOKENS` (any
+            ffn_dim >= 128). Once [tok, ffn_dim] is large enough that the
+            fused kernel's fp32 store traffic fully hides the GEMM, the half-
+            rate accumulate stops mattering. Microbench g5_2 (run148) at
+            d128/ffn128: x0.99 at tok 8192, x1.01 at tok 65536, **x1.66 at
+            tok 1.28M** (the fused kernel runs in exactly the standalone
+            cast+GELU time -- the GEMM is free). This *is* on the official
+            matrix: row 6 (B=10000, d128, tok 1.28M). The crossover is
+            between tok 65536 (parity) and 1.28M (x1.66); the floor is set
+            well above 65536 so only the clearly-memory-bound regime engages.
 
         Every condition is a property of the SHAPE and the frozen weights.
         """
+        big_ffn = d_model >= 512 and ffn_dim >= 2048 and tok >= _FFN_MIN_TOKENS
+        membound = tok >= _FFN_MEMBOUND_TOKENS and ffn_dim >= 128
         if (_FFN_CFG < 0 or device.type != "cuda"
-                or tok < _FFN_MIN_TOKENS or tok % 128 != 0
-                or d_model < 512 or ffn_dim < 2048
-                or ffn_dim % 128 != 0 or d_model % 64 != 0):
+                or tok % 128 != 0 or ffn_dim % 128 != 0 or d_model % 64 != 0
+                or not (big_ffn or membound)):
             self._ffn_cur = None
             return
         key = (tok, ffn_dim, d_model)
