@@ -9,54 +9,52 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 3 — T2: FP32-accum warp-spec GEMM for row-8 (d1024) causal qkv/out_proj/ffn_in
-- **Phase:** Phase-0 microbench job running
-- **Last completed:** T1 double-negative documented (step 44, commit `b69c810`). Wrote + committed
-  (`<hash>`) `probes/g5_1_d1024_gemm_sweep.py` + sbatch, submitted.
-- **Next concrete action:** when the sweep job finishes → read
-  `results/g5_1_d1024_gemm_sweep_run<J>.log`.
-  - If an ACCF32 cfg is >1.03x cuBLAS at M8192/K1024/N{1024,3072} with err ≈ cuBLAS err
-    → Phase 1: add a causal attention-GEMM gate (mirror `_ensure_ffn_plan`, `d_model≥1024 ∧
-    tok≥8192`), wire `torch.ops.g43.ws_linear` into `_optimized_forward_causal`'s qkv + out_proj
-    (+ maybe ffn_in) behind it; correctness probe → check_validity → 40-trial accuracy on rows
-    8 + a d128 control + nc control → matched BEFORE/AFTER bench → PROGRESS step 45 → commit.
-  - If no ACCF32 cfg beats cuBLAS → document negative (step 45), move to T3.
-- **In-flight jobs:** g5_1 d1024 GEMM sweep — `squeue -u techjam2`; sbatch
-  `jobs/g5_1_d1024_gemm_sweep.sbatch`; output → `results/g5_1_d1024_gemm_sweep_run<J>.log`. ~20 min.
-- **Pending decisions:** T3 route (fp16-both-FFN vs fused neutral kernel) — after T2.
+- **Iteration:** 4 — T3: the d128 elementwise/GELU bar (largest official-matrix cost)
+- **Phase:** Phase-0 microbench job running (`g5_2_g47_d128_bigtok`)
+- **Approach:** extend G4.7's shipped fused ffn_in+GELU kernel (precision-neutral, ACCF32 cfg 58)
+  to the memory-bound d128 big-token rows (6: tok 1.28M, 13: tok 65536), where the [tok,128] hidden
+  round-trip G4.7 eliminates dominates. run132 only tested d128 at tok 8192/65536 (x0.93-0.99);
+  tok 1.28M untested. If Phase 0 shows a win → gate change + verify + ship. Cheap (reuses shipped kernel).
+- **Next concrete action:** when job finishes → read `results/g5_2_g47_d128_bigtok_run<J>.log`.
+  - WIN (ACCF32-fused cfg > 1.03x the shipped chain at row 6 and/or 13):
+    edit `_ensure_ffn_plan` in benchmark.py — add a second admit clause
+    `(d_model>=128 ∧ ffn_dim>=128 ∧ tok>=<threshold from probe>)` alongside the existing d512 one;
+    pick the winning cfg (keep `_FFN_CFG` env override; may need per-branch cfg).
+    Then: `probes/g4_7_ffn_wiring_smoke.py` (extend for d128 case) → check_validity → verify_baseline
+    → regen torch_transformer_benchmark.py → 40-trial ship-verify sbatch on official rows 6,13,1(control),8
+    + nc_large_batch → PROGRESS step 46 → ACCURACY_BUDGET §8 → archive commit (causal cells) → git commit.
+  - NEGATIVE: document step 46 negative; then T3 route (b) — the fused GELU→ffn_out→+resid neutral
+    kernel — is the only remaining lever; decide whether the build is worth it given the official
+    matrix's total addressable latency, or declare the loop at its precision-neutral end-state.
+- **In-flight jobs:** g5_2 d128 big-tok sweep — `squeue -u techjam2`; sbatch `jobs/g5_2_d128_bigtok.sbatch`;
+  output → `results/g5_2_g47_d128_bigtok_run<J>.log`. ~20 min.
+- **Pending decisions:** T3 ship vs negative — after this job.
 
-## Iteration 1 result (step 43) — target ranking
+## Loop history (commits)
 
-- **T1** (iter 2): SDPA backend audit rows 8/13 + recompile audit small rows. Cheap, config-only.
-- **T2** (iter 3): FP32-accum warp-spec GEMM for row-8 (d1024) attention+FFN GEMMs — ~15% of row 8
-  is recoverable roofline (library runs `stages_32x1`, ~56% of 165 TF FP16 roofline). Precision-neutral.
-- **T3** (iter 4+): d128 elementwise/GELU bar (rows 6=47%, 13=42%). (a) fp16 both-FFN GEMMs re-priced
-  at 0.002 [precision-reducing]; (b) fused GELU→ffn_out→+resid kernel, hidden on-chip [neutral, bigger build].
-  Roofline confirms the [tok,ffn] hidden round-trip is EXPOSED on all d128 rows.
+- `92bf628` G4.7 ship + judges'-baseline reconciliation (prior session's work, committed this session)
+- `42cc466` / `a04bd31` archive: causal-long-seq 7.78x / causal-large-batch 2.98x
+- `12a68d4` iter0 doc refresh (SUBMISSION/DOCUMENTATION/CLAUDE/CAUSAL_LEDGER with G4.7 numbers)
+- `852379b` + `84ed40a` iter1 profile → PROGRESS step 43 (d128 elementwise/GELU is the bar; T1/T2/T3 targets)
+- `b69c810` iter2 T1: SDPA backend + recompile audit — **double negative** (step 44)
+- `dd6a4ba` iter3 T2: FP32-accum warp-spec for d1024 GEMMs — **negative**, cuBLAS at 94-96% roofline (step 45)
+- (this) iter4 T3 Phase 0 in flight
 
-## Iteration queue
+## Candidate levers status
 
-1. [x] iteration 0 — doc refresh
-2. [ ] iteration 1 — profile official rows 1/6/8/13 → PROGRESS step 43 profiling entry + ranked target list
-3. [ ] iteration 2+ — attack the top precision-neutral bar
-
-## Candidate levers (iteration 1 profile re-ranks)
-
-Reassessed after noting **SDPA owns its own softmax** (flash kernel) — so:
-- **G4.5 (skip softmax max-sub) is mostly N/A** — we don't own the softmax; would need to replace SDPA's flash kernel (huge lift, step 20/35 says won't win). DEMOTED.
-- **Cast / LayerNorm traffic at huge-tok rows 6, 13** — the causal path does `n1.to(fp16)`, `n2.to(fp16)`, casts back, per layer. At row 6 (1.28M tok) that's ~1ms/layer of pure elementwise traffic. If census ELEM bucket is large → fuse the fp16 cast into LayerNorm's output emit (precision-neutral, saves a pass). Inductor may already do it — census decides. **Top hypothesis for iter 2.**
-- **SDPA backend audit** for rows 8/13 — force FLASH vs EFFICIENT vs MATH, measure. Config-only, precision-neutral, cheap.
-- **CUDA-graph / recompile_limit audit** for small rows 1-5/9-12 — cheap check.
-- **Skinny-N GEMM (ffn_in/ffn_out N=128 on small-d rows) underfills the GPU** — Stream-K / split-K. But cuBLAS `splitKreduce` may already handle it; census will show. If cuBLAS isn't splitting, a warp-spec split-K arm (precision-neutral, fp32 reduce) could help.
-- FP32-accum warp-spec for causal attention GEMMs (qkv/out_proj) at row 8 — G4.3 only closed the FP16-accum version.
-- fused ffn_out for memory-bound d128 rows 6/13 — only if the roofline check says the round-trip is exposed.
+- ~~T1 SDPA backend / recompile~~ — closed negative (step 44)
+- ~~T2 d1024 warp-spec GEMM~~ — closed negative (step 45)
+- **T3 d128 elementwise/GELU** — IN PROGRESS. Route (a): extend G4.7 gate to d128 big-tok (this probe).
+  Route (b): fused GELU→ffn_out→+resid neutral kernel (bigger build, fallback).
+- Deferred: fp16 both-FFN GEMMs at 0.002 [precision-reducing]; token-parallel persistent megakernel
+  for row 6 [huge build, eliminates LN/residual round-trips — the real 38% bar].
 
 ## Key facts for a cold resume
 
-- Shipped causal path = `_optimized_forward_causal` in benchmark.py; tags G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc, +G4.7c (d512/ffn2048 only — inert on the official matrix).
-- Official rows: 1-5,9-12 = d128/ffn128 small (tok ≤ 16384, 4L); 6 = d128 tok1.28M; 8 = d1024/ffn1024 tok8192; 13 = d128 tok65536; 7 = d32/ffn32; 14 = d1024 tok3.2M (OOM, not run).
-- Budget: atol 0.002 / rtol 0.02, disjunctive, failed==0 is the gate. `tools/verify_baseline.py` guards it.
-- SUBMISSION.md stage table (stale, d512): FFN = 61-78% of eager stage sum. Confirm/replace for the official matrix in iteration 1.
-- Per candidate: eager `_ensure_*` gate + exact fallback; correctness probe → check_validity → 40-trial accuracy → matched BEFORE/AFTER bench; PROGRESS + ACCURACY_BUDGET §8 + commit; regen torch_transformer_benchmark.py + verify_baseline before each commit.
-- `_before_benchmark.py` regenerated by ship-verify sbatch via `git show <sha>:benchmark.py` (gitignored).
-- profiler subagent NOT available as a spawnable type here; use torch.profiler in a probe instead, keep raw output in the log file not context.
+- Shipped causal path = `_optimized_forward_causal` in benchmark.py; G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c (d512/ffn2048 only).
+- Official rows: 1-5,9-12 = d128/ffn128 small (tok ≤ 16384); 6 = d128 tok1.28M; 8 = d1024/ffn1024 tok8192; 13 = d128 tok65536; 7 = d32/ffn32; 14 = d1024 tok3.2M (OOM).
+- Budget atol 0.002 / rtol 0.02 disjunctive, failed==0. `tools/verify_baseline.py` guards it.
+- Per candidate: eager `_ensure_*` gate + exact fallback; correctness probe → check_validity → 40-trial accuracy → matched BEFORE/AFTER bench; PROGRESS + ACCURACY_BUDGET §8 + commit; regen torch_transformer_benchmark.py + verify_baseline before commit.
+- `_before_benchmark.py` regenerated by ship-verify sbatch via `git show <sha>:benchmark.py` (gitignored). Pin pre-G4.7 = `0691311`.
+- G4.7 kernel = `csrc/g4_4_warpspec_gemm.cu`, configs 51-76 (WS_CFG_LIST_G47). cfg 58 = ACCF32 + fused erf-GELU, fp32 out (the shipped one). `_ensure_ffn_plan` gate in benchmark.py ~L858.
+- profiler subagent NOT a spawnable type here; use torch.profiler in a probe, keep raw output in the log.
