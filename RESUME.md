@@ -11,7 +11,20 @@ sbatch only; no git remote (local commits ARE the deliverable); document while a
 ## NOW
 
 - **Iteration:** 7 — **G5.MEGA**: per-sequence fused megakernel for official row 6 (user: "try 1 then 2")
-- **Phase:** 0 PASS (correctness). Phase 1 = speed — probe in flight.
+- **Phase:** 1 — v2 (mma.sync GEMMs) built; correctness + speed job in flight.
+- **v1 (scalar): CORRECT (g5_5 run158 PASS) but x0.227 (231ms vs 52ms).** Needed tensor cores.
+- **v2 (this):** `csrc/g5_mega_causal.cu` rewritten — `gemm_rowreg` mma.sync m16n8k16 f32-accum for
+  qkv/out_proj/ffn_in (4-warp M-split, one n8-tile at a time so acc = 8 floats/thread, A from shared,
+  B streamed from L2). `xr` residual row in registers. sK/sV fp16 shared (64KB). qkv output
+  round-trips a `[B][SEQ][3D]` fp16 global scratch (d128 shared can't hold n1+q+k+v). Attention /
+  LN / GELU / ffn_out still scalar. Committed `<hash>`.
+- **Next concrete action:** read `results/g5_6_mega_speed_run<J>.log`.
+  - compile error / ptxas fail → fix .cu.
+  - g5_5 OVERALL PASS + g5_6 shows mega ≥ x1 → good; if ≥ x1.5 go to Phase 2 integration.
+  - g5_5 FAIL (mma fragment bug) → debug: dump one GEMM's output vs a torch reference in the probe.
+    Likely: mma A/B fragment layout, the `__pragma unroll 1` n-tile loop, or the global-scratch
+    read-after-write fence.
+  - g5_6 still slow → attention scalar loop is likely next (profile which stage).
 - **Phase 0 result (g5_5 run157):** the scalar megakernel is CORRECT — max|mega - fp64| =
   1.05-1.39e-3 across 5 trials, `fail 0`, passes the 0.002 budget with MORE headroom than the
   shipped path (1.28-1.49e-3). It does fp32 attention (vs the shipped fp16 flash), so it differs
