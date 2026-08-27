@@ -3255,3 +3255,71 @@ causal at step 41. **T2 closed. No change to benchmark.py.**
 
 Moving to T3 — the d128 elementwise/GELU bar (step 43), the largest remaining
 official-matrix cost.
+
+---
+
+### 46. T3 route (a) — extend G4.7's fused ffn_in+GELU to the memory-bound d128 rows: **reverted, integration does not carry**
+
+Step 43 ranked the d128 elementwise/GELU bar as the largest official-matrix
+cost (47% of row 6, 42% of row 13). Route (a): reuse G4.7's already-shipped
+fused `ffn_in`+GELU kernel (cfg 58, ACCF32 = FP32-accumulate + exact erf-GELU,
+precision-neutral) on the rows where it becomes a win — the deeply
+memory-bound ones, where the fused kernel's fp32 store traffic fully hides
+the GEMM and the half-rate accumulate stops costing.
+
+**Phase 0 (`probes/g5_2_g47_d128_bigtok.py`, job 148,
+`results/g5_2_g47_d128_bigtok_run148.log`) was a clear hit.** cfg 58 vs the
+shipped chain (cuBLAS `addmm` fp16 + a `torch.compile`'d cast+GELU), CUDA-graph
+replay, at d128/ffn128:
+
+| tok | cfg 58 vs chain |
+|---|---|
+| 8192 (row 1) | x0.99 |
+| 65536 (row 13) | x1.01 |
+| **1 280 000 (row 6)** | **x1.66** — fused kernel runs in exactly the standalone cast+GELU time; the GEMM is free |
+
+Wired a second admit regime into `_ensure_ffn_plan` (`tok >= 2^19`, any
+`ffn_dim >= 128`, crossover measured between 65536 and 1.28M). Gate logic
+verified for all 14 official rows — only row 6 newly engages. Wiring smoke
+(`run149`) showed `_ffn_cur = 58` and cfg 58 differing from the fallback by
+9.3e-4 at d128/tok-1M.
+
+**Ship-verify (`jobs/g5_2_ship_verify.sbatch`, job 150,
+`results/g5_2_ship_verify_run150.log`) is a silent fallback.** BEFORE
+(`09dee91`) vs AFTER, matched, official row 6 + 5 controls:
+
+- **Row 6 AFTER's per-trial `max_abs` is bit-identical to BEFORE's** for every
+  one of the 5 shared trials (0.00195017 / 0.00153732 / 0.00154169 /
+  0.00150752 / 0.00154489). A FP32-accumulate warp-spec GEMM with an
+  epilogue-fused GELU cannot produce output bit-identical to `F.linear` +
+  a separate GELU kernel — the wiring smoke itself measured a 9.3e-4
+  difference. **The fused op did not run in the compiled/CUDA-graph'd model.**
+- No traceback: `ffn_gelu_linear`'s `try/except Exception` swallows whatever
+  the op raises under CUDA-graph capture at this shape, falling back to the
+  exact `F.gelu(F.linear(...))` every call.
+- The +5.7% row-6 "speedup" (5.536 → 5.854) is not corroborated by any
+  arithmetic change and is not trusted — row 1 moved −1.5% and row 13 −0.02%
+  in the same job; row 6 is the largest shape (B=10000) and the most
+  susceptible to L2/thermal variance between a 5-trial and a 40-trial
+  accuracy preamble.
+
+This is the **same silent-fallback class G4.7's `ffn_dim >= 2048` floor exists
+to avoid** — the fused custom op does not survive `torch.compile(mode=
+"reduce-overhead")` + CUDA-graph capture at small `ffn_dim`, for a reason not
+yet isolated (candidate: the op allocating a 655 MB fp32 output inside the
+graph pool, ×4 layers at B=10000).
+
+**Reverted.** `_ensure_ffn_plan`'s gate predicate is byte-identical to
+`09dee91` again (docstring carries the negative). `benchmark.py`'s shipped
+behaviour is unchanged from the run142-verified state. Kept the probes, the
+sweep log, and this entry.
+
+**Method bug found:** `probes/g4_7_ffn_wiring_smoke.py`'s `run_case` calls the
+model **once**, which under `reduce-overhead` is an eager pre-capture warmup —
+it sees the fused op engage in eager mode and never exercises graph replay, so
+it cannot detect a capture-time fallback. A capture-aware smoke (≥ ~20 calls,
+then diff replay output against the fallback model) is required before
+trusting any future fused-FFN gate — **including a re-verification of G4.7
+regime 1 (d512/ffn2048), whose +9.5%/+12.1% is corroborated across two jobs
+(run139, run142) and the run132 microbench but was smoke-checked the same
+inadequate way.** That re-verification is iteration 5.

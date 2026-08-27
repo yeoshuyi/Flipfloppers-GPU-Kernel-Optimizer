@@ -127,12 +127,18 @@ def main():
         "causal d1024/ffn1024 tok8192 (official row-8 -- gate off)",
         C(batch_size=64, seq_len=128, d_model=1024, num_heads=4,
           ffn_dim=1024, num_layers=4, causal=True), expect_cfg=None)
-    # T3: deeply memory-bound d128/ffn128, tok >= 2^19 -> MUST engage (cfg 58,
-    # precision-neutral). Stand-in for official row 6 (B=10000, tok 1.28M).
+    # d128 big-tok: the tok>=2^19 admit regime was REVERTED (step 46) -- cfg 58
+    # is x1.66 in isolation there but silently falls back under CUDA-graph
+    # capture. Gate is off; must stay None.
+    # NOTE: this run_case calls opt(x) ONCE, which under reduce-overhead is an
+    # eager pre-capture warmup -- it does NOT exercise graph replay, so it
+    # cannot detect the capture-time fallback that killed T3. A capture-aware
+    # smoke (>= ~20 calls, then diff replay output vs the fallback model) is a
+    # TODO before trusting any new fused-FFN gate.
     all_ok &= run_case(
-        "causal d128/ffn128 tok1.05M (official row-6 regime -- MEMBOUND, engages)",
+        "causal d128/ffn128 tok1.05M (T3 reverted -- gate off)",
         C(batch_size=8192, seq_len=128, d_model=128, num_heads=4,
-          ffn_dim=128, num_layers=2, causal=True), expect_cfg=58)
+          ffn_dim=128, num_layers=2, causal=True), expect_cfg=None)
     # below token gate: tok=2048
     all_ok &= run_case(
         "causal d512/ffn2048 tok2048 (below token gate)",
