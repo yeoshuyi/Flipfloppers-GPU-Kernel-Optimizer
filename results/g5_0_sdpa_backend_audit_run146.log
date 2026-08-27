@@ -1,0 +1,56 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: Memory efficient kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1104.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: Memory Efficient attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:571.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: Flash attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1106.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: Flash attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:559.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: cuDNN attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1108.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+/work/probes/g5_0_sdpa_backend_audit.py:66: UserWarning: head_dim should be no more than 128 (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:647.)
+  return F.scaled_dot_product_attention(q, k, v, attn_mask=None,
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+=== SDPA backend audit (fp16, is_causal=True, scale=1.0) ===
+  row1_d128_h4_s128  hd=32  tok=8192
+     auto            8.25 us   maxdiff 0.00e+00  <-- auto
+     FLASH           8.07 us   maxdiff 0.00e+00  ** fastest
+     EFFICIENT      10.96 us   maxdiff 1.95e-03
+     CUDNN          13.06 us   maxdiff 1.95e-03
+     MATH          118.19 us   maxdiff 3.91e-03
+
+  row6_d128_h4_s128  hd=32  tok=1280000
+     auto         1443.77 us   maxdiff 0.00e+00  <-- auto
+     FLASH        1443.98 us   maxdiff 0.00e+00
+     EFFICIENT    1404.96 us   maxdiff 1.95e-03  ** fastest
+     CUDNN        1778.67 us   maxdiff 1.95e-03
+     MATH        41691.59 us   maxdiff 3.91e-03
+
+  row8_d1024_h4_s128  hd=256  tok=8192
+     auto           41.19 us   maxdiff 0.00e+00  <-- auto
+     FLASH          41.19 us   maxdiff 0.00e+00
+     EFFICIENT      53.92 us   maxdiff 1.95e-03
+     CUDNN       (unavailable)
+     MATH          540.38 us   maxdiff 3.91e-03
+
+  row11_d128_h16_s128  hd=8  tok=8192
+     auto           24.05 us   maxdiff 0.00e+00  <-- auto
+     FLASH          24.06 us   maxdiff 0.00e+00
+     EFFICIENT      32.37 us   maxdiff 1.95e-03
+     CUDNN          44.40 us   maxdiff 1.95e-03
+     MATH          744.06 us   maxdiff 1.95e-03
+
+  row13_d128_h4_s1024  hd=32  tok=65536
+     auto          163.32 us   maxdiff 0.00e+00  <-- auto
+     FLASH         163.72 us   maxdiff 0.00e+00
+     EFFICIENT     277.97 us   maxdiff 1.95e-03
+     CUDNN         320.23 us   maxdiff 1.95e-03
+     MATH        13418.62 us   maxdiff 3.91e-03
+
+=== compiled causal path recompile count (small rows) ===
+  row1: recompiles=0  stats={'calls_captured': 109, 'unique_graphs': 1}
+  row4: recompiles=0  stats={'calls_captured': 109, 'unique_graphs': 1}
+  row12: recompiles=0  stats={'calls_captured': 109, 'unique_graphs': 1}
+

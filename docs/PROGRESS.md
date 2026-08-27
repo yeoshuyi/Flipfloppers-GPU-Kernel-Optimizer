@@ -3203,3 +3203,26 @@ tok 8192), row 13 (d128, S=1024, tok 65536). Compiled-path CUPTI census
   on-chip (G3.1 rebuilt on the warp-spec infra, fp32/TF32x3 hidden), justified
   now that the round-trip is measured-exposed. (b) is the bigger build; decide
   after T1/T2.
+
+---
+
+### 44. T1 (iteration 2) — SDPA backend + recompile audit: clean double negative
+
+`probes/g5_0_sdpa_backend_audit.py`, job 146,
+`results/g5_0_sdpa_backend_audit_run146.log`.
+
+- **SDPA already picks the optimal backend.** `auto` dispatch selects **FLASH**
+  on every official row (auto timing == FLASH timing, `maxdiff` 0.0 — same
+  kernel). FLASH is fastest or tied everywhere: row 1 8.1 µs, row 8 41 µs,
+  row 11 24 µs, row 13 163 µs. `EFFICIENT` is 2.7% faster *only* at row 6 (tok
+  1.28M) but returns a numerically different result (`maxdiff` 1.95e-3, the
+  fp16-accum softmax path), and 2.7% of the 20%-of-forward SDPA is ~0.5% whole-
+  model bought with a real precision move — not worth it against the tight
+  causal budget. `MATH`/`CUDNN` are strictly worse. **No action.**
+- **No recompiles.** The compiled `_optimized_forward_causal` reports
+  `recompiles=0`, `unique_graphs=1` over 60 forwards on rows 1 / 4 / 12. The
+  `recompile_limit` seen during G4.7 development was an artefact of that
+  probe building three model instances that shared dynamo guard state — it
+  does not happen on a real single-model run. **No action.**
+
+Both cheap config levers ruled out. Moving to T2 (row-8 d1024 GEMM roofline).
