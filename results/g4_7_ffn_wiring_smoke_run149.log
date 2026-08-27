@@ -1,0 +1,72 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8]    function: '_optimized_forward_causal' (/work/benchmark.py:1061)
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8]    last reason: 0/7: self._ffn_cur is None                                    # if ffn_cfg is None:  # ork/benchmark.py:1147 in _optimized_forward_causal
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8] User stack trace:
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8]   File "/work/benchmark.py", line 1147, in _optimized_forward_causal
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8]     if ffn_cfg is None:
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0827 16:42:49.791000 171175 torch/_dynamo/convert_frame.py:1994] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+  [cfg58] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 2048)
+  [cfg51] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 2048)
+
+=== causal d512/ffn2048 tok8192  (TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=58  cfg51=51   (expect fallback=None, cfg58=58, cfg51=51)
+  fallback shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 4.488e-04   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 2.111e-03   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 2.111e-03   (expect > 0 -- configs must differ)
+  --> PASS
+  [cfg58] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 128)
+  [cfg51] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 128)
+
+=== causal d128/ffn128 tok8192 (official row-1 -- gate off)  (TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True))
+  _ffn_cur: fallback=None  cfg58=None  cfg51=None   (expect fallback=None, cfg58=None, cfg51=None)
+  fallback shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 0.000e+00   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 0.000e+00   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 0.000e+00   (expect > 0 -- configs must differ)
+  --> PASS
+  [cfg58] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 1024)
+  [cfg51] direct ffn_gelu_linear OK, out dtype torch.float32 shape (8192, 1024)
+
+=== causal d1024/ffn1024 tok8192 (official row-8 -- gate off)  (TransformerConfig(batch_size=64, seq_len=128, d_model=1024, num_heads=4, ffn_dim=1024, num_layers=4, causal=True))
+  _ffn_cur: fallback=None  cfg58=None  cfg51=None   (expect fallback=None, cfg58=None, cfg51=None)
+  fallback shape=(64, 128, 1024) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(64, 128, 1024) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(64, 128, 1024) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 0.000e+00   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 0.000e+00   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 0.000e+00   (expect > 0 -- configs must differ)
+  --> PASS
+  [cfg58] direct ffn_gelu_linear OK, out dtype torch.float32 shape (1048576, 128)
+  [cfg51] direct ffn_gelu_linear OK, out dtype torch.float32 shape (1048576, 128)
+
+=== causal d128/ffn128 tok1.05M (official row-6 regime -- MEMBOUND, engages)  (TransformerConfig(batch_size=8192, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=58  cfg51=51   (expect fallback=None, cfg58=58, cfg51=51)
+  fallback shape=(8192, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(8192, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(8192, 128, 128) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 9.291e-04   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 1.539e-03   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 1.551e-03   (expect > 0 -- configs must differ)
+  --> PASS
+  [cfg58] direct ffn_gelu_linear OK, out dtype torch.float32 shape (2048, 2048)
+  [cfg51] direct ffn_gelu_linear OK, out dtype torch.float32 shape (2048, 2048)
+
+=== causal d512/ffn2048 tok2048 (below token gate)  (TransformerConfig(batch_size=16, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=None  cfg51=None   (expect fallback=None, cfg58=None, cfg51=None)
+  fallback shape=(16, 128, 512) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(16, 128, 512) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(16, 128, 512) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 0.000e+00   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 0.000e+00   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 0.000e+00   (expect > 0 -- configs must differ)
+  --> PASS
+
+OVERALL: PASS
