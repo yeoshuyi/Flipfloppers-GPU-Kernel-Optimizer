@@ -97,6 +97,8 @@ def main():
             tok = kw["batch_size"] * kw["seq_len"]
             opt58._ffn_plan[(tok, kw["ffn_dim"], kw["d_model"])] = force
             opt58._ffn_cur = force
+            # d128 forced cases are the memory-bound regime -> out-param op
+            opt58._ffn_membound = kw["ffn_dim"] < 2048
             opt58._compiled_causal = None     # force a recompile with the new const
             cur = force
         o58, k58 = run_and_census(opt58, x, m)
