@@ -3426,3 +3426,66 @@ for a whole-model payoff that this round's microbench-vs-in-model gap
 (steps 45, 48) says cannot be trusted without building the whole thing.
 The official matrix is at its **precision-neutral optimisation end-state** for
 the standard-kernel toolkit.
+
+---
+
+### 49. G5.MEGA (lever 1) — per-sequence fused causal megakernel for official row 6: CORRECT, but a hand-roll cannot beat cuBLAS+flash. Negative.
+
+User asked to try the two remaining large levers ("1 then 2"). Lever 1: a
+megakernel with **one CUDA block per sequence** (row 6 is B=10000, d128, h4,
+S128, L4) that keeps the fp32 residual `x` on-chip across all 4 layers,
+eliminating the LN/residual HBM traffic that step 43 measured at 38.9% of
+row 6's 52 ms forward.
+
+**Two prototypes, both correct, both slower:**
+
+| version | correctness (g5_5) | row-6 speed vs shipped (g5_6) |
+|---|---|---|
+| v1 scalar (`csrc/g5_mega_causal.cu`, thread-per-query-row) | PASS — max\|mega−fp64\| 1.05–1.39e-3, `fail 0`, budget-safe, and consistently *tighter* than the shipped path (fp32 attention vs fp16 flash) | **x0.227** (231 ms) |
+| v2 mma.sync m16n8k16 for qkv/out_proj/ffn_in + fp16-shared k/v + per-block qkv global scratch | PASS — 1.15–1.44e-3, `fail 0` | **x0.127** (413 ms) — *worse* |
+
+The megakernel is **verified correct and precision-neutral** (in fact
+slightly more accurate than the shipped path). But it loses on speed, and
+worse with mma than scalar:
+
+- `d_model = 128` makes every `[SEQ][D]` buffer 32 KB fp16 / 64 KB fp32; the
+  99 KB shared budget cannot hold `n1 + q + k + v` at once, forcing either
+  `xr` into registers (**168 regs, 2944 B spill stores** — v2) or a qkv
+  global round-trip (~1 GB write + read at B=10000).
+- The scalar fallbacks that remain (online-softmax attention: O(S²·HD·H) per
+  block; `ffn_out` fp32 128×128 with GELU recomputed per element) are
+  ~20–80 G scalar FMAs across the model — dwarfing the residual traffic the
+  fusion saves.
+- The baseline is *strong*: cuBLAS is at 94–96 % of the GEMM roofline here
+  (step 45) and SDPA already picks the optimal flash kernel (step 44). There
+  is no slack for a non-CUTLASS-grade hand-roll to exploit; the ~18 ms
+  residual-traffic saving is smaller than the overhead a sub-optimal fused
+  kernel adds.
+
+**Not shipped.** `csrc/g5_mega_causal.{cu,cpp}`, `probes/g5_5_mega_correct.py`,
+`probes/g5_6_mega_speed.py` are kept — the megakernel is a working, verified
+reference; making it *win* is a full CUTLASS-3.x-style fused-kernel project
+(warp-specialised pipeline, flash-tiled attention in the same kernel, zero
+spill), 20–40 more build/measure iterations for a payoff on 1 of the 14
+official rows. Out of proportion to the remaining opportunity.
+
+**Lever 2 (fused `GELU → ffn_out → +residual`) — not built, on the T3
+precedent.** It is the structural mirror of T3 (steps 46-48): fuse an FFN
+GEMM's surrounding elementwise work so the activation does not round-trip.
+T3's out-parameter fused `ffn_in`+GELU op was verified to engage through
+CUDA-graph capture, was precision-neutral, and delivered **exactly 0 %**
+whole-model on row 6 — because inductor already fuses the elementwise
+aggressively (step 35 Finding 1) and a kernel boundary costs nothing under
+CUDA graphs (steps 20/35). A fused `ffn_out`+GELU is the same class of change
+and would almost certainly return the same 0 %. Building it is ~5-8
+iterations for a near-certain null.
+
+**Iteration 7 conclusion.** Both remaining large levers for official row 6
+are closed: lever 1 (megakernel) built and proven not competitive with the
+cuBLAS+flash baseline; lever 2 (fused ffn_out) not worth building on the T3
+precedent. Combined with steps 43-48, **the official 14-row causal matrix is
+at its optimisation end-state for this project's toolkit.** The shipped
+causal path is unchanged from step 42. What could still move it: a
+CUTLASS-3.x-grade fused megakernel (large, uncertain), or a scoring/target
+change (non-causal regimes, a different shape family) — a direction decision
+for the project owner.
