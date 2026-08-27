@@ -10,15 +10,15 @@ document while acting; commit after every meaningful unit.
 ## NOW
 
 - **Iteration:** 2 — T1: SDPA backend audit + CUDA-graph/recompile audit (cheap, whole-matrix)
-- **Phase:** starting
-- **Last completed:** iter 1 profile done (job 145 → `results/g4_9_official_profile_run145.log`),
-  PROGRESS step 43 written (per-row census + ranked targets T1/T2/T3). About to commit iter 1.
-- **Next concrete action:** commit iter 1 (probe log + step 43). Then write
-  `probes/g5_0_sdpa_backend_audit.py` — for official rows 8 & 13, time SDPA under each
-  available backend (FLASH / EFFICIENT / MATH / cuDNN) via `torch.nn.attention.sdpa_kernel`,
-  fp16 q/k/v, is_causal=True, scale=1.0; and a recompile check: run rows 1/4/9/12 through the
-  compiled causal path with `TORCH_LOGS=recompiles`, count recompiles. sbatch it.
-- **In-flight jobs:** none.
+- **Phase:** T1 audit job running
+- **Last completed:** iter 1 committed (`852379b`, `84ed40a`). Wrote + committed
+  `probes/g5_0_sdpa_backend_audit.py` + `jobs/g5_0_sdpa_audit.sbatch` (commit after this).
+- **Next concrete action:** when the SDPA-audit job finishes → read
+  `results/g5_0_sdpa_backend_audit_run<J>.log`. If a backend beats auto >3% on a row → wire a
+  forced-backend path in `_optimized_forward_causal` behind an eager shape gate; else record the
+  negative. If recompiles > ~2 on small rows → investigate the guard. Then move to T2.
+- **In-flight jobs:** SDPA audit (job id in `$SCRATCHPAD/../scratchpad`, check `squeue -u techjam2`;
+  sbatch = `jobs/g5_0_sdpa_audit.sbatch`; output → `results/g5_0_sdpa_backend_audit_run<J>.log`). ~15 min.
 - **Pending decisions:** T3 route (fp16-both-FFN vs fused neutral kernel) — after T1/T2.
 
 ## Iteration 1 result (step 43) — target ranking
