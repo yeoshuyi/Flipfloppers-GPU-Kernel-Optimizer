@@ -55,6 +55,16 @@ initial baseline-compile-only stage to 2.76x once SDPA, the algebraic folds,
 and FP16 attention were independently re-verified and shipped for that path
 too (`docs/CAUSAL_LEDGER.md` has the full per-step record).
 
+**Since this sweep**, one further precision-neutral optimisation shipped for
+the causal path (`docs/PROGRESS.md` step 42): a fused feed-forward GEMM +
+exact-GELU epilogue on the warp-specialised kernel, lifting causal
+long-sequence from 7.10x → **7.78x** and causal large-batch from 2.66x →
+**2.98x** at the d512/ffn2048 shape, with the model's output bit-identical
+to before. These two causal sub-shapes are not broken out in the table above
+(whose "Long-sequence" / "Large-batch" rows are the non-causal d512 shapes);
+`archive/causal-*__fp16.json` and `results/g4_7_ship_verify_v2_run142.log`
+carry the numbers.
+
 ## Working Under Constraints
 
 The two constraints that shaped nearly every technical decision in this
@@ -262,10 +272,27 @@ again, and the reasoning behind every "no" is preserved alongside every
   path if the calibration doesn't actually win on the machine it's running
   on. This is most of the extra gap between the tiny row's 7.37x and the
   large-batch row's 1.97x above.
-- Underneath both of these: SDPA in place of manual attention math, fused
+- **A hand-written warp-specialised `mma.sync` GEMM, FP32-accumulate, with a
+  fused epilogue.** For large token counts (`≥ 8192`) the attention
+  projections (non-causal) and the feed-forward input GEMM (causal) run on a
+  custom kernel with a producer/consumer named-barrier pipeline and a
+  128-bit shared-memory-staged epilogue, in place of cuBLAS. It accumulates
+  in FP32 — same numerical precision as the library path — so it spends no
+  accuracy budget, and for the causal FFN it *also* fuses the exact erf-form
+  GELU into the epilogue, computed bit-for-bit identically to the reference,
+  collapsing a GEMM plus a full-tensor activation pass into one kernel.
+  Non-causal: +4.8% / +5.4% at long-sequence / large-batch. Causal: +9.5% /
+  +12.1% at long-sequence / large-batch (d512/ffn2048), with the model's
+  output error provably unchanged to the last bit. This is the first place
+  in the project where a hand-written kernel beats the vendor library on a
+  shipped path — the earlier FP16-*accumulate* attempts at the same kernel
+  (see "Investigated and closed") were real speedups that the accuracy
+  budget made uncollectible; moving the accumulation back to FP32 and paying
+  for the win with pipeline engineering instead is what made it shippable.
+- Underneath all of these: SDPA in place of manual attention math, fused
   QKV projection, an exact power-of-two scale fold, and CUDA graphs via
   `torch.compile(mode="reduce-overhead")` for launch-overhead elimination —
-  the foundation the FP16/cuBLASLt work above builds on.
+  the foundation the FP16/cuBLASLt/warp-spec work above builds on.
 
 ### Investigated and closed
 
@@ -282,7 +309,7 @@ datacenter-style shortcut.
 | Fused FFN kernel (Triton) | Removes ~48 MB of intermediate-activation DRAM traffic per forward pass | The FFN is compute-bound (60-69% of the TF32 roofline already), not memory-bound — that traffic was already fully hidden behind compute; fusion only sacrifices cuBLAS's per-GEMM tiling freedom | Kernel built, verified against float64 ground truth, measured 0.18-0.87x (never a win) across every shape tested |
 | Full megakernel / kernel-fusion investigation (the Hopper-style persistent-kernel idea, adapted for Ada's `cp.async` instead of TMA) | Fewer kernel launches should mean less overhead | CUDA graphs had already reduced launch overhead to effectively zero; a direct experiment (deleting one real kernel boundary via cuBLASLt's in-place split-K) showed removing it costs 3-9x more than it saves | Fresh kernel census, a decisive built experiment, four independent readings of the "launch overhead" gate |
 | GELU polynomial approximation | Catalogued as a low-risk, low-cost win | The catalogued accuracy estimate for a degree-7 polynomial was simply wrong by ~5 orders of magnitude once actually computed — verified by direct numerical fitting, no GPU needed | Chebyshev/minimax fit computed and checked against the exact function |
-| Hand-written `mma.sync` PTX, FP16 accumulate | cuBLAS is capped at FP32 accumulation on this GPU; a different accumulation tier is a mechanism cuBLAS can't offer at all, not just a different algorithm within its existing tier | The mechanism is real (an isolated accumulate-type-only A/B on the identical kernel measured 1.4-1.5x) but the raw GEMM win was only 1.2x, diluting to a ~2% whole-model gain at best — and a later, more thorough pass (see the CUTLASS row below) established that even that gain was never collectible: the accumulation tier fails this model's accuracy budget outright, at every shape that would have benefited | First raw PTX in the codebase; fragment-level correctness verified three independent ways before any performance work; a 26-configuration tile search across three independent rounds, cross-checked via CUDA-graph replay and profiler kernel time in agreement to within 1-3% |
+| Hand-written `mma.sync` PTX, FP16 accumulate | cuBLAS is capped at FP32 accumulation on this GPU; a different accumulation tier is a mechanism cuBLAS can't offer at all, not just a different algorithm within its existing tier | The mechanism is real (an isolated accumulate-type-only A/B on the identical kernel measured 1.4-1.5x) but the raw GEMM win was only 1.2x, diluting to a ~2% whole-model gain at best — and a later, more thorough pass (see the CUTLASS row below) established that even that gain was never collectible: the accumulation tier fails this model's accuracy budget outright, at every shape that would have benefited. **The kernel itself was not wasted** — its FP32-accumulate configuration plus warp-specialisation later shipped (G4.3 non-causal, G4.7 causal; see "Shipped"), trading the unaffordable accumulation tier for pipeline engineering | First raw PTX in the codebase; fragment-level correctness verified three independent ways before any performance work; a 26-configuration tile search across three independent rounds, cross-checked via CUDA-graph replay and profiler kernel time in agreement to within 1-3% |
 | SASS-level hand-tuning via `CuAssembler`, informed by the `CuAsmRL` research paper's instruction-reordering approach | The remaining efficiency gap in our hand-written kernel needed exactly the kind of fine-grained scheduling control this tooling promises, without a full kernel rewrite | Not an Ada problem — the tool correctly recognizes and encodes our GPU's instruction set (verified: it re-encoded every instruction our kernel uses and matched the original bytes exactly, zero errors). The actual wall is that our CUDA toolkit's binary container format has moved on from what the tool's file-format reader expects, at one specific internal section it can't reconstruct from text. We fixed two smaller incompatibilities before hitting this one, and confirmed it isn't specific to our GPU by reproducing the identical failure on an older, officially-supported architecture | A real dependency install and toolchain probe, not a documentation lookup; the specific failure point isolated precisely enough to know exactly what would need to be built to route around it |
 | NVIDIA's own production kernel-template library, hand-configured for the exact GEMM shapes and accumulation tier our earlier kernel proved was real, pushed all the way through to a full accuracy verdict | Sidesteps the SASS-editing wall entirely (compiled fresh from source, never parses a pre-built binary's container format) and directly targets the structural efficiency gap our hand-written kernel was missing | **Closed on accuracy, not speed — the more decisive of the two possible answers.** The kernel itself is provably correct (its exact-FP32-accumulate configuration reproduces our baseline's numbers to all seven printed digits — two independent implementations agreeing bit-for-bit); the accumulation tier itself is what's unaffordable. It only had 9% of error budget left after ordinary FP16 storage had already spent the rest, and this tier costs roughly 7-8x more error than that at the reduction depth these matmuls need — real headroom, but nowhere near enough. We checked whether isolating just one of the two matmuls could route around it: the closest variant passes four of six affected shapes, but fails on the exact one shape that had any speed benefit to offer, by six elements out of 84 million — so close that it briefly looked like a targeted fix might exist, and precise enough to be sure that it doesn't. This result retroactively answers the open question the hand-written kernel above had left unresolved: the accumulation tier isn't just economically marginal, it's arithmetically unaffordable at this model's precision budget, independent of which tool builds the kernel | A working kernel confirmed correct in isolation, then pushed through the full accuracy suite anyway rather than stopped at a speed verdict; three independent routing configurations tested before concluding no accurate-and-faster subset exists |
 
@@ -352,7 +379,11 @@ failed by a comparable margin at the old, tighter budget
 Pareto-optimal point: every faster point we found and verified either
 violated the accuracy constraint outright (this tier) or wasn't actually
 faster once measured end-to-end (the fused-FFN-kernel and megakernel rows
-above).
+above). The one later exception is the **FP32-accumulate** warp-specialised
+kernel (G4.3 / G4.7): a different point entirely — it stays inside the
+feasible region because it keeps the library's accumulation precision, and
+pays for its win with pipeline engineering rather than a cheaper number
+format. It moved the shipped point without moving the accuracy.
 
 ## Regime Latency Breakdowns
 

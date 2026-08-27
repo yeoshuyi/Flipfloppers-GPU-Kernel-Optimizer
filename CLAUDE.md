@@ -227,12 +227,16 @@ See `docs/ACCURACY_BUDGET.md` for the spend/benefit rule when near this ceiling.
 - **G1.1c** (Stage 2B-B1) — norm2-affine fold into `_ffn_in_weight`/`_bias`
 - **G6.4a_v2c** — FFN-in in FP16 
 - **G0.2c** (Stage 2B-B2) — fused QKV GEMM + scale-fold + norm1-affine-fold
+- **G6.4bc** — FP16 Q/K/V/out_proj around SDPA
+- **G4.7c** (step 42) — fused `ffn_in`+exact-GELU on the warp-spec kernel,
+  FP32-accumulate, precision-**neutral**; gated `d_model≥512 ∧ ffn_dim≥2048 ∧
+  tok≥8192` so it does NOT engage on any official-matrix row
 
-**Elite, per causal shape**:
+**Elite, per causal shape** (`archive/causal-*__fp16.json`):
 - default: **2.71x** (`G6.4bc`, `max_abs` 0.00157)
 - tiny: **7.66x** (`max_abs` 0.00147)
-- long-seq: **7.10x** (`max_abs` 0.00161)
-- large-batch: **2.66x** (`max_abs` 0.00182, tightest margin of the four —
-  91% of the 0.002 budget)
+- long-seq: **7.78x** (`G4.7c`; was 7.10x, `max_abs` 0.00161 unchanged)
+- large-batch: **2.98x** (`G4.7c`; was 2.66x, `max_abs` 0.00182 unchanged —
+  still tightest margin, 91% of budget; G4.7c spent none of it)
 
 `G4.6c` (CUTLASS FP16-accumulate for causal-large-batch) and PTX (G4.4) / SASS (G4.5) were previously marked as dead ends. **THESE ARE NOW RE-OPENED AS HIGH-PRIORITY TARGETS.** You are authorized to hex-edit ELF binaries to bypass the `nvdisasm` bug, and implement stochastic rounding/Kahan compensation to rescue the CUTLASS/PTX accuracy failures.

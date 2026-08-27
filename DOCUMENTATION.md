@@ -24,15 +24,14 @@ invented):
   0.002 ceiling; §8 ledger of shipped lossy steps
 - `SUBMISSION.md` — competition narrative, cross-referenced only
 
-**A note on currency.** `docs/PROGRESS.md`'s prose stops at step 40
-(G4.4/G4.5/G4.6 closure). A further round of work — reviving FP16 FFN-in
-(`G6.4a_v2`) after the accuracy budget was loosened, and the full causal-path
-rewrite (`G0.1c`…`G4.6c`) — is real, shipped, and verifiable in
-`archive/*.json`, `git log`, and inline `benchmark.py` comments (e.g. the
-`_build_ffn_in_fold` comment citing "docs/PROGRESS.md's Phase 2.5 update"),
-but **no corresponding "Phase 2.5" narrative section exists in
-`docs/PROGRESS.md`** as of this writing. This documentation gap is noted
-wherever it's relevant below rather than silently papered over.
+**A note on currency.** `docs/PROGRESS.md` now runs through **step 42**
+(steps 41 G4.3 non-causal ship, 42 G4.7 causal ship — both narrated in full).
+An earlier gap remains: the FP16-FFN-in revival (`G6.4a_v2`) and the causal
+rewrite (`G0.1c`…`G6.4bc`) were done without a "Phase 2.5" narrative section
+in PROGRESS — they are verifiable in `archive/*.json`, `git log`, inline
+`benchmark.py` comments, and §3.3 here. Steps 41–42 (§3.4) do have full
+PROGRESS entries. `docs/ACCURACY_BUDGET.md` (§8 ledger) is the current
+single source for per-optimisation precision cost.
 
 ---
 
@@ -192,13 +191,17 @@ real enforced default" for the whole ledger).
 | G0.2c | QKV fused GEMM + scale-fold + norm1-affine-fold, causal-independently-verified | 0.00141 (unchanged) | 1.99x (near-miss, logged not elite) | — | — | — |
 | shape sweep | first causal validation beyond B8_S128, confirms the stack generalizes | 0.00128–0.00163 | — | 5.84x/5.71x (padded) | 3.99x/3.08x (padded) | 2.11x/2.03x (padded) |
 | **G6.4bc** | FP16 for Q/K/V/out_proj around SDPA, causal (same pattern as `G6.4b`); removes the explicit `EFFICIENT_ATTENTION` forcing — FP16 unlocks automatic flash/efficient dispatch | 0.00157 (default) / 0.00147 (tiny) / 0.00161 (long-seq) / **0.00182 (large-batch, 91% of the 0.002 budget)** | **2.71x** (+37%) | **7.66x**/8.35x padded (+43%/+55%) | **7.10x**/6.40x padded (+78%/+107%) | **2.66x**/2.66x padded (+26%/+31%) |
+| **G4.7c** | fused `ffn_in` GEMM + exact-erf GELU epilogue on the G4.3 warp-spec kernel, FP32-accumulate — precision-**neutral** (`max_abs` bit-identical to G6.4bc), gated to `d_model≥512 ∧ ffn_dim≥2048 ∧ tok≥8192` so it engages only on the project's internal d512/ffn2048 causal sweep, **not** the official 14-row matrix (`ffn_dim ∈ {32,128,1024}`) | 0.00161 (long-seq) / 0.00182 (large-batch) — **unchanged from G6.4bc, exact ledger match** | — | **7.78x** (+9.5% over G6.4bc) | **2.98x** (+12.1%) | step 42; `results/g4_7_ship_verify_v2_run142.log` |
 
-**Current causal elite** (`docs/CAUSAL_LEDGER.md` "Current elite" section,
-`archive/causal*__fp16.json`): default **2.71x**, tiny **7.66x** (also
-7.655x per `archive/causal-tiny__fp16.json`), long-seq **7.10x** (7.102x
-archived), large-batch **2.66x**. large-batch's `max_abs` of 0.00182 is
-explicitly flagged as "the tightest margin in this ledger" — the binding
-constraint on any further causal-path precision work (see §4, `G4.6c`).
+**Current causal elite** (`archive/causal*__fp16.json`): default **2.71x**,
+tiny **7.66x**, long-seq **7.78x** (`causal-long-seq__fp16` `g4_7c`; was
+7.10x at `g6_4bc`), large-batch **2.98x** (`causal-large-batch__fp16` `g4_7c`;
+was 2.66x). The long-seq / large-batch bumps are G4.7c, and are **free of
+accuracy cost** — `max_abs` is bit-identical to the pre-G4.7 40-trial record
+because the fused epilogue computes the erf GELU exactly and accumulates in
+FP32 (§3.4). large-batch's `max_abs` of 0.00182 is still "the tightest margin
+in this ledger" — the binding constraint on any further causal-path
+*precision*-spending work (see §4, `G4.6c`, and `docs/ACCURACY_BUDGET.md` §1).
 
 long-seq's outsized +78–107% gain from `G6.4bc` is attributed to a real
 mechanism, not overhead reduction: `CLAUDE.md`'s own regime table notes
@@ -210,6 +213,44 @@ reduces the number of valid keys in early softmax rows, which reduces the
 averaging-down of quantization error across the reduction — the same
 mechanism cited throughout for why causal is consistently the tightest-margin
 regime.
+
+---
+
+### 3.4 Warp-specialised `mma.sync` GEMM — G4.3 (non-causal) and G4.7 (causal)
+
+The "Hand-written `mma.sync` PTX" and "CUTLASS" rows in §4 closed the
+**FP16-accumulate** tier: real mechanism, but the accumulation precision is
+arithmetically unaffordable at this model's budget on every shape that would
+benefit. What later shipped is the **FP32-accumulate** version of the same
+warp-specialised kernel — same `mma.sync.m16n8k16` datapath and
+producer/consumer named-barrier pipeline, but accumulating in FP32 (identical
+precision to cuBLAS on an FP16-storage GEMM), so it spends **zero** accuracy
+budget.
+
+- **G4.3 (non-causal), step 41.** Warp-specialised GEMM + a CUTLASS-grade
+  128-bit shared-memory-staged epilogue, replacing cuBLASLt for the two
+  attention projections (QKV, out_proj) at `tok ≥ 8192`. Ships **non-causal
+  only**: `+4.75% long_seq`, `+5.38% large_batch` (`archive/*__fp16.json`,
+  `results/g4_3_ship_verify_final_run130.log`). Carries a SPLIT-64 FP32 carry
+  (`cfg 48`) so non-causal large_batch's `max_abs` lands at 0.00158 (79% of
+  budget) rather than 0.00189 (99%). **Closed for causal** — the causal
+  attention path is already at 91–95% of budget on FP16 *storage*, and the
+  FP16-*accumulate* arm of this kernel adds ~5× the remaining headroom (every
+  rescue on the ladder measured; `results/g4_3_numerical_rescue_run129.log`).
+- **G4.7 (causal), step 42.** Extends the same kernel with an FP32-accumulate
+  arm and a fused epilogue that computes `F.gelu(approximate="none")`
+  **bit-identically** (verified 39/39 (cfg, shape) points,
+  `results/g4_7_ffn_correct_run131.log`) — collapsing the `ffn_in` GEMM *and*
+  a full elementwise cast+GELU pass into one kernel. Precision-neutral, so the
+  causal budget that blocked G4.3 does not apply. Ships for causal at
+  `d_model≥512 ∧ ffn_dim≥2048 ∧ tok≥8192`: **+9.5% long_seq_causal, +12.1%
+  large_batch_causal**, `max_abs` bit-identical to the pre-G4.7 record. The
+  microbench (`results/g4_7_ffn_sweep_run132.log`) shows the FP32-accumulate
+  arm only nets a gain once `ffn_dim` is large (x0.93–x0.99 at
+  `ffn_dim ∈ {128, 1024}` — half-rate FP32 `mma` on Ada is not repaid by the
+  saved elementwise pass until `ffn_dim ≥ 2048`), which is why the gate
+  excludes the entire official 14-row matrix. First causal-path GEMM win in
+  the project. Full spend/benefit reasoning: `docs/ACCURACY_BUDGET.md` §8.
 
 ---
 
