@@ -188,22 +188,22 @@ this session that actually shipped — G4.3 (non-causal) and G4.7 (causal) — w
 chosen precisely because one had headroom in its regime and the other spends
 **zero** budget.
 
+**Official 14-row matrix, precision-neutral round (PROGRESS 43-48): nothing
+shipped.** SDPA already optimal (44); d1024 GEMMs at 94-96% of roofline, warp-
+spec loses (45); the d128 fused `ffn_in`+GELU engages through capture (via the
+out-param op, 48) and is precision-neutral but gives **0% whole-model** — the
+isolated x1.66 was a microbench artefact. Two independent rounds (45, 48) where
+an isolated GEMM/FFN microbench overstated the win vs the matched in-model
+BEFORE/AFTER — **trust only the matched in-model measurement.**
+
 **Candidate future optimisations** (rank by estimated efficiency; spend reserve
 only on the top of this list):
 
 | id | cell(s) | est. Δspeed | est. Δmax_abs | notes |
 |---|---|---|---|---|
 | FP8 e4m3 FFN | non-causal default/large-batch | ~1.5x FFN | needs probe | error averages down `eps/√K`; never in attention |
-| G4.7 `ffn_out` GEMM + residual epilogue | causal @ d512/ffn2048 | step 41's other half | ~0 if FP32-accumulate | needs an fp32 residual add fused into the store |
-| G4.7 FP16-accum arm on small-`ffn_dim` official rows | causal rows 1/6/13 | x1.2 on `ffn_in` | +~1e-3 | only if causal-large-batch headroom is bought back upstream first |
-
-**Candidate future optimisations** (rank by estimated efficiency; spend reserve
-only on the top of this list):
-
-| id | cell(s) | est. Δspeed | est. Δmax_abs | notes |
-|---|---|---|---|---|
-| FP8 e4m3 FFN | non-causal default/large-batch | ~1.5x FFN | needs probe | error averages down `eps/√K`; never in attention |
-| G4.3 into non-causal FFN GEMMs | long-seq, large-batch (non-causal) | x1.42–1.55 on ffn_in (run132) | fp16-accum: large; ACCF32: ~0 | ACCF32 arm is precision-neutral but half-rate — only wins at d512/ffn2048 |
+| G4.3 into non-causal FFN GEMMs | long-seq, large-batch (non-causal) | x1.42–1.55 on ffn_in (run132) | fp16-accum: large; ACCF32: ~0 | ACCF32 arm precision-neutral but half-rate — only wins at d512/ffn2048; **verify in-model, not microbench** |
+| token-parallel persistent megakernel for official row 6 | causal large-batch d128 | targets the 38% LN/residual traffic bar (step 43) | 0 if fp32 residual kept | large build; faces the torch.compile/cudagraph wall of steps 46-48 |
 
 ---
 

@@ -3356,3 +3356,73 @@ fusion pushed into a hand-written kernel that also does `ffn_out`).
 only as an import/gate sanity test; `probes/g5_3_g47_capture_verify.py` (≥ 40
 warmup calls, then trace-census for the kernel symbol) is now the required
 gate before shipping any fused-FFN change.
+
+---
+
+### 48. T3(b) — out-parameter fused-FFN op: engages, precision-neutral, **zero whole-model speedup**. Official-matrix round closed.
+
+Step 47 confirmed (via `ws_gemm_kernel` census) that the returning op
+`g43::ffn_gelu_linear` silently falls back under CUDA-graph capture at
+d128/tok>=1M -- its internal 655 MB fp32 output allocation cannot be placed in
+inductor's cudagraph-tree pool. **T3(b)** replaces it with
+`g43::ffn_gelu_linear_out` -- an out-parameter op
+(`mutates_args={"out"}`, no return) over the C++ `ws_gemm` out-param entry --
+with `act` pre-allocated in the traced region so inductor owns it.
+
+- **Capture verification** (`probes/g5_3_g47_capture_verify.py`, job 154,
+  `results/g5_3_g47_capture_verify_run154.log`): `ws_gemm_kernel` now appears
+  in the d128 captured-graph trace -- x30 at tok 1.05M, **x60 at the row-6
+  shape (tok 1.28M, 4 layers)**. The out-param op engages through capture.
+  Replay vs fallback: d512 2.4e-7 (bit-neutral), d128 row-6 2.6e-4 (fp16-
+  storage rounding -- the same precision tier as the shipped fp16 `ffn_in`;
+  a lateral rounding realisation, not a new reducing step).
+- **Ship-verify** (`jobs/g5_4_t3b_ship_verify.sbatch`, job 155,
+  `results/g5_4_t3b_ship_verify_run155.log`). Clean matched design -- both
+  passes are the working-tree `benchmark.py`, 40 accuracy trials, only
+  `G4_7_FFN_CFG` differs (`-1` off / `58` on), so the speedup isolates the
+  row-6 fused path with no 5-vs-40-trial confound:
+
+  | shape | BEFORE (off) | AFTER (on) | Δ | max_abs |
+  |---|---|---|---|---|
+  | **off_row6 (d128, tok 1.28M)** | 5.851x | **5.851x** | **0.0%** | 0.00195017 -> 0.00195017 (`failed=0`) |
+  | off_row13 / row1 / row8 | — | — | noise | unchanged |
+  | int_large_batch_causal (regime 1) | 2.982x | 2.982x | 0.0% | unchanged |
+  | nc_large_batch | 2.583x | 2.584x | 0.0% | unchanged |
+
+  **The fused `ffn_in`+GELU buys nothing whole-model on row 6.** The g5_2
+  (run148) x1.66 "vs the shipped chain" was an isolated-microbench artefact:
+  the synthetic baseline (`torch.addmm` + a standalone `torch.compile`'d
+  cast+GELU) overstates what the real inductor-fused fallback inside
+  `_optimized_forward_causal` costs. Same lesson as step 45's d1024 "56% of
+  roofline". The matched in-model BEFORE/AFTER is the only trustworthy
+  measure, and it is flat.
+
+**Reverted.** `_ensure_ffn_plan`'s gate predicate is byte-identical to
+`09dee91` (the run142-verified state); `benchmark.py`'s shipped behaviour is
+unchanged. `g43::ffn_gelu_linear_out` (registered, verified to engage through
+capture) is **kept** as a documented asset for any future fused-FFN work --
+it costs nothing unused.
+
+---
+
+**Official 14-row causal matrix -- optimisation round summary (steps 43-48).**
+Profiled (43), then every cheap-to-moderate precision-neutral lever explored
+and closed:
+
+| target | finding | step |
+|---|---|---|
+| SDPA backend / dynamo recompiles | SDPA auto-dispatch already picks FLASH on every row; no recompiles | 44 |
+| d1024 (row 8) attention/FFN GEMMs | cuBLAS at 93.7-95.9% of the FP32-accum roofline in isolation; every precision-neutral warp-spec config loses x0.87-0.92 | 45 |
+| d128 elementwise/GELU bar (47% of row 6) | fused `ffn_in`+GELU: returning op fails CUDA-graph capture (46-47); out-param op engages but gives 0% whole-model (48) | 46-48 |
+
+**No optimisation shipped for the official matrix this round.** The shipped
+causal path is unchanged from the step-42 (run142) state -- G4.7c still helps
+only the project's internal d512/ffn2048 causal sweep, which the official
+matrix does not include. The remaining theoretical levers -- a token-parallel
+persistent megakernel for row 6's LN/residual traffic (the real 38% bar), or
+a fused `GELU->ffn_out->+residual` kernel -- are large builds that face the
+same `torch.compile`/CUDA-graph integration wall navigated in steps 46-48,
+for a whole-model payoff that this round's microbench-vs-in-model gap
+(steps 45, 48) says cannot be trusted without building the whole thing.
+The official matrix is at its **precision-neutral optimisation end-state** for
+the standard-kernel toolkit.

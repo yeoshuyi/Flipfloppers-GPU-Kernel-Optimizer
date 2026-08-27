@@ -127,15 +127,14 @@ def main():
         "causal d1024/ffn1024 tok8192 (official row-8 -- gate off)",
         C(batch_size=64, seq_len=128, d_model=1024, num_heads=4,
           ffn_dim=1024, num_layers=4, causal=True), expect_cfg=None)
-    # d128 big-tok (tok >= 2^19): memory-bound regime, engages cfg 58 via the
-    # OUT-PARAMETER op (step 48). NOTE: this one-call check only proves the
-    # gate + eager path; capture-time engagement is verified by
-    # probes/g5_3_g47_capture_verify.py (ws_gemm_kernel census), which is the
-    # required gate before shipping any fused-FFN change.
+    # d128 big-tok: the tok>=2^19 regime was tried and REVERTED (steps 46-48) --
+    # the out-param op engages through capture and is precision-neutral but
+    # gives zero whole-model speedup (isolated x1.66 was a microbench artefact).
+    # Gate is off; must stay None.
     all_ok &= run_case(
-        "causal d128/ffn128 tok1.05M (T3b memory-bound -- engages cfg 58)",
+        "causal d128/ffn128 tok1.05M (T3 reverted -- gate off)",
         C(batch_size=8192, seq_len=128, d_model=128, num_heads=4,
-          ffn_dim=128, num_layers=2, causal=True), expect_cfg=58)
+          ffn_dim=128, num_layers=2, causal=True), expect_cfg=None)
     # below token gate: tok=2048
     all_ok &= run_case(
         "causal d512/ffn2048 tok2048 (below token gate)",

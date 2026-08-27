@@ -238,11 +238,6 @@ _WS_MIN_TOKENS = 8192
 # G4_7_FFN_CFG disables the fusion (falls back to F.gelu(F.linear(...))).
 _FFN_CFG = int(os.environ.get("G4_7_FFN_CFG", "58"))
 _FFN_MIN_TOKENS = int(os.environ.get("G4_7_FFN_MIN_TOKENS", "8192"))
-# T3 second regime: once [tok, ffn_dim] is large enough that cfg 58's fp32
-# store traffic fully hides the GEMM, the fused ffn_in+GELU wins at ANY
-# ffn_dim. Crossover (g5_2 run148, d128/ffn128): parity at tok 65536, x1.66
-# at tok 1.28M. Uses the OUT-PARAMETER op (steps 46-48).
-_FFN_MEMBOUND_TOKENS = int(os.environ.get("G4_7_FFN_MEMBOUND_TOKENS", str(1 << 19)))
 _FFN_OP_READY = False
 
 
@@ -645,10 +640,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         # traced region. Never an input, an output, or a data_ptr.
         self._ffn_plan: dict = {}
         self._ffn_cur = None
-        # G4.7 T3: True when _ffn_cur is set for the deeply-memory-bound
-        # regime (tok >= 2^19), which needs the OUT-PARAMETER op to survive
-        # CUDA-graph capture. False for regime 1 (d512/ffn2048).
-        self._ffn_membound = False
         # G6.4b: FP16 for attention only (FFN stays exact TF32 -- G6.4a
         # closed that direction, PROGRESS.md step 27). Same accumulation-
         # precision guard as G6.4a; harmless here even though SDPA's own
@@ -890,28 +881,28 @@ class UserOptimizedTransformer(BaselineTransformer):
         max_abs UNCHANGED (0.00161 / 0.00182). These are the project's own
         d512/ffn2048 causal sweep shapes -- not the official 14-row matrix.
 
-        SECOND REGIME -- `tok >= _FFN_MEMBOUND_TOKENS` (any ffn_dim >= 128).
-        Reaches official row 6 (d128, tok 1.28M). cfg 58 is x1.66 vs the
-        shipped chain in isolation there (g5_2 run148). Steps 46-47: the
-        RETURNING op `g43::ffn_gelu_linear` silently falls back here -- its
-        internal [tok, ffn_dim] fp32 allocation does not survive
-        torch.compile(reduce-overhead) + CUDA-graph capture at this size.
-        Step 48: this regime uses the OUT-PARAMETER op instead, whose output
-        is allocated by the traced region (inductor's cudagraph tree can
-        place it). `self._ffn_membound` tells the traced code which op to call.
+        A `tok >= 2^19` "deeply memory-bound" second regime (to reach official
+        row 6, d128) was tried twice and REVERTED (steps 46-48). cfg 58 is
+        x1.66 vs the shipped chain *in an isolated microbench* there
+        (g5_2 run148), but: (i) the RETURNING op `g43::ffn_gelu_linear`
+        silently falls back at that size (its internal 655 MB fp32 output
+        alloc does not survive CUDA-graph capture -- steps 46-47); (ii) the
+        OUT-PARAMETER op `g43::ffn_gelu_linear_out` *does* engage through
+        capture (g5_3 run154) and is precision-neutral, but delivers
+        **zero whole-model speedup** (g5_4 ship-verify run155: row 6
+        5.851x -> 5.851x). The isolated x1.66 was a microbench artefact --
+        the synthetic chain baseline overstated what the real inductor-fused
+        fallback costs. `ffn_gelu_linear_out` is kept as a verified asset.
 
         Every condition is a property of the SHAPE and the frozen weights.
         """
-        big_ffn = d_model >= 512 and ffn_dim >= 2048 and tok >= _FFN_MIN_TOKENS
-        membound = tok >= _FFN_MEMBOUND_TOKENS and ffn_dim >= 128
         if (_FFN_CFG < 0 or device.type != "cuda"
-                or tok % 128 != 0 or ffn_dim % 128 != 0 or d_model % 64 != 0
-                or not (big_ffn or membound)):
+                or tok < _FFN_MIN_TOKENS or tok % 128 != 0
+                or d_model < 512 or ffn_dim < 2048
+                or ffn_dim % 128 != 0 or d_model % 64 != 0):
             self._ffn_cur = None
-            self._ffn_membound = False
             return
         key = (tok, ffn_dim, d_model)
-        self._ffn_membound = membound and not big_ffn
         if key in self._ffn_plan:
             self._ffn_cur = self._ffn_plan[key]
             return
@@ -1097,7 +1088,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         # as a guard, so it is a specialisation dimension, never a per-call
         # branch inside the cudagraph'd body.
         ffn_cfg = self._ffn_cur
-        ffn_membound = self._ffn_membound
         for layer in self.layers:
             attn = layer.attention
             # Stage 2B-B2: norm1's affine folded into _qkv_weight/_bias
@@ -1181,22 +1171,9 @@ class UserOptimizedTransformer(BaselineTransformer):
                 # kernel, at no precision cost. Falls back to the exact op
                 # inside the custom op if the tile does not divide the shape.
                 # See docs/PROGRESS.md step 42, results/g4_7_ffn_*_run13*.log.
-                if ffn_membound:
-                    # T3 (step 48): OUT-PARAMETER op -- the returning op's
-                    # internal [tok, ffn_dim] alloc does not survive CUDA-graph
-                    # capture at tok >= 2^19. `act` is allocated here so
-                    # inductor's cudagraph tree owns it.
-                    act = torch.empty(
-                        n2_fp16.shape[0], n2_fp16.shape[1],
-                        layer._ffn_in_weight_fp16.shape[0],
-                        dtype=torch.float32, device=n2_fp16.device)
-                    torch.ops.g43.ffn_gelu_linear_out(
-                        n2_fp16, layer._ffn_in_weight_fp16,
-                        layer._ffn_in_bias_fp16, ffn_cfg, act)
-                else:
-                    act = torch.ops.g43.ffn_gelu_linear(
-                        n2_fp16, layer._ffn_in_weight_fp16,
-                        layer._ffn_in_bias_fp16, ffn_cfg)
+                act = torch.ops.g43.ffn_gelu_linear(
+                    n2_fp16, layer._ffn_in_weight_fp16,
+                    layer._ffn_in_bias_fp16, ffn_cfg)
             ffn = layer.ffn_out(act)
             x = x + ffn
             if not no_pad:
