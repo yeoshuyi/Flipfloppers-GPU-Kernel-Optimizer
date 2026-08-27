@@ -9,26 +9,25 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 6 — T3(a) retry: cudagraph-safe OUT-PARAMETER custom op for the fused ffn_in+GELU
-- **Phase:** implementing
-- **iter 5 RESULT (step 47, commit `4989375`):** G4.7 regime 1 (d512) VERIFIED engages through
-  capture — `ws_gemm_kernel` in the captured trace x30. G4.7 stands, no revert. The d128 fallback
-  is diagnosed as the custom op allocating a 655MB fp32 output inside the cudagraph pool (×4 layers,
-  B=10000) — `ffn_dim>=2048` doubles as an implicit output-size bound.
-- **iter 6 hypothesis:** the fix is an OUT-PARAMETER op — `g43::ffn_gelu_linear_out(inp,w,bias,cfg,out)`
-  with `mutates_args=("out",)`, `out` pre-allocated by the compiled graph (`torch.empty` inside the
-  traced region, which inductor's cudagraph tree DOES handle, unlike an opaque op's internal alloc).
-  The C++ out-param entry `ws_gemm(cfg,inp,w,bias,out)` ALREADY EXISTS in g4_4_warpspec_gemm.cpp.
-- **Next concrete action:** add `g43::ffn_gelu_linear_out` to `_ffn_register_op` (mutates_args, no
-  return, fake is a no-op); in `_optimized_forward_causal` when `ffn_cfg` set, do
-  `act = torch.empty(*n2.shape[:-1], ffn_dim, dtype=fp32, device); torch.ops.g43.ffn_gelu_linear_out(
-  n2_fp16, w, b, ffn_cfg, act)`. Re-add the `tok>=2^19` gate regime. Then:
-  `probes/g5_3_g47_capture_verify.py` (add the d128 case with gate ON) → if `ws_gemm_kernel` appears
-  in the d128 captured trace → 40-trial ship-verify rows 6/13/1/8 + controls → ship or negative.
-- **In-flight jobs:** g5_3 re-run (weights-fix) — `results/g5_3_g47_capture_verify_run<J>.log`; the
-  ws_gemm_kernel census in run151 was already conclusive (d512 engages).
-- **Pending decisions:** if the out-param op ALSO silently falls back at d128 → declare the official
-  matrix at its precision-neutral end-state (write a summary), stop the loop.
+- **Iteration:** 6 — resolve whether T3(a)'s step-46 revert was a FALSE ALARM
+- **Phase:** g5_3 re-run with forced-d128 cases + census-based verdict (job in flight)
+- **THE KEY UNCERTAINTY:** job 152 showed d512 has `ws_gemm_kernel` x30 in the captured trace
+  (ENGAGED) but cfg58-vs-fallback replay diff = 2.4e-7 (fp32 epsilon — precision-neutral, NOT a
+  fallback). My step-46 "silent fallback" call for T3/d128 was based on run150's "BEFORE≡AFTER
+  bit-identical per-trial" — which is ALSO exactly what a precision-neutral engaged kernel produces.
+  So step 46 may be WRONG and T3(a) (+5.7% on row 6) may actually be a valid ship.
+- **Next concrete action:** read `results/g5_3_g47_capture_verify_run<J>.log`. The truth signal is
+  `ws_gemm_kernel in cfg58 CAPTURED trace` for the FORCED-on d128 cases (tok 1.05M L2, tok 1.28M L4):
+  - **`ws_gemm_kernel` PRESENT at d128** → step 46 was a false alarm. RE-APPLY the `tok>=2^19` gate
+    regime (revert commit 1e9debb's benchmark.py change), re-run the 40-trial ship-verify to
+    re-confirm row-6 speedup with a clean matched BEFORE/AFTER (BEFORE = a forced-fallback build via
+    `G4_7_FFN_CFG=-1`, so speedup isn't confounded by 5-vs-40 trial), then ship: PROGRESS step 48,
+    ACCURACY_BUDGET §8, commit. Update step 46 to "corrected".
+  - **`ws_gemm_kernel` ABSENT at d128** → step 46 stands, T3(a) genuinely dead. Then iteration 7 =
+    T3 route (b) out-param op / fused-ffn_out, OR declare end-state.
+- **In-flight jobs:** g5_3 v3 — `squeue -u techjam2`; sbatch `jobs/g5_3_capture_verify.sbatch`;
+  output → `results/g5_3_g47_capture_verify_run<J>.log`. ~15 min.
+- **Pending decisions:** T3(a) ship vs dead — this job decides.
 - **Why:** step 46 — the T3 d128 fused path SILENTLY FELL BACK under torch.compile(reduce-overhead)
   + CUDA-graph capture (ship-verify run150: row6 AFTER per-trial max_abs bit-identical to BEFORE).
   The wiring smoke missed it (calls opt(x) once = eager pre-capture warmup, never exercises replay).
