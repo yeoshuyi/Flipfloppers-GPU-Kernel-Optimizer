@@ -33,13 +33,18 @@ DEV = torch.device("cuda")
 torch.set_float32_matmul_precision("high")
 torch.backends.cuda.matmul.allow_tf32 = True
 
+# force_cfg: if set, override _ffn_cur to this AFTER the gate runs, so we test
+# "would the kernel survive capture at this shape IF the gate admitted it".
 CASES = [
-    ("d512/ffn2048 tok8192  (G4.7 regime 1 -- SHIPPED)",
+    ("d512/ffn2048 tok8192  (G4.7 regime 1 -- SHIPPED, gate on)",
      dict(batch_size=8, seq_len=1024, d_model=512, num_heads=8,
-          ffn_dim=2048, num_layers=2)),
-    ("d128/ffn128  tok1.05M (T3 -- expected fallback)",
+          ffn_dim=2048, num_layers=2), None),
+    ("d128/ffn128  tok1.05M  (T3 -- gate FORCED on)",
      dict(batch_size=8192, seq_len=128, d_model=128, num_heads=4,
-          ffn_dim=128, num_layers=2)),
+          ffn_dim=128, num_layers=2), 58),
+    ("d128/ffn128  tok1.28M L4 (T3 = official row 6 shape -- gate FORCED on)",
+     dict(batch_size=10000, seq_len=128, d_model=128, num_heads=4,
+          ffn_dim=128, num_layers=4), 58),
 ]
 
 
@@ -82,43 +87,47 @@ def run_and_census(opt, x, m, warm=40, prof_iters=15):
 def main():
     print(f"torch={torch.__version__} gpu={torch.cuda.get_device_name(0)}\n")
     ok = True
-    for label, kw in CASES:
+    for label, kw, force in CASES:
         print(f"================ {label} ================")
         opt58, x, m, base = build(kw, 58)
         with torch.inference_mode():          # _ensure_ffn_plan runs in forward()
             opt58(x, m)
         cur = opt58._ffn_cur
+        if force is not None:
+            tok = kw["batch_size"] * kw["seq_len"]
+            opt58._ffn_plan[(tok, kw["ffn_dim"], kw["d_model"])] = force
+            opt58._ffn_cur = force
+            opt58._compiled_causal = None     # force a recompile with the new const
+            cur = force
         o58, k58 = run_and_census(opt58, x, m)
         del opt58
         torch.cuda.empty_cache()
 
-        optfb, x2, m2, _ = build(kw, -1, base=base)   # SAME weights
+        optfb, x2, m2, _ = build(kw, -1, base=base)   # SAME weights, gate off
         ofb, kfb = run_and_census(optfb, x2, m2)
         del optfb, base
         torch.cuda.empty_cache()
 
         has_ws = any("ws_gemm_kernel" in n for n in k58)
-        has_gelu_kern_58 = any("gelu" in n.lower() for n in k58)
         diff = (o58 - ofb).abs().max().item()
-        print(f"  _ffn_cur (cfg58 build)      : {cur}")
-        print(f"  ws_gemm_kernel in cfg58 trace: {has_ws}")
-        print(f"  standalone GELU kernel in cfg58 trace: {has_gelu_kern_58}")
-        print(f"  max|cfg58_replay - fallback_replay| : {diff:.3e}")
-        ws_syms = [n for n in k58 if "ws_gemm_kernel" in n]
-        for s in ws_syms[:3]:
-            print(f"     WS kernel: {s[:90]}  x{k58[s]}")
+        print(f"  _ffn_cur (effective)                 : {cur}")
+        print(f"  ws_gemm_kernel in cfg58 CAPTURED trace: {has_ws}   "
+              f"(this is the truth signal)")
+        print(f"  max|cfg58_replay - fallback_replay|   : {diff:.3e}   "
+              f"(precision-neutral => tiny; NOT an engagement test)")
+        for s in [n for n in k58 if "ws_gemm_kernel" in n][:2]:
+            print(f"     WS kernel: {s[:88]}  x{k58[s]}")
         if cur == 58:
-            engaged = has_ws and diff > 1e-6
-            verdict = "ENGAGED through capture" if engaged else \
-                "*** SILENT FALLBACK under capture ***"
+            verdict = ("ENGAGED through capture" if has_ws
+                       else "*** SILENT FALLBACK under capture (no ws_gemm_kernel) ***")
             print(f"  VERDICT: {verdict}")
-            if not engaged:
+            if not has_ws:
                 ok = False
         else:
-            print(f"  VERDICT: gate off (_ffn_cur={cur}) -- fused path not selected here")
+            print(f"  VERDICT: gate off (_ffn_cur={cur})")
         print()
-    print("OVERALL:", "PASS (shipped regime engages)" if ok else
-          "FAIL (a selected fused regime silently falls back)")
+    print("OVERALL:", "PASS" if ok else
+          "FAIL (a fused regime silently falls back under capture)")
     return 0 if ok else 1
 
 

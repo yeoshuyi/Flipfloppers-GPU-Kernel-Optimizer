@@ -1,0 +1,27 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+================ d512/ffn2048 tok8192  (G4.7 regime 1 -- SHIPPED) ================
+USDT:2026-08-27 16:57:26 174123:174123 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 16:57:26 174123:174123 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 16:57:26 174123:174123 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 16:57:26 174123:174123 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 16:57:27 174123:174123 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 16:57:28 174123:174123 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 16:57:29 174123:174123 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 16:57:29 174123:174123 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  _ffn_cur (cfg58 build)      : 58
+  ws_gemm_kernel in cfg58 trace: True
+  standalone GELU kernel in cfg58 trace: True
+  max|cfg58_replay - fallback_replay| : 2.384e-07
+     WS kernel: void ws_gemm_kernel<128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1>(__half const*, __  x30
+  VERDICT: *** SILENT FALLBACK under capture ***
+
+================ d128/ffn128  tok1.05M (T3 -- expected fallback) ================
+  _ffn_cur (cfg58 build)      : None
+  ws_gemm_kernel in cfg58 trace: False
+  standalone GELU kernel in cfg58 trace: True
+  max|cfg58_replay - fallback_replay| : 0.000e+00
+  VERDICT: gate off (_ffn_cur=None) -- fused path not selected here
+
+OVERALL: FAIL (a selected fused regime silently falls back)

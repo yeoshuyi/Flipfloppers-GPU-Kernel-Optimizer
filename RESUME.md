@@ -9,8 +9,26 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 5 — capture-aware verification of G4.7 regime 1 (d512/ffn2048)
-- **Phase:** capture-verify job running (`g5_3_g47_capture_verify`)
+- **Iteration:** 6 — T3(a) retry: cudagraph-safe OUT-PARAMETER custom op for the fused ffn_in+GELU
+- **Phase:** implementing
+- **iter 5 RESULT (step 47, commit `4989375`):** G4.7 regime 1 (d512) VERIFIED engages through
+  capture — `ws_gemm_kernel` in the captured trace x30. G4.7 stands, no revert. The d128 fallback
+  is diagnosed as the custom op allocating a 655MB fp32 output inside the cudagraph pool (×4 layers,
+  B=10000) — `ffn_dim>=2048` doubles as an implicit output-size bound.
+- **iter 6 hypothesis:** the fix is an OUT-PARAMETER op — `g43::ffn_gelu_linear_out(inp,w,bias,cfg,out)`
+  with `mutates_args=("out",)`, `out` pre-allocated by the compiled graph (`torch.empty` inside the
+  traced region, which inductor's cudagraph tree DOES handle, unlike an opaque op's internal alloc).
+  The C++ out-param entry `ws_gemm(cfg,inp,w,bias,out)` ALREADY EXISTS in g4_4_warpspec_gemm.cpp.
+- **Next concrete action:** add `g43::ffn_gelu_linear_out` to `_ffn_register_op` (mutates_args, no
+  return, fake is a no-op); in `_optimized_forward_causal` when `ffn_cfg` set, do
+  `act = torch.empty(*n2.shape[:-1], ffn_dim, dtype=fp32, device); torch.ops.g43.ffn_gelu_linear_out(
+  n2_fp16, w, b, ffn_cfg, act)`. Re-add the `tok>=2^19` gate regime. Then:
+  `probes/g5_3_g47_capture_verify.py` (add the d128 case with gate ON) → if `ws_gemm_kernel` appears
+  in the d128 captured trace → 40-trial ship-verify rows 6/13/1/8 + controls → ship or negative.
+- **In-flight jobs:** g5_3 re-run (weights-fix) — `results/g5_3_g47_capture_verify_run<J>.log`; the
+  ws_gemm_kernel census in run151 was already conclusive (d512 engages).
+- **Pending decisions:** if the out-param op ALSO silently falls back at d128 → declare the official
+  matrix at its precision-neutral end-state (write a summary), stop the loop.
 - **Why:** step 46 — the T3 d128 fused path SILENTLY FELL BACK under torch.compile(reduce-overhead)
   + CUDA-graph capture (ship-verify run150: row6 AFTER per-trial max_abs bit-identical to BEFORE).
   The wiring smoke missed it (calls opt(x) once = eager pre-capture warmup, never exercises replay).
