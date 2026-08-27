@@ -1,0 +1,8 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+max|mega - compiled_shipped| over [10000,128,128] = 1.469e-03
+
+row 6 (B=10000):
+  shipped compiled causal :    52.485 ms
+  G5.MEGA (scalar)        :   231.047 ms   x0.227
+
+  slower -- Phase 1 optimisation needed
