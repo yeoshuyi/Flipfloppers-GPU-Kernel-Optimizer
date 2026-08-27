@@ -9,69 +9,52 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 4 — T3: extend G4.7 fused ffn_in+GELU to memory-bound row 6
-- **Phase:** 40-trial ship-verify running (job 150)
-- **Phase-0 (run148):** cfg 58 at d128/ffn128 = x0.99/x1.01/**x1.66** at tok 8192/65536/1.28M.
-- **Wiring smoke PASS (run149):** cfg 58 engages at d128/tok-1M, cfg58 vs fallback 9.3e-4
-  (precision-neutral), cfg58≠cfg51 (genuinely running). Gate-off controls all None.
-- Committed: `2d5c71a` (gate), `93e55b7` (RESUME), `<smoke-pass hash>`.
-- **In-flight:** job **150** = `jobs/g5_2_ship_verify.sbatch` → `results/g5_2_ship_verify_run150.log`.
-  BEFORE=09dee91 (5 trials) / AFTER working tree (40 trials). Shapes: off_row6 (engages),
-  off_row13/row1/row8 (gate-off controls), int_large_batch_causal (regime-1 regression check),
-  nc_large_batch (non-causal control). ~1.5h (row 6 baseline is B=10000).
-- **Next concrete action:** when 150 done → `cp /scratch/techjam2/runs/150.out
-  results/g5_2_ship_verify_run150.log`; parse BEFORE/AFTER per shape.
-  SHIP iff: row6 all-40 PASS + max_abs matches BEFORE's tail (precision-neutral) + speedup ≥ +0.3%
-  + every control unchanged within noise. Then: PROGRESS step 46, ACCURACY_BUDGET §8 ledger row,
-  refresh SUBMISSION/DOCUMENTATION causal-row6 note, git commit. (No archive cell fits row 6's
-  exact shape — document in PROGRESS/ACCURACY_BUDGET instead.)
-  NEGATIVE (regression / accuracy fail / <0.3%): revert the `_FFN_MEMBOUND_TOKENS` gate clause,
-  regen entrypoint, document step 46 negative, commit. Then T3 route (b) fused-ffn_out kernel,
-  or declare loop at end-state.
-- **Approach:** extend G4.7's shipped fused ffn_in+GELU kernel (precision-neutral, ACCF32 cfg 58)
-  to the memory-bound d128 big-token rows (6: tok 1.28M, 13: tok 65536), where the [tok,128] hidden
-  round-trip G4.7 eliminates dominates. run132 only tested d128 at tok 8192/65536 (x0.93-0.99);
-  tok 1.28M untested. If Phase 0 shows a win → gate change + verify + ship. Cheap (reuses shipped kernel).
-- **Next concrete action:** when job finishes → read `results/g5_2_g47_d128_bigtok_run<J>.log`.
-  - WIN (ACCF32-fused cfg > 1.03x the shipped chain at row 6 and/or 13):
-    edit `_ensure_ffn_plan` in benchmark.py — add a second admit clause
-    `(d_model>=128 ∧ ffn_dim>=128 ∧ tok>=<threshold from probe>)` alongside the existing d512 one;
-    pick the winning cfg (keep `_FFN_CFG` env override; may need per-branch cfg).
-    Then: `probes/g4_7_ffn_wiring_smoke.py` (extend for d128 case) → check_validity → verify_baseline
-    → regen torch_transformer_benchmark.py → 40-trial ship-verify sbatch on official rows 6,13,1(control),8
-    + nc_large_batch → PROGRESS step 46 → ACCURACY_BUDGET §8 → archive commit (causal cells) → git commit.
-  - NEGATIVE: document step 46 negative; then T3 route (b) — the fused GELU→ffn_out→+resid neutral
-    kernel — is the only remaining lever; decide whether the build is worth it given the official
-    matrix's total addressable latency, or declare the loop at its precision-neutral end-state.
-- **In-flight jobs:** g5_2 d128 big-tok sweep — `squeue -u techjam2`; sbatch `jobs/g5_2_d128_bigtok.sbatch`;
-  output → `results/g5_2_g47_d128_bigtok_run<J>.log`. ~20 min.
-- **Pending decisions:** T3 ship vs negative — after this job.
+- **Iteration:** 5 — capture-aware verification of G4.7 regime 1 (d512/ffn2048)
+- **Phase:** capture-verify job running (`g5_3_g47_capture_verify`)
+- **Why:** step 46 — the T3 d128 fused path SILENTLY FELL BACK under torch.compile(reduce-overhead)
+  + CUDA-graph capture (ship-verify run150: row6 AFTER per-trial max_abs bit-identical to BEFORE).
+  The wiring smoke missed it (calls opt(x) once = eager pre-capture warmup, never exercises replay).
+  **G4.7 regime 1 (d512, step 42, SHIPPED) was smoke-checked the same inadequate way** — must confirm
+  it genuinely engages through capture, else step 42 is bogus and reverts.
+- **Next concrete action:** when job done → read `results/g5_3_g47_capture_verify_run<J>.log`.
+  - d512 verdict "ENGAGED through capture" (ws_gemm_kernel in trace + cfg58-replay ≠ fallback-replay):
+    G4.7 stands. Update PROGRESS/RESUME, commit. Then pick iteration 6 (T3 route (b) fused-ffn_out
+    neutral kernel, OR the d128 elementwise bar via a non-op integration, OR declare end-state).
+  - d512 verdict "SILENT FALLBACK": **serious** — revert G4.7 (step 42) wiring in benchmark.py,
+    revert archive causal elites (42cc466/a04bd31 → back to g6_4bc 7.10x/2.66x), PROGRESS step 47
+    documenting the reversal + the +9.5%/+12.1% being a measurement artefact, regen entrypoint,
+    commit. Then reassess whether the custom-op-in-cudagraph approach is viable at all.
+- **In-flight jobs:** g5_3 capture-verify — `squeue -u techjam2`; sbatch `jobs/g5_3_capture_verify.sbatch`;
+  output → `results/g5_3_g47_capture_verify_run<J>.log`. ~15 min.
+- **Pending decisions:** iteration 6 target — after g5_3.
 
-## Loop history (commits)
+## Loop history (commits, newest first)
 
-- `92bf628` G4.7 ship + judges'-baseline reconciliation (prior session's work, committed this session)
-- `42cc466` / `a04bd31` archive: causal-long-seq 7.78x / causal-large-batch 2.98x
-- `12a68d4` iter0 doc refresh (SUBMISSION/DOCUMENTATION/CLAUDE/CAUSAL_LEDGER with G4.7 numbers)
-- `852379b` + `84ed40a` iter1 profile → PROGRESS step 43 (d128 elementwise/GELU is the bar; T1/T2/T3 targets)
+- `1e9debb` iter4 T3a: revert d128 mem-bound gate — **silent fallback under capture** (step 46)
+- `93e55b7` iter4 T3: RESUME (Phase-0 win at row 6 x1.66)
+- `2d5c71a` iter4 T3: extend _ensure_ffn_plan (tok>=2^19) — later reverted
+- `dd6a4ba` iter3 T2: FP32-accum warp-spec for d1024 GEMMs — **negative** (step 45); cuBLAS at 94-96% roofline
 - `b69c810` iter2 T1: SDPA backend + recompile audit — **double negative** (step 44)
-- `dd6a4ba` iter3 T2: FP32-accum warp-spec for d1024 GEMMs — **negative**, cuBLAS at 94-96% roofline (step 45)
-- (this) iter4 T3 Phase 0 in flight
+- `84ed40a` iter1: profile official matrix — step 43 (d128 elementwise/GELU is the bar)
+- `12a68d4` iter0: doc refresh with G4.7 numbers
+- `92bf628` (+ `42cc466`/`a04bd31` archive) G4.7 ship — **UNDER RE-VERIFICATION (iter 5)**
 
-## Candidate levers status
+## Findings so far (official-matrix optimization)
 
-- ~~T1 SDPA backend / recompile~~ — closed negative (step 44)
-- ~~T2 d1024 warp-spec GEMM~~ — closed negative (step 45)
-- **T3 d128 elementwise/GELU** — IN PROGRESS. Route (a): extend G4.7 gate to d128 big-tok (this probe).
-  Route (b): fused GELU→ffn_out→+resid neutral kernel (bigger build, fallback).
-- Deferred: fp16 both-FFN GEMMs at 0.002 [precision-reducing]; token-parallel persistent megakernel
-  for row 6 [huge build, eliminates LN/residual round-trips — the real 38% bar].
+- SDPA already optimal (FLASH auto-picked); no recompiles. — closed
+- d1024 GEMMs: cuBLAS at 94-96% of FP32-accum roofline; warp-spec loses x0.87-0.92. — closed
+- d128 rows: the fused ffn_in+GELU kernel wins x1.66 in ISOLATION at tok 1.28M but the
+  custom op does not survive CUDA-graph capture at d128. — route (a) closed
+- **OPEN: does G4.7's shipped d512 path survive capture?** (iter 5, in flight)
+- Untried: T3 route (b) fused GELU→ffn_out→+resid neutral kernel; token-parallel persistent
+  megakernel for row 6 (the real 38% LN/residual bar); fp16 both-FFN GEMMs at 0.002 [reducing].
 
 ## Key facts for a cold resume
 
-- Shipped causal path = `_optimized_forward_causal` in benchmark.py; G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c (d512/ffn2048 only).
-- Official rows: 1-5,9-12 = d128/ffn128 small (tok ≤ 16384); 6 = d128 tok1.28M; 8 = d1024/ffn1024 tok8192; 13 = d128 tok65536; 7 = d32/ffn32; 14 = d1024 tok3.2M (OOM).
-- Budget atol 0.002 / rtol 0.02 disjunctive, failed==0. `tools/verify_baseline.py` guards it.
-- Per candidate: eager `_ensure_*` gate + exact fallback; correctness probe → check_validity → 40-trial accuracy → matched BEFORE/AFTER bench; PROGRESS + ACCURACY_BUDGET §8 + commit; regen torch_transformer_benchmark.py + verify_baseline before commit.
-- `_before_benchmark.py` regenerated by ship-verify sbatch via `git show <sha>:benchmark.py` (gitignored). Pin pre-G4.7 = `0691311`.
-- G4.7 kernel = `csrc/g4_4_warpspec_gemm.cu`, configs 51-76 (WS_CFG_LIST_G47). cfg 58 = ACCF32 + fused erf-GELU, fp32 out (the shipped one). `_ensure_ffn_plan` gate in benchmark.py ~L858.
-- profiler subagent NOT a spawnable type here; use torch.profiler in a probe, keep raw output in the log.
+- Shipped causal path = `_optimized_forward_causal` in benchmark.py; G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c (d512/ffn2048, tok≥8192 — under re-verification).
+- benchmark.py gate `_ensure_ffn_plan` (~L858) is byte-identical to commit 09dee91 after the T3 revert; docstring carries the step-46 negative.
+- Official rows: 1-5,9-12 = d128/ffn128 small; 6 = d128 tok1.28M; 8 = d1024/ffn1024 tok8192; 13 = d128 tok65536; 7 = d32/ffn32; 14 = d1024 tok3.2M (OOM).
+- Budget atol 0.002 / rtol 0.02 disjunctive, failed==0. `tools/verify_baseline.py` guards it. `tools/sync_entrypoint.py` regen `torch_transformer_benchmark.py` before each commit.
+- **Wiring-smoke method bug**: `probes/g4_7_ffn_wiring_smoke.py` `run_case` calls opt(x) ONCE = eager warmup; does NOT exercise cudagraph replay. Any fused-FFN verification needs ≥20 warmup calls then replay-vs-fallback diff (that's what `probes/g5_3_g47_capture_verify.py` does).
+- `_before_benchmark.py` regenerated by ship-verify sbatch via `git show <sha>:benchmark.py` (gitignored).
+- G4.7 kernel = `csrc/g4_4_warpspec_gemm.cu` configs 51-76; cfg 58 = ACCF32 + fused erf-GELU, fp32 out. custom op `g43::ffn_gelu_linear` in benchmark.py `_ffn_register_op` (has a try/except that silently falls back to F.gelu(F.linear())).

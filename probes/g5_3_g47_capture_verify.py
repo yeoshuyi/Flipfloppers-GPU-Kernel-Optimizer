@@ -43,15 +43,17 @@ CASES = [
 ]
 
 
-def build(kw, cfg_val):
+def build(kw, cfg_val, base=None):
     B._FFN_CFG = cfg_val
     tc = B.TransformerConfig(causal=True, **kw)
     tc.validate()
-    base = B.BaselineTransformer(tc).to(DEV, torch.float32).eval()
+    if base is None:
+        torch.manual_seed(0)
+        base = B.BaselineTransformer(tc).to(DEV, torch.float32).eval()
     opt = B.UserOptimizedTransformer(tc).to(DEV, torch.float32).eval()
-    B.copy_model_weights(base, opt, strict=True)
+    B.copy_model_weights(base, opt, strict=True)   # same weights for both cfgs
     x, m = B.generate_random_case(tc, DEV, torch.float32, 1234, 0.0, 1.0)
-    return opt, x, m
+    return opt, x, m, base
 
 
 def run_and_census(opt, x, m, warm=40, prof_iters=15):
@@ -82,19 +84,17 @@ def main():
     ok = True
     for label, kw in CASES:
         print(f"================ {label} ================")
-        opt58, x, m = build(kw, 58)
-        cur = opt58._ffn_cur if hasattr(opt58, "_ffn_cur") else "n/a"
-        # _ensure_ffn_plan runs inside forward(); trigger it once
-        with torch.inference_mode():
+        opt58, x, m, base = build(kw, 58)
+        with torch.inference_mode():          # _ensure_ffn_plan runs in forward()
             opt58(x, m)
         cur = opt58._ffn_cur
         o58, k58 = run_and_census(opt58, x, m)
         del opt58
         torch.cuda.empty_cache()
 
-        optfb, x2, m2 = build(kw, -1)
+        optfb, x2, m2, _ = build(kw, -1, base=base)   # SAME weights
         ofb, kfb = run_and_census(optfb, x2, m2)
-        del optfb
+        del optfb, base
         torch.cuda.empty_cache()
 
         has_ws = any("ws_gemm_kernel" in n for n in k58)
