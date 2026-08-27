@@ -9,8 +9,17 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 4 — T3: the d128 elementwise/GELU bar (largest official-matrix cost)
-- **Phase:** Phase-0 microbench job running (`g5_2_g47_d128_bigtok`)
+- **Iteration:** 4 — T3: extend G4.7 fused ffn_in+GELU to memory-bound row 6
+- **Phase:** wiring smoke running; ship-verify NOT yet submitted
+- **Phase-0 RESULT (run148):** cfg 58 (ACCF32, precision-neutral) at d128/ffn128 = x0.99 (tok 8192),
+  x1.01 (tok 65536), **x1.66 (tok 1.28M)**. Extended `_ensure_ffn_plan` with a `tok>=2^19` admit
+  regime; committed `<hash>`. Gate logic verified for all 14 official rows.
+- **Next concrete action:** when wiring smoke passes (expect `_ffn_cur=58` at the d128 tok-1.05M
+  case, cfg58≈fallback) → submit `jobs/g5_2_ship_verify.sbatch` (BEFORE=09dee91, 40-trial AFTER,
+  official rows 6/13/1/8 + int_large_batch_causal + nc_large_batch). If smoke FAILS → fix wiring,
+  re-smoke (do NOT submit the 1.5h ship job on a broken gate).
+- **After ship-verify:** if row6 max_abs unchanged + speedup ≥ +0.3% + all PASS + controls unchanged
+  → PROGRESS step 46 (ship), ACCURACY_BUDGET §8 row, git commit. Else document negative.
 - **Approach:** extend G4.7's shipped fused ffn_in+GELU kernel (precision-neutral, ACCF32 cfg 58)
   to the memory-bound d128 big-token rows (6: tok 1.28M, 13: tok 65536), where the [tok,128] hidden
   round-trip G4.7 eliminates dominates. run132 only tested d128 at tok 8192/65536 (x0.93-0.99);
