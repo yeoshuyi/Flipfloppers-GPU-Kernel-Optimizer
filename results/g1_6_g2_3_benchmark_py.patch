@@ -1,0 +1,217 @@
+diff --git a/benchmark.py b/benchmark.py
+index 80cb85e..3f23421 100644
+--- a/benchmark.py
++++ b/benchmark.py
+@@ -256,6 +256,19 @@ class UserOptimizedTransformer(BaselineTransformer):
+     Causal still bypasses this entirely via super().forward() before
+     compilation is even considered -- this diff is scoped to the
+     already-optimized non-causal path only.
++
++    G1.6 + G2.3: _build_weight_arena() packs every weight the optimized
++    forward actually reads (~63MB: the FP16 attention fold, the folded
++    FP32 ffn_in, and a copy of ffn_out) into ONE contiguous byte buffer and
++    repoints each layer at views into it; _pin_arena_in_l2() then aims a
++    single CUDA accessPolicyWindow at that buffer with
++    hitProp=Persisting/missProp=Streaming, backed by a
++    cudaLimitPersistingL2CacheSize reservation. See those two methods for
++    why the "FP32 model does not fit in L2" ground-truth figure does not
++    apply to the hot working set, and csrc/l2_persist.cpp for why this is a
++    compiled extension rather than ctypes. Pure memory-layout/caching --
++    every computed value is bit-identical, and if the extension cannot be
++    built the model degrades to G1.6 alone.
+     """
+ 
+     def __init__(self, config: TransformerConfig) -> None:
+@@ -263,6 +276,11 @@ class UserOptimizedTransformer(BaselineTransformer):
+         self._mask_cache: dict = {}
+         self._compiled_impl = None
+         self._compiled_causal = None
++        # G1.6/G2.3 state. Instance attributes, never Parameter/Buffer.
++        self._weight_arena = None
++        self._l2_ext = None
++        self._l2_pinned = False
++        self._l2_pin_failed = False
+         # G6.4b: FP16 for attention only (FFN stays exact TF32 -- G6.4a
+         # closed that direction, PROGRESS.md step 27). Same accumulation-
+         # precision guard as G6.4a; harmless here even though SDPA's own
+@@ -347,11 +365,163 @@ class UserOptimizedTransformer(BaselineTransformer):
+         layer._ffn_in_weight = w
+         layer._ffn_in_bias = b
+ 
++    # G1.6: byte alignment for every slice inside the weight arena. 256 B is
++    # both a legal reinterpret-cast boundary for every dtype used here (so
++    # .view(dtype) on a uint8 slice is always valid) and the L2 sector
++    # granularity the access-policy window operates on.
++    _ARENA_ALIGN = 256
++
++    def _build_weight_arena(self, device: torch.device) -> None:
++        # G1.6: one contiguous buffer holding every weight the optimized
++        # forward pass actually READS, so a single accessPolicyWindow (G2.3,
++        # _pin_arena_in_l2 below) can cover the whole hot working set.
++        #
++        # CLAUDE.md's ground truth ("FP32 75.66MB > 72MB L2, does not fit")
++        # counts the original nn.Parameters -- which strict=True state_dict
++        # loading requires us to keep, but which are dead weight after the
++        # first fold -- PLUS the folded copies. The set below is only what
++        # _optimized_forward touches per call:
++        #   per layer  qkv fp16 [1536,512]  1.57 MB
++        #              out_proj fp16 [512,512] 0.52 MB
++        #              ffn_in fp32 [2048,512]  4.19 MB
++        #              ffn_out fp32 [512,2048] 4.19 MB   = ~10.5 MB
++        #   x 6 layers                                   = ~63 MB  <  72 MB
++        #
++        # Same eager-only rule as every other weight cache here (see
++        # _build_qkv_fold's docstring): this allocates fresh storage and
++        # caches Python-level references to views into it, which inside a
++        # cudagraph'd region would hand out pointers the next replay reclaims.
++        # Runs once; the guard below keeps every weight address stable for the
++        # life of the model, which is also what cudagraph capture requires.
++        arena = getattr(self, "_weight_arena", None)
++        if arena is not None and arena.device == device:
++            return
++
++        entries = []
++        for layer in self.layers:
++            attn = layer.attention
++            # ffn_out is still an untouched nn.Linear -- nothing folds into
++            # it, so its Parameter is the source of truth. Copy it into the
++            # arena and read the copy from _optimized_forward; the Parameter
++            # itself stays registered so strict=True load_state_dict still
++            # sees exactly the baseline's key set (CLAUDE.md invariant 4).
++            entries.extend((
++                (attn, "_qkv_weight_fp16", attn._qkv_weight_fp16),
++                (attn, "_qkv_bias_fp16", attn._qkv_bias_fp16),
++                (attn, "_out_proj_weight_fp16", attn._out_proj_weight_fp16),
++                (attn, "_out_proj_bias_fp16", attn._out_proj_bias_fp16),
++                (layer, "_ffn_in_weight", layer._ffn_in_weight),
++                (layer, "_ffn_in_bias", layer._ffn_in_bias),
++                (layer, "_ffn_out_weight", layer.ffn_out.weight.detach()),
++                (layer, "_ffn_out_bias", layer.ffn_out.bias.detach()),
++            ))
++
++        align = self._ARENA_ALIGN
++        offsets = []
++        total = 0
++        for _, _, src in entries:
++            offsets.append(total)
++            nbytes = src.numel() * src.element_size()
++            total += (nbytes + align - 1) // align * align
++
++        arena = torch.empty(total, dtype=torch.uint8, device=device)
++        for (owner, name, src), off in zip(entries, offsets):
++            nbytes = src.numel() * src.element_size()
++            view = arena.narrow(0, off, nbytes).view(src.dtype).view(src.shape)
++            view.copy_(src)
++            # Exact bitwise copy -- same dtype, same shape, no arithmetic.
++            # If this ever trips, the slice/alignment maths is wrong and the
++            # accuracy sweep would silently see aliased or shifted weights.
++            assert torch.equal(view, src), f"arena slice mismatch for {name}"
++            setattr(owner, name, view)
++        self._weight_arena = arena
++
++    def _load_l2_ext(self):
++        # G2.3: the CUDA L2-persistence controls (cudaDeviceSetLimit /
++        # cudaStreamSetAttribute) are not exposed by torch.cuda.cudart() --
++        # docs/PROGRESS.md step 16 established that, and rejected reaching
++        # them via raw ctypes because a struct-layout mistake in
++        # cudaAccessPolicyWindow has no compiler in the loop. csrc/
++        # l2_persist.cpp is that compiler: it is built against this
++        # container's real CUDA headers, so the struct layout and enum values
++        # are checked at compile time rather than at kernel-launch time.
++        import os
++        from torch.utils.cpp_extension import load
++
++        root = os.path.dirname(os.path.abspath(__file__))
++        src = os.path.join(root, "csrc", "l2_persist.cpp")
++        if not os.path.isfile(src):
++            raise FileNotFoundError(src)
++        build_dir = os.environ.get("TORCH_EXT_BUILD_DIR") or os.path.join(
++            root, ".ext_build")
++        os.makedirs(build_dir, exist_ok=True)
++        # cpp_extension.load() writes to TMPDIR; the container's default is
++        # not writable/visible, so point it somewhere under the bind mount.
++        os.environ.setdefault("TMPDIR", build_dir)
++        # with_cuda=True is required even with no .cu source: torch infers
++        # CUDA only from .cu file extensions, so without it the CUDA include
++        # path and -lcudart are both absent and <cuda_runtime.h> is not found.
++        return load(name="l2_persist", sources=[src],
++                    build_directory=build_dir, with_cuda=True, verbose=False)
++
++    def _pin_arena_in_l2(self) -> None:
++        # G2.3: reserve part of L2 for persisting lines and aim an
++        # accessPolicyWindow at the whole arena, so the ~63 MB of weights
++        # re-read on every single forward stay resident instead of being
++        # evicted by the activation traffic streaming past them.
++        #
++        # Best-effort by construction: if the extension cannot be built (no
++        # nvcc/gcc in the grading environment, csrc/ not shipped alongside
++        # benchmark.py, ...) the model is exactly as correct and only as fast
++        # as it was before -- this changes no computed value, only where the
++        # bytes live. Failure is recorded so the build is never retried.
++        if self._l2_pin_failed or self._l2_pinned:
++            return
++        # TEMPORARY decomposition knob (not regime dispatch, not shipped
++        # behaviour): lets one sweep isolate G1.6's arena from G2.3's pin.
++        # Remove before solidification.
++        import os
++        if os.environ.get("KOPT_L2_PERSIST", "1") == "0":
++            self._l2_pin_failed = True
++            return
++        try:
++            if self._l2_ext is None:
++                self._l2_ext = self._load_l2_ext()
++            ext = self._l2_ext
++            arena = self._weight_arena
++            nbytes = arena.numel()
++            persist_max = ext.persisting_l2_max_size()
++            window_max = ext.access_policy_max_window_size()
++            if persist_max <= 0 or window_max <= 0:
++                self._l2_pin_failed = True
++                return
++            # The driver caps the persisting reservation well below total L2,
++            # and caps the window size independently -- query what was
++            # actually GRANTED rather than assuming the request was honoured.
++            granted = ext.set_persist_limit(min(nbytes, persist_max))
++            if granted <= 0:
++                self._l2_pin_failed = True
++                return
++            window_bytes = min(nbytes, window_max)
++            window = (arena if window_bytes == nbytes
++                      else arena.narrow(0, 0, window_bytes))
++            # num_bytes * hitRatio must not exceed the granted reservation,
++            # otherwise the CUDA docs make the behaviour undefined.
++            ratio = min(1.0, granted / float(window_bytes))
++            ext.set_window(window, ratio)
++            self._l2_pinned = True
++        except Exception:  # noqa: BLE001 -- pure perf hint, never correctness
++            self._l2_pin_failed = True
++
+     def _ensure_folded_weights(self, device: torch.device, dtype: torch.dtype) -> None:
+         for layer in self.layers:
+             self._build_qkv_fold(layer.attention, layer.norm1, device, dtype)
+             self._build_attn_fp16_fold(layer.attention, device)
+             self._build_ffn_in_fold(layer, device, dtype)
++        # G1.6 depends on the three folds above having run.
++        self._build_weight_arena(device)
++        # G2.3 depends on G1.6's arena existing at a stable address.
++        self._pin_arena_in_l2()
+ 
+     @staticmethod
+     def _split_heads_view(x: torch.Tensor, num_heads: int, head_dim: int) -> torch.Tensor:
+@@ -499,7 +669,15 @@ class UserOptimizedTransformer(BaselineTransformer):
+                 x, layer.norm2.normalized_shape, eps=layer.norm2.eps
+             )
+             ffn_hidden = F.linear(n2, layer._ffn_in_weight, layer._ffn_in_bias)
+-            ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
++            # G1.6: read ffn_out's weight/bias from the arena copy rather than
++            # the nn.Linear's own Parameters. nn.Linear.forward IS
++            # F.linear(input, self.weight, self.bias) and the arena slice is a
++            # bitwise copy (asserted at build time), so this is the same
++            # computation on the same values at a different address.
++            ffn = F.linear(
++                F.gelu(ffn_hidden, approximate="none"),
++                layer._ffn_out_weight, layer._ffn_out_bias,
++            )
+             x = x + ffn
+             if not no_pad:
+                 x = x.masked_fill(~valid_token_mask[..., None], 0)

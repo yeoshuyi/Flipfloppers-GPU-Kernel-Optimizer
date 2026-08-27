@@ -1,0 +1,22 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+[1/2] c++ -MMD -MF l2_persist.o.d -DTORCH_EXTENSION_NAME=l2_persist -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -fPIC -std=c++20 -c /work/csrc/l2_persist.cpp -o l2_persist.o 
+[2/2] c++ l2_persist.o -shared -L/usr/local/lib/python3.12/dist-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o l2_persist.so
+=== device L2 facts ===
+l2CacheSize                = 75497472 (72.0 MiB)
+persistingL2CacheMaxSize   = 51904512 (49.5 MiB)
+accessPolicyMaxWindowSize  = 134213632 (128.0 MiB)
+arena                      = 62914560 (60.0 MiB)
+granted persisting limit   = 51904512 (49.5 MiB)
+hit_ratio                  = 0.8250
+
+=== timings (ms/iter, lower is better) ===
+A_eager_nowindow                         0.6547   x1.0000 vs A_eager_nowindow
+B_eager_window                           0.6540   x1.0011 vs A_eager_nowindow
+C_graph_nowindow                         0.6236   x1.0000 vs C_graph_nowindow
+C_graph_window_on_default_stream         0.6235   x1.0001 vs C_graph_nowindow
+D_graph_window_in_capture                0.6245   x0.9985 vs C_graph_nowindow
+
+=== verdict ===
+eager window effect : x1.0011
+graph, window on default stream : x1.0001
+graph, window set in capture    : x0.9985

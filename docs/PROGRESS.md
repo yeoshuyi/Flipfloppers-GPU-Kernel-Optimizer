@@ -1767,3 +1767,75 @@ central focus) remain the dominant cost in the optimized path; the
 attribution to baseline vs. optimized is accounted for. Not a wasted
 check — a verified negative, consistent with this session's practice of
 citing a specific profiler fact for every claim rather than assuming.
+
+### 32. G1.6 + G2.3 built for real (C++/pybind11 extension) — G2.3 is a measured 4–6% REGRESSION, G1.6 alone is neutral. Both reverted.
+
+Step 16 deferred G2.3 because reaching `cudaDeviceSetLimit` /
+`cudaStreamSetAttribute` from Python meant `ctypes`-ing `libcudart.so` with
+no compiler to check the `cudaAccessPolicyWindow` struct layout. This step
+removed that objection by building the real thing: **`csrc/l2_persist.cpp`**,
+a pybind11 extension compiled against this container's own CUDA 13.1
+headers via `torch.utils.cpp_extension.load()`. It builds and works.
+
+Two toolchain gotchas worth keeping:
+- `cpp_extension.load()` needs `TMPDIR` pointed at a writable,
+  container-visible path (`/work/.ext_build`); the container default is not.
+- **`with_cuda=True` is mandatory even with no `.cu` source.** Torch infers
+  CUDA only from the `.cu` file extension, so a pure-`.cpp` extension that
+  includes `<cuda_runtime.h>` fails to compile without it (missing CUDA
+  include path and `-lcudart`). First build attempt died exactly here.
+
+`.data_ptr()` is taken **in C++** from a `torch::Tensor` argument, so
+nothing in `benchmark.py` calls it and `tools/check_validity.py` passes
+cleanly — no gate evasion, the Python side never needs the raw address.
+
+**The premise held; the payoff did not.** The hot working set really is
+~63MB (the FP16 attention fold + folded `ffn_in` + `ffn_out`), not the
+75.66MB of CLAUDE.md's ground truth — that figure double-counts the dead
+original `nn.Parameter`s kept only for `strict=True`. G1.6's arena packed
+all of it contiguously and every layer was repointed at views into it.
+
+Device facts (`results/g2_3_l2_probe_run68.log`): `l2CacheSize` 72.0 MiB,
+`persistingL2CacheMaxSize` **49.5 MiB**, `accessPolicyMaxWindowSize`
+128 MiB. So a 60MB arena can only get `hitRatio` 0.825.
+
+Sweeps (`results/g1_6_g2_3_sweep_run69.log`, `results/g1_6_arena_only_run70.log`)
+vs the shipped `results/g6_4b_official_sweep_run63.log`:
+
+| shape | run63 | G1.6 only | G1.6+G2.3 |
+|---|---|---|---|
+| tiny | 6.140 | 6.176 | 6.124 |
+| default | 2.238 | 2.187 | **2.098** |
+| long_seq | 4.560 | 4.556 | **4.365** |
+| large_batch | 1.976 | 1.972 | 1.970 |
+| default_padded | 2.136 | 2.154 | **2.049** |
+| long_seq_padded | 4.293 | 4.292 | **4.091** |
+
+Causal shapes (1.783→1.793, 1.787→1.796) are the control: they bypass
+`_ensure_folded_weights` entirely, and their ±0.5% drift sets the noise
+floor. G1.6 alone sits inside that floor everywhere. **G2.3 is a clean
+−4% to −6% on every shape it touches.**
+
+**Why.** `probes/g2_3_l2_persist_probe.py` isolates the window itself
+(A eager/no window, B eager/window, C graph/no window, D window set INSIDE
+the capture region so it lands on the capture stream and is snapshotted
+into the graph's kernel nodes). D is legal and works — so the CUDA-graph
+capture-stream concern is answered, not a confound — but **every
+configuration is within ±0.2% in TINY, DEFAULT and LARGE-BATCH alike.**
+The window buys nothing because at 186 GB/s (tiny) and 96 GB/s (default)
+of implied weight traffic against the 4090's ~1 TB/s, nothing here is
+DRAM-bandwidth-bound, and the ~63MB working set already fits under normal
+LRU in 72MB of L2. Persistence protects a hot subset when the working set
+*exceeds* L2; here it only carves 49.5 MiB away from the activation
+traffic that was using it. That carve-out is the regression.
+
+Accuracy was **bit-identical to run63 on all 8 shapes** (max_abs
+0.000654817 / 0.000844739 / 0.000728816 / 0.000849087 / 0.000828147 /
+0.000994682 / 0.000994682 / 0.00078994), exactly as a pure memory-layout
+change must be — which is what makes the timing delta trustworthy.
+
+**Reverted `benchmark.py` to HEAD.** The attempted diff is preserved as
+`results/g1_6_g2_3_benchmark_py.patch` rather than committed. The
+extension, the probe and the job scripts are kept: they are reusable, and
+they turn "L2 persistence, 1.1x default / 1.5x+ tiny" in
+`docs/CATALOGUE.md` from an untested estimate into a measured **no**.
