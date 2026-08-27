@@ -1589,3 +1589,63 @@ different structure (softmax renormalizes before the value matmul,
 which could behave very differently under the same quantization noise
 floor) — not assumed to inherit this result, worth testing on its own
 evidence exactly as the plan scoped it.
+
+### 28. G6.4b (FP16 attention) — shipped: clean pass on every shape, largest single-iteration win this session
+
+**What was tried:** FP16 for QKV projection + SDPA + `out_proj`, FFN left
+on the exact TF32 path (step 27 closed FP16 there). Same
+`allow_fp16_reduced_precision_reduction=False` guard as G6.4a, set in
+`__init__` so it holds regardless of entry point. FP16 Q/K/V also
+switches which SDPA backend gets used: FP32 is stuck on the `math`
+backend (G0.1's own finding — flash/efficient aren't available for FP32
+at all), FP16 unlocks flash/memory-efficient — a second, independent
+lever stacked on top of the precision change itself, motivating the
+research prediction that this regime specifically (not FFN) was where
+FP16 would pay off.
+
+**Result: clean pass, no close calls, at the same 40-seed/6-shape rigor
+that caught G6.4a's near-misses** (`results/g6_4b_fp16_attn_rigor_run62.log`):
+`failed=0` on every one of tiny/default/long_seq/large_batch/
+default_padded/long_seq_padded, `max_abs` topping out at **0.000906**
+(large_batch, 671M elements — the same shape that broke G6.4a hardest)
+comfortably under the 0.001 atol outright, not saved by the disjunctive
+`rel` clause the way G6.4a's passes were. Confirms this session's own
+prior finding (step 14) that attention's softmax wasn't the accuracy
+risk in BF16 either — the FFN's large weight reductions were the
+problem both times, and isolating away from them is what actually works,
+independent of which 16-bit format is used.
+
+**Speedups, real and large — official 8-shape sweep**
+(`results/g6_4b_official_sweep_run63.log`, job 63, vs the shipped
+baseline `results/g2_4b_sweep_run27.log`):
+
+| shape | before | after | gain |
+|---|---|---|---|
+| tiny | 4.595x | 6.140x | +33.6% |
+| default | 1.608x | 2.238x | +39.2% |
+| long_seq | 2.353x | 4.560x | **+93.8%** |
+| large_batch | 1.610x | 1.976x | +22.7% |
+| default_padded | 1.588x | 2.136x | +34.5% |
+| default_causal | 1.747x | 1.783x | +2.1% (noise — causal path untouched, see below) |
+| causal_padded | 1.753x | 1.787x | +1.9% (noise, same reason) |
+| long_seq_padded | 2.236x | 4.293x | **+92.0%** |
+
+**long_seq nearly doubles — exactly the predicted mechanism.**
+CLAUDE.md's own regime table notes attention is ~48% of the forward pass
+at `S>=1024`; flash/memory-efficient attention's O(S) memory and better
+tensor-core utilization scale specifically with sequence length, so the
+biggest win landing at long_seq (not tiny or default) is the causal
+GEMM-vs-attention balance behaving exactly as expected, not a surprise
+result. Causal shapes move by ~2% (noise, not signal) because `forward()`
+routes `config.causal` to `_compiled_causal`/`super().forward()` before
+`_optimized_forward` is ever reached — this change is structurally
+incapable of touching causal, confirmed by causal's `max_abs` being
+bit-identical to every prior sweep's causal number (0.000994682).
+
+**Shipped.** `check_validity.py` still passes. Archived as a new elite in
+all 6 regime cells (`tiny/fp16`, `default/fp16`, `long-seq/fp16`,
+`large-batch/fp16`, `padded/fp16` at 6.14x/2.24x/4.56x/1.98x/2.14x, plus
+`causal/fp16` at 1.78x recording the now-current state even though this
+diff didn't touch causal). This is the largest single-iteration
+improvement of the whole session, and the first time a precision
+reduction beyond TF32 has shipped.
