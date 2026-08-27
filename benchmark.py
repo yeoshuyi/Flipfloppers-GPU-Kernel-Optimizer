@@ -645,6 +645,17 @@ class UserOptimizedTransformer(BaselineTransformer):
             # variable this iteration (one optimisation per iteration).
             # Same CUDA-graph lever as G2.4/G2.4b on top, still lazy.
             no_pad_causal = self._mask_is_all_ones(valid_token_mask)
+            # Stage 2B-B1: reuse the norm2->ffn_in fold (G1.1) here too --
+            # identical computation whether causal or not, doesn't touch
+            # attention, so the mechanism that made causal's margin tight
+            # (few valid keys in early softmax rows) doesn't apply to it.
+            # Eager-only, same rule as the non-causal path. Deliberately
+            # NOT calling _ensure_folded_weights (which also builds the
+            # QKV/scale fold and the FP16 attention cast) -- those are
+            # Stage 2B-B2, a separate, independently-verified change, one
+            # optimisation per iteration.
+            for layer in self.layers:
+                self._build_ffn_in_fold(layer, x.device, x.dtype)
             if self._compiled_causal is None:
                 self._compiled_causal = torch.compile(
                     self._optimized_forward_causal, mode="reduce-overhead"
@@ -745,8 +756,14 @@ class UserOptimizedTransformer(BaselineTransformer):
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
 
-            n2 = layer.norm2(x)
-            ffn = layer.ffn_out(F.gelu(layer.ffn_in(n2), approximate="none"))
+            # Stage 2B-B1: norm2's affine folded into _ffn_in_weight/_bias
+            # (G1.1), so norm2 itself only needs the pure reduction here --
+            # F.layer_norm(weight=None, bias=None) computes exactly
+            # (x-mean)/sqrt(var+eps), matching the non-causal path's use
+            # of this same fold exactly.
+            n2 = F.layer_norm(x, layer.norm2.normalized_shape, eps=layer.norm2.eps)
+            ffn_hidden = F.linear(n2, layer._ffn_in_weight, layer._ffn_in_bias)
+            ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
             x = x + ffn
             if not no_pad:
                 x = x.masked_fill(~valid_token_mask[..., None], 0)
