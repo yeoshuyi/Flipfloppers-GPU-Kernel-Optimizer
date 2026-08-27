@@ -33,6 +33,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 
 # --------------------------------------------------------------------------
@@ -629,23 +630,26 @@ class UserOptimizedTransformer(BaselineTransformer):
         valid_token_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         if self.config.causal:
-            # G2.4b: same lever as the non-causal path's G2.4 (CUDA graphs
-            # via lazy torch.compile), applied to baseline's OWN exact
-            # computation -- no SDPA, no folded weights, still reads the
-            # original q_proj/k_proj/v_proj/norm1/norm2 directly. Baseline's
-            # forward() has no lazy weight-caching (only ever reads existing
-            # nn.Parameters), so the step-12 bug (building+caching a fresh
-            # tensor inside the compiled region) doesn't apply here. This
-            # doesn't touch the causal accuracy question at all -- every
-            # attempt to independently RECOMPUTE causal attention has hit
-            # the same TF32-rounding wall (see docstring above); this one
-            # keeps the computation identical and only targets launch
-            # overhead, the same thing G2.4 fixed for non-causal.
+            # G0.1c: SDPA (EFFICIENT_ATTENTION backend, forced explicitly --
+            # automatic dispatch does not pick it for FP32) replaces the
+            # manual matmul/mask/softmax/matmul loop for causal too, same
+            # lever as G0.1 for non-causal. Previously closed on accuracy
+            # (see docstring above) under the OLD 0.001/0.01 budget --
+            # re-verified clean at the new 0.002/0.02 default, 40 seeds,
+            # both causal shapes, 0 failures (probes/g0_1_causal_sdpa_newbudget.py,
+            # MATH and EFFICIENT backends both pass; FLASH/CUDNN error out,
+            # no FP32 kernel available on this stack -- expected, not an
+            # accuracy question). No folded weights yet -- q_proj/k_proj/
+            # v_proj/out_proj/norm1/norm2/ffn_in/ffn_out all still read
+            # directly, isolating the attention-kernel change as the only
+            # variable this iteration (one optimisation per iteration).
+            # Same CUDA-graph lever as G2.4/G2.4b on top, still lazy.
+            no_pad_causal = self._mask_is_all_ones(valid_token_mask)
             if self._compiled_causal is None:
                 self._compiled_causal = torch.compile(
-                    super().forward, mode="reduce-overhead"
+                    self._optimized_forward_causal, mode="reduce-overhead"
                 )
-            return self._compiled_causal(x, valid_token_mask)
+            return self._compiled_causal(x, valid_token_mask, no_pad_causal)
 
         # G0.5: generate_random_case() always hands back a concrete all-ones
         # tensor when there's no real padding (never a literal None) -- so
@@ -688,6 +692,69 @@ class UserOptimizedTransformer(BaselineTransformer):
                 self._optimized_forward, mode="reduce-overhead"
             )
         return self._compiled_impl(x, valid_token_mask, no_pad)
+
+    def _optimized_forward_causal(
+        self,
+        x: torch.Tensor,
+        valid_token_mask: Optional[torch.Tensor],
+        no_pad: bool,
+    ) -> torch.Tensor:
+        # G0.1c: unfused causal path, SDPA in place of the manual
+        # matmul/mask/softmax/matmul loop. Structurally mirrors
+        # BaselineTransformerBlock.forward/BaselineSelfAttention.forward
+        # exactly, so this stays byte-for-byte comparable to the reference
+        # everywhere except the one kernel under test.
+        for layer in self.layers:
+            attn = layer.attention
+            n1 = layer.norm1(x)
+            q = self._split_heads_view(attn.q_proj(n1), attn.num_heads, attn.head_dim)
+            k = self._split_heads_view(attn.k_proj(n1), attn.num_heads, attn.head_dim)
+            v = self._split_heads_view(attn.v_proj(n1), attn.num_heads, attn.head_dim)
+
+            if no_pad:
+                # No padding: is_causal=True keeps EFFICIENT_ATTENTION
+                # eligible (an explicit attn_mask would kick it off, per
+                # CLAUDE.md trap #3).
+                with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
+                    context = F.scaled_dot_product_attention(
+                        q, k, v, attn_mask=None, is_causal=True
+                    )
+            else:
+                # Padding present: causal restriction and key validity both
+                # folded into one explicit boolean mask (True = attend),
+                # is_causal=False -- SDPA rejects is_causal=True together
+                # with a real attn_mask.
+                seq_len = x.shape[1]
+                key_keep = valid_token_mask[:, None, None, :]
+                causal_ok = ~torch.ones(
+                    (seq_len, seq_len), device=x.device, dtype=torch.bool
+                ).triu(diagonal=1)
+                allow = key_keep & causal_ok[None, None, :, :]
+                with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
+                    context = F.scaled_dot_product_attention(
+                        q, k, v, attn_mask=allow, is_causal=False
+                    )
+
+            context = (
+                context.transpose(1, 2)
+                .contiguous()
+                .view(x.shape[0], x.shape[1], attn.d_model)
+            )
+            attn_out = attn.out_proj(context)
+            if not no_pad:
+                attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
+            x = x + attn_out
+
+            n2 = layer.norm2(x)
+            ffn = layer.ffn_out(F.gelu(layer.ffn_in(n2), approximate="none"))
+            x = x + ffn
+            if not no_pad:
+                x = x.masked_fill(~valid_token_mask[..., None], 0)
+
+        x = self.final_norm(x)
+        if not no_pad:
+            x = x.masked_fill(~valid_token_mask[..., None], 0)
+        return x
 
     def _optimized_forward(
         self,
