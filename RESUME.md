@@ -1,49 +1,60 @@
 # RESUME — live cursor for the continuous optimization loop
 
 Plan: `~/.claude/plans/crispy-cooking-pine.md`
-Target: **CLAUDE.md official 14-row causal matrix ONLY** (ffn_dim ∈ {32,128,1024}).
-Constraints: precision-neutral preferred; sbatch only; no git remote (local commits ARE the deliverable);
-document while acting; commit after every meaningful unit; keep this file short + current-only.
+Target: **CLAUDE.md official 14-row causal matrix** — now specifically **official row 6**
+(B=10000, d128, h4, S128, L4, ffn128, causal; tok 1.28M).
+Constraints: precision-neutral (match the shipped `_optimized_forward_causal` precision exactly);
+sbatch only; no git remote (local commits ARE the deliverable); document while acting; commit per unit.
 
 ---
 
 ## NOW
 
-- **Iteration:** 7 — LOOP PAUSED. Official-matrix precision-neutral round is at end-state.
-- **Phase:** awaiting user direction.
-- **Why paused:** PROGRESS steps 43-48 explored every cheap-to-moderate precision-neutral lever on
-  the official 14-row causal matrix. **Nothing shipped.**
-  - T1 (44): SDPA auto-picks FLASH already; no dynamo recompiles. Negative.
-  - T2 (45): cuBLAS at 94-96% of the FP32-accum roofline on the d1024 GEMMs; warp-spec loses x0.87-0.92. Negative.
-  - T3 (46-48): d128 fused ffn_in+GELU — returning op fails CUDA-graph capture; the **out-param op
-    `g43::ffn_gelu_linear_out` engages through capture and is precision-neutral, but gives 0%
-    whole-model** (g5_4 run155: row6 5.851x → 5.851x). The isolated g5_2 x1.66 was a microbench artefact.
-  - Twice (45, 48) an isolated microbench overstated the win vs the matched in-model measurement.
-- **benchmark.py state:** reverted to the run142-verified state — `_ensure_ffn_plan` gate predicate
-  is **byte-identical to commit `09dee91`**. `g43::ffn_gelu_linear_out` is kept (registered, verified,
-  unused) as an asset. Shipped behaviour unchanged since step 42.
-- **Next concrete action (needs user input):** the remaining levers are large builds with untrustworthy
-  projected payoff:
-  1. **token-parallel persistent megakernel for official row 6** — targets the real bar (LN/residual
-     traffic = 38% of row 6, step 43), keeping the [tok,128] residual in registers across 4 layers.
-     Large; faces the same torch.compile/cudagraph integration wall as steps 46-48; payoff unmeasurable
-     without building most of it.
-  2. **fused GELU→ffn_out→+residual kernel** (G3.1 rebuilt on the warp-spec infra, precision-neutral) —
-     same wall + the microbench-vs-in-model trust problem.
-  3. **precision-reducing options** — fp16 both-FFN GEMMs at 0.002: dead vs row 6's 97.5%-of-budget max_abs.
-  4. **stop** — the official matrix is at its precision-neutral end-state with the standard-kernel toolkit;
-     shipped causal speedups (2.71x default / 7.66x tiny / 7.78x long-seq / 2.98x large-batch on the
-     internal d512 sweep; the official rows carry the G0/G1/G6.4 chain) stand.
-  Ask the user which of 1/2/4 to pursue, or whether to redirect (non-causal, a different regime, etc.).
+- **Iteration:** 7 — **G5.MEGA**: per-sequence fused megakernel for official row 6 (user: "try 1 then 2")
+- **Phase:** 0 — design + skeleton
+- **Why:** step 43 — row 6's 52.5ms forward is 38.9% LN/residual traffic + 8% standalone GELU. The
+  fp32 residual `x` [1.28M,128] (655MB) round-trips HBM ~2 reads + 2 writes per layer × 4. A megakernel
+  with **one CUDA block per sequence** (S=128, d=128 → one sequence fits on-chip) does all 4 layers
+  with `x` resident in shared, zero residual HBM traffic.
+- **Design (precision-faithful = precision-neutral by construction):** match every op to the shipped
+  causal path exactly —
+  - LN norm1/norm2 = pure `(x-mean)/rsqrt(var+eps)` (affine folded into weights), fp32; final_norm keeps affine.
+  - qkv / out_proj / ffn_in GEMMs: fp16 storage, **fp32 accumulate** (like the shipped `F.linear(fp16)`).
+  - attention: fp16 q/k/v, fp32 softmax WITH max-subtraction, fp16 probs, fp32 PV accumulate (match flash).
+  - Q pre-scaled (folded into `_qkv_weight`), so scale=1.0. GELU: exact erf, fp32. ffn_out: fp32/TF32.
+  - fp32 residual stream throughout.
+  - Weights: the SAME folded fp16 tensors the shipped path builds (`_qkv_weight_fp16`, `_out_proj_weight_fp16`,
+    `_ffn_in_weight_fp16`) + `layer.ffn_out.weight/bias` fp32 + `final_norm.weight/bias` fp32.
+  - Shared budget (99KB): `x` [128,128] fp32 = 64KB persistent + ~32KB fp16 scratch (reused for
+    n / qkv pieces / hidden). Attention tiled flash-style so scores never materialize [128,128].
+- **Files:** `csrc/g5_mega_causal.cu` + `.cpp` (new). Custom op `g5::mega_causal_forward` OUT-PARAMETER
+  (mutates the output tensor — steps 46-48 showed allocating ops don't survive cudagraph capture).
+- **Next concrete action:** write `csrc/g5_mega_causal.{cu,cpp}` — a CORRECTNESS-FIRST version
+  (can be slow: `x` in shared, scores materialized per-head if it fits, simple loops for GEMMs).
+  Then `probes/g5_5_mega_correct.py`: build it, run 1 layer then 4 layers vs a pure-PyTorch replica
+  of `_optimized_forward_causal`'s math, fp64-reference the pieces. Gate on bit-level-ish agreement
+  before any speed work.
 - **In-flight jobs:** none.
-- **Pending decisions:** iteration 7 direction — user call.
+- **Pending decisions:** none yet — building.
+
+## Build plan (G5.MEGA)
+
+1. **Phase 0** — `csrc/g5_mega_causal.{cu,cpp}` correctness-first + `probes/g5_5_mega_correct.py` +
+   `jobs/g5_5_mega_correct.sbatch`. Gate: matches the reference math at 1 and 4 layers, 0 failing
+   elements vs the 0.002 budget on real row-6-shaped random input.
+2. **Phase 1** — tune: shared-mem layout, mma.sync for the GEMMs, flash-tiled attention, occupancy.
+   `probes/g5_5_mega_sweep.py` — best-of-5 CUDA-graph replay vs the shipped path at the row-6 shape.
+3. **Phase 2** — integrate: `_ensure_mega_plan` eager gate (causal ∧ d_model≤128 ∧ S≤128 ∧ h==4 ∧
+   L==4 ∧ tok≥2^19 — a hard row-6 specialist), wire into `_optimized_forward_causal` as a
+   whole-body replacement when the gate fires. `probes/g5_3`-style capture verify (mega kernel symbol
+   in the trace). 40-trial ship-verify row 6 + controls.
+3b. **THEN lever 2** — fused `GELU→ffn_out→+residual` kernel (only after the megakernel resolves).
+4. **Phase 3** — PROGRESS step 49, ACCURACY_BUDGET §8, SUBMISSION/DOCUMENTATION, archive, commit.
 
 ## Loop history (commits, newest first)
 
-- `<step48>` iter6/T3b: out-param op engages but 0% whole-model — reverted; official-matrix round closed (step 48)
-- `62d2041` / `<t3b>` iter6/T3b: out-param op `ffn_gelu_linear_out` — engages through capture (g5_3 run154)
+- `17154de` iter6/T3b: out-param op engages but 0% whole-model — reverted; official-matrix round closed (step 48)
 - `4989375` iter5: G4.7 regime 1 (d512) verified engages through capture (step 47)
-- `1e9debb` iter4 T3a: revert d128 gate — silent fallback (step 46)
 - `dd6a4ba` iter3 T2: d1024 GEMM warp-spec — negative (step 45)
 - `b69c810` iter2 T1: SDPA + recompile audit — double negative (step 44)
 - `84ed40a` iter1: profile official matrix (step 43)
@@ -52,16 +63,10 @@ document while acting; commit after every meaningful unit; keep this file short 
 
 ## Cold-resume facts
 
-- Shipped causal path = `_optimized_forward_causal`; tags G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c
-  (d512/ffn2048 regime 1 only; verified engages through capture). No official-matrix optimization shipped.
-- `_ensure_ffn_plan` gate == `09dee91`. `g43::ffn_gelu_linear` (returning, regime 1) +
-  `g43::ffn_gelu_linear_out` (out-param, unused asset) both registered in `_ffn_register_op`.
-- Budget atol 0.002 / rtol 0.02 disjunctive, `failed==0`. `tools/verify_baseline.py` guards the harness;
-  `tools/sync_entrypoint.py` regen `torch_transformer_benchmark.py` before every commit (both currently clean).
-- **Verification method for any fused-FFN change**: `probes/g5_3_g47_capture_verify.py` (force capture,
-  census `ws_gemm_kernel` in the replay trace). The one-call `probes/g4_7_ffn_wiring_smoke.py` only
-  proves gate+eager. And: **isolated GEMM/FFN microbenches overstate wins — require a matched in-model
-  BEFORE/AFTER before shipping** (steps 45, 48).
-- Official rows: 1-5,9-12 d128/ffn128 small; 6 d128 tok1.28M; 8 d1024/ffn1024; 13 d128 tok65536;
-  7 d32/ffn32; 14 d1024 tok3.2M (OOM baseline, not run).
-- Docs current through PROGRESS step 48; SUBMISSION/DOCUMENTATION/CLAUDE/CAUSAL_LEDGER carry G4.7 (step 42) numbers.
+- Shipped causal path = `_optimized_forward_causal` (benchmark.py); tags G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c (d512 only). `_ensure_ffn_plan` gate == commit `09dee91`.
+- G5.MEGA target = official row 6 ONLY: `TransformerConfig(batch_size=10000, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)`.
+- Folded weights the shipped path builds: `attn._qkv_weight_fp16` [384,128] (norm1 affine + head_dim**-0.5 scale + norm1 fold absorbed), `attn._qkv_bias_fp16` [384]; `attn._out_proj_weight_fp16` [128,128] = `out_proj.weight.to(fp16)` (NOT folded), `_out_proj_bias_fp16`; `layer._ffn_in_weight_fp16` [128,128] (norm2 affine folded), `_ffn_in_bias_fp16`; `layer.ffn_out` = original fp32 Linear; `self.final_norm` = original fp32 LayerNorm WITH affine. Builders: `_build_qkv_fold`, `_build_attn_fp16_fold`, `_build_ffn_in_fold`, `_ensure_folded_weights`.
+- Reference math: read the `_optimized_forward_causal` body (benchmark.py ~L1075-1180) — LN(no affine)→n_fp16→qkv F.linear→split heads [B,4,128,32]→SDPA(is_causal,scale=1)→transpose/view→out_proj F.linear→+resid(fp32)→LN(no affine)→ffn_in F.linear→to fp32→gelu(erf)→ffn_out (fp32 Linear)→+resid. After 4 layers: final_norm (WITH affine).
+- Budget atol 0.002 / rtol 0.02 disjunctive, `failed==0`. Row 6 shipped max_abs ≈ 0.00195 (97.5%).
+- Verification method: capture-aware (`probes/g5_3_g47_capture_verify.py` pattern — force capture, census the kernel symbol). Isolated microbenches overstate wins (steps 45, 48) — require matched in-model BEFORE/AFTER.
+- `tools/verify_baseline.py` + `tools/sync_entrypoint.py --check` before every commit.
