@@ -158,6 +158,16 @@ long-seq,large-batch,padded}.json`, all `id: g6_4a_v2`, applied stack
 2026-08-27T10:22:05): **tiny 7.194x, default 2.494x, long-seq 5.367x,
 large-batch 2.451x, padded 2.513x.**
 
+`SUBMISSION.md`'s Before/After table reports these same regimes very
+slightly higher (tiny 7.24x/7.236x, default 2.52x, long-seq 5.37x,
+large-batch 2.45x, padded 2.50x) plus causal at 2.76x vs 2.71x above —
+that table is one fresh, single-job, all-shapes-together re-verification
+(`jobs/final_reverify.sbatch` → `results/final_reverify_run118.log`), run
+later than and separately from these incrementally-archived per-step
+numbers. Both measure the same shipped commit; treat the deltas as normal
+run-to-run/thermal variance between two differently-timed jobs, not as a
+disagreement about what's shipped.
+
 ### 3.3 Causal path — shipped stack
 
 Source: `docs/CAUSAL_LEDGER.md`; `archive/causal*.json`. Budget: 0.001/0.01

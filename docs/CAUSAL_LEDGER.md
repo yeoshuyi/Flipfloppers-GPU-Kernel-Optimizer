@@ -33,6 +33,14 @@ section for that boundary.
 - long-seq: **7.10x** (`G6.4bc`, `archive/causal-long-seq__fp16.json`), max_abs 0.00161
 - large-batch: **2.66x** (`G6.4bc`, `archive/causal-large-batch__fp16.json`), max_abs 0.00182 (tightest margin)
 
+**Cross-check:** `SUBMISSION.md`'s Before/After table reports causal at
+2.76x (1.5473ms→0.5612ms), not 2.71x — that's a separate, later, fresh
+single-job full-sweep re-verification (`jobs/final_reverify.sbatch`,
+preserved at `results/final_reverify_run118.log`), not a contradiction of
+the 2.71x archived here. Both were measured against the same shipped
+commit; the ~1.8% gap is ordinary run-to-run/thermal variance between two
+differently-timed runs, not a code difference.
+
 ## Order of remaining work (see the approved plan for full detail)
 
 1. ~~Archive the four causal-shape numbers above~~ — DONE.

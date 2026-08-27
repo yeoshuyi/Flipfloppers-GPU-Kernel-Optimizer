@@ -25,6 +25,18 @@ baseline and optimized measured together in the same run, on the same GPU.
 supersedes it now that the FP16 FFN/attention passes and the causal-path
 rewrite described later in this document have shipped.)
 
+**Provenance:** `jobs/final_reverify.sbatch`, output preserved at
+`results/final_reverify_run118.log` (previously only in
+`/scratch/techjam2/runs/118.out`, outside the git repo and at risk of being
+cleaned up — copied in so this table stays verifiable). These are
+intentionally a fresh, single-job, all-shapes-together measurement rather
+than a reassembly of the per-optimization-step numbers logged incrementally
+in `archive/*.json` during development — small deltas against
+`docs/CAUSAL_LEDGER.md`'s per-step numbers (e.g. causal 2.76x here vs
+2.71x archived at `G6.4bc`'s own commit) are expected run-to-run/thermal
+variance between separately-timed runs, not a discrepancy in what shipped;
+both were verified against the same commit's `benchmark.py`.
+
 | Regime | Baseline (`BaselineTransformer`) | Ours (`UserOptimizedTransformer`) | Speedup |
 |---|---|---|---|
 | Tiny (B·S < 128) | 1.452 ms | **0.201 ms** | **7.24x** |
