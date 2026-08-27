@@ -33,7 +33,6 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.attention import SDPBackend, sdpa_kernel
 
 
 # --------------------------------------------------------------------------
@@ -663,6 +662,21 @@ class UserOptimizedTransformer(BaselineTransformer):
                 # non-causal -- re-verified here independently for causal,
                 # not assumed to inherit the non-causal result).
                 self._build_qkv_fold(layer.attention, layer.norm1, x.device, x.dtype)
+                # G6.4bc: FP16 copies of the (already scale/norm1-folded)
+                # QKV weight and out_proj -- same builder non-causal's
+                # G6.4b uses, depends only on attn._qkv_weight already
+                # being built above.
+                self._build_attn_fp16_fold(layer.attention, x.device)
+            # G6.6c: TRIED AND REVERTED. Wiring _ensure_lt_plan in here
+            # measured a real regression at causal-tiny (5.841x/5.708x ->
+            # 5.341x/5.377x, -8.6%/-5.8%, full 40-seed sweep, not noise).
+            # Root cause: _build_lt_plan's gate 2 only checks cuBLASLt-TF32
+            # against plain F.linear-TF32 -- the comparison non-causal's
+            # step-33 precedent was based on, before G6.4a_v2 (FP16 FFN)
+            # existed as an alternative. FP16 has 2x TF32's FLOPS ceiling on
+            # this hardware (CLAUDE.md's own table), so once FP16-FFN exists
+            # as the other option, cuBLASLt-TF32 loses here even though it
+            # still beats plain F.linear. See docs/CAUSAL_LEDGER.md.
             if self._compiled_causal is None:
                 self._compiled_causal = torch.compile(
                     self._optimized_forward_causal, mode="reduce-overhead"
@@ -728,21 +742,23 @@ class UserOptimizedTransformer(BaselineTransformer):
             # (G1.1), so norm1 here is only the pure reduction; QKV is one
             # fused GEMM (G0.2) instead of three, and Q is pre-scaled so
             # SDPA gets scale=1.0 (G1.2).
+            # G6.4bc: QKV + SDPA + out_proj in FP16 (same pattern as
+            # non-causal G6.4b) -- FP16 also unlocks SDPA's automatic
+            # flash/efficient dispatch without forcing a backend (FP32
+            # needed the explicit sdpa_kernel([EFFICIENT_ATTENTION]) this
+            # replaces; FP16 doesn't).
             n1 = F.layer_norm(x, layer.norm1.normalized_shape, eps=layer.norm1.eps)
-            qkv = F.linear(n1, attn._qkv_weight, attn._qkv_bias)
+            n1_fp16 = n1.to(torch.float16)
+            qkv = F.linear(n1_fp16, attn._qkv_weight_fp16, attn._qkv_bias_fp16)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
             v = self._split_heads_view(v, attn.num_heads, attn.head_dim)
 
             if no_pad:
-                # No padding: is_causal=True keeps EFFICIENT_ATTENTION
-                # eligible (an explicit attn_mask would kick it off, per
-                # CLAUDE.md trap #3).
-                with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
-                    context = F.scaled_dot_product_attention(
-                        q, k, v, attn_mask=None, is_causal=True, scale=1.0
-                    )
+                context = F.scaled_dot_product_attention(
+                    q, k, v, attn_mask=None, is_causal=True, scale=1.0
+                )
             else:
                 # Padding present: causal restriction and key validity both
                 # folded into one explicit boolean mask (True = attend),
@@ -754,30 +770,30 @@ class UserOptimizedTransformer(BaselineTransformer):
                     (seq_len, seq_len), device=x.device, dtype=torch.bool
                 ).triu(diagonal=1)
                 allow = key_keep & causal_ok[None, None, :, :]
-                with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
-                    context = F.scaled_dot_product_attention(
-                        q, k, v, attn_mask=allow, is_causal=False, scale=1.0
-                    )
+                context = F.scaled_dot_product_attention(
+                    q, k, v, attn_mask=allow, is_causal=False, scale=1.0
+                )
 
             context = (
                 context.transpose(1, 2)
                 .contiguous()
                 .view(x.shape[0], x.shape[1], attn.d_model)
             )
-            attn_out = attn.out_proj(context)
+            attn_out_fp16 = F.linear(
+                context, attn._out_proj_weight_fp16, attn._out_proj_bias_fp16
+            )
+            attn_out = attn_out_fp16.to(torch.float32)
             if not no_pad:
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
 
-            # Stage 2B-B1 + G6.4a_v2: norm2's affine folded into
-            # _ffn_in_weight/_bias (G1.1), FFN-in itself in FP16 (cast back
-            # to FP32 immediately after, same pattern as the non-causal
-            # path's G6.4a_v2 -- ffn_out and GELU stay exact). The exact-
-            # FP32 fold alone (Stage 2B-B1) measured <0.3% here, launch
-            # overhead already absorbed by G2.4b/G0.1c's CUDA graphs --
-            # this is the next real lever, following the non-causal
-            # session's own precedent that FP16 FFN was the largest single
-            # win after SDPA/graphs there too.
+            # Stage 2B-B1 + G6.4a_v2c: norm2's affine folded into
+            # _ffn_in_weight/_bias (G1.1), FFN-in in FP16 (cast back to
+            # FP32 immediately, ffn_out/GELU stay exact). G6.6c (cuBLASLt
+            # for this GEMM) was tried and reverted -- see the note on the
+            # causal dispatch above and docs/CAUSAL_LEDGER.md; it measured
+            # a real -5.8%/-8.6% regression at causal-tiny against this
+            # FP16 path.
             n2 = F.layer_norm(x, layer.norm2.normalized_shape, eps=layer.norm2.eps)
             n2_fp16 = n2.to(torch.float16)
             ffn_hidden_fp16 = F.linear(n2_fp16, layer._ffn_in_weight_fp16,

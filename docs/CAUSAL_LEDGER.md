@@ -22,7 +22,7 @@ section for that boundary.
 | `G4.4` (mma.sync PTX) | DEAD END | n/a | n/a | Pure speed-gate miss (1.207x vs 1.3x gate at large_batch, non-causal). Never touched causal. No budget change revives a speed-gate miss. |
 | `G4.5` (CuAssembler/SASS) | DEAD END | n/a | n/a | CUDA 13.1 `nvdisasm` vs CuAssembler fork cubin ELF container-format incompatibility (`.note.nv.tkinfo`). Toolchain blocker, not numerics. Never touched causal. |
 | BF16/FP8/INT8 (causal) | DEAD END, not re-tested | n/a | n/a | Fails 5x-39x over the new budget per already-logged non-causal numbers; causal's attention reduction depth is smaller than the FFN's K=2048 where these already failed most narrowly — no mechanism to do better. |
-| `G6.6c` (cuBLASLt, causal-tiny FFN) | PENDING | — | — | `_LT_MAX_TOKENS=127` gates this to `tok<=127` — only causal-tiny (`B=1,S=64`, tok=64) qualifies. Non-causal precedent (step 33): 1.32-1.49x at the FFN via a TF32 split-K variant cuBLASLt's heuristic finds and PyTorch's default misses. Mechanically small: reuse `_ensure_lt_plan`/`_build_lt_plan`, wire into `_optimized_forward_causal`'s FFN branch. |
+| `G6.6c` (cuBLASLt, causal-tiny FFN) | TRIED, REVERTED | -8.6%/-5.8% @ causal-tiny (regression) | 40-seed sweep, not noise | Wired in exactly as planned (reused `_ensure_lt_plan`/`_build_lt_plan` verbatim). Real regression: cuBLASLt-TF32 beats plain `F.linear`-TF32 (the comparison `_build_lt_plan`'s gate 2 makes, and the one non-causal's step-33 precedent was based on) but loses to `G6.4a_v2c`'s FP16 FFN, which wasn't part of that comparison. FP16 has 2x TF32's FLOPS ceiling on this hardware — once FP16-FFN exists as the alternative, cuBLASLt-TF32 is no longer competitive at this shape. Step-33's precedent predates FP16-FFN existing at all, so it doesn't transfer. Reverted cleanly; code is back to always using `G6.4a_v2c` for causal's FFN. |
 | `G6.4bc` (FP16 attention, causal) | PENDING | — | — | Cast Q/K/V/out_proj to FP16 around SDPA, cast back immediately (same pattern as non-causal `G6.4b` and this session's `G6.4a_v2c`). Prerequisite for `G4.6c`. |
 | `G4.6c` (CUTLASS FP16-accum, causal-large-batch) | PENDING, gated on `G6.4bc` | — | — | Extension + configs (`CFG_QKV=6`, `CFG_OUT=18`) already re-validated at the new budget for non-causal (`probes/g4_6_cutlass_phase2b_newbudget.py`, all 8 shapes pass). Unreachable for causal until `G6.4bc` makes causal's QKV/out_proj GEMMs FP16. Target only causal-large-batch (where non-causal history shows the win). Tightest accuracy margin of anything in this ledger — validate with care. |
 
@@ -35,9 +35,10 @@ section for that boundary.
 
 ## Order of remaining work (see the approved plan for full detail)
 
-1. Archive the four causal-shape numbers above (Plan Part 1 — needs a
-   `tools/archive.py` `REGIMES` schema extension: `causal-tiny`,
-   `causal-long-seq`, `causal-large-batch`).
-2. `G6.6c` — cuBLASLt for causal-tiny's FFN.
-3. `G6.4bc` — FP16 attention for causal.
+1. ~~Archive the four causal-shape numbers above~~ — DONE (`REGIMES`
+   extended with `causal-tiny`/`causal-long-seq`/`causal-large-batch`,
+   all four committed).
+2. ~~`G6.6c` — cuBLASLt for causal-tiny's FFN~~ — TRIED, REVERTED (see row
+   above). Elite numbers unchanged from before this step.
+3. `G6.4bc` — FP16 attention for causal. **Next up.**
 4. `G4.6c` — CUTLASS FP16-accumulate for causal-large-batch (gated on step 3).
