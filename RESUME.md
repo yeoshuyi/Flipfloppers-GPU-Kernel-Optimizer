@@ -10,14 +10,16 @@ document while acting; commit after every meaningful unit.
 ## NOW
 
 - **Iteration:** 1 — profile the official matrix
-- **Phase:** starting
-- **Last completed:** iteration 0 doc refresh (SUBMISSION.md, DOCUMENTATION.md §3.3/§3.4/currency,
-  CLAUDE.md causal status, CAUSAL_LEDGER.md stub) — committed as <fill after commit>.
-- **Next concrete action:** write `probes/g4_9_official_profile.py` — kernel census + stage split for
-  official rows 1 / 6 / 8 / 13 on the shipped causal model, via torch.profiler chrome trace
-  (cat=="kernel"), plus an FFN-fusion roofline check for d128 rows 6/13. Then `jobs/g4_9_*.sbatch`, submit.
-- **In-flight jobs:** none.
-- **Pending decisions:** none.
+- **Phase:** profile job running
+- **Last completed:** iteration 0 doc refresh committed as `12a68d4`. Wrote
+  `probes/g4_9_official_profile.py` + `jobs/g4_9_official_profile.sbatch`, submitted.
+- **Next concrete action:** when job 145 done → `cp /scratch/techjam2/runs/145.out
+  results/g4_9_official_profile_run145.log`; read it; write PROGRESS step 43 (per-row kernel
+  breakdown + ranked precision-neutral target list); commit; pick iteration 2 target.
+- **In-flight jobs:** **145** = `jobs/g4_9_official_profile.sbatch` → expect `results/g4_9_official_profile_run145.log`.
+  Profiles official rows 1/6/8/13: eager stage split (cast+QKV / SDPA / FFN), compiled kernel census,
+  d128 ffn_out roofline. ~40 min.
+- **Pending decisions:** iteration 2 target — depends on job 145.
 
 ## Iteration queue
 
