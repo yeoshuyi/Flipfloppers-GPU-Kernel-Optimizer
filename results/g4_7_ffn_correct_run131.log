@@ -1,0 +1,479 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+[1/3] c++ -MMD -MF g4_4_warpspec_gemm.o.d -DTORCH_EXTENSION_NAME=g4_7_ffn_gelu -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -fPIC -std=c++20 -c /work/csrc/g4_4_warpspec_gemm.cpp -o g4_4_warpspec_gemm.o 
+[2/3] /usr/local/cuda/bin/nvcc -MD -MF g4_4_warpspec_gemm.cuda.o.d -DTORCH_EXTENSION_NAME=g4_7_ffn_gelu -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options '-fPIC' -gencode=arch=compute_89,code=sm_89 -Xptxas -v -diag-suppress 179 -std=c++20 -c /work/csrc/g4_4_warpspec_gemm.cu -o g4_4_warpspec_gemm.cuda.o 
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi4ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi8ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi4ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi8ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 127 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 110.273 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi8ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi8ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 127 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 58.384 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi0ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 127 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 58.027 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 146 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 83.045 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 154 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 42.305 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi4ELi0ELi1ELi0ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 142 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 72.716 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    56 bytes stack frame, 56 bytes spill stores, 56 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 56 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 75.042 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    72 bytes stack frame, 68 bytes spill stores, 72 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 72 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 75.119 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 108.379 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 126.939 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 60.029 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    56 bytes stack frame, 56 bytes spill stores, 56 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 56 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 143.196 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 107.279 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 126.769 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 58.732 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi8ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi64ELi1ELi1ELi8ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    72 bytes stack frame, 68 bytes spill stores, 72 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 72 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 145.066 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 110.099 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 221 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 122.182 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 221 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 84.495 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi64ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 150.582 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 132 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 99.497 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi1ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 221 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 122.056 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi1EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 221 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 82.011 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi64ELi1ELi0ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi64ELi1ELi0ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 252 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 129.600 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi1ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 126 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 94.329 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi256ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi256ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 112.170 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi128ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi128ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 113.529 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi64ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi64ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 248 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 90.303 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi256ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi256ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 92.203 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi256ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi256ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 112.711 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 99 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 20.144 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 160 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 39.586 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi64ELi128ELi64ELi4ELi1ELi2ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi64ELi128ELi64ELi4ELi1ELi2ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 84.499 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi64ELi128ELi64ELi3ELi1ELi2ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi64ELi128ELi64ELi3ELi1ELi2ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 76.502 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi8ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi8ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 53.574 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi8ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi8ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 48.815 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 132 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 58.047 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 164 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 41.336 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 41.840 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 164 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 39.640 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi2ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    104 bytes stack frame, 100 bytes spill stores, 156 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 104 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 93.211 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 43.352 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 40.255 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 40.126 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 130 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 68.668 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 56.043 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 54.798 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi8ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 135 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 60.182 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi1ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 131 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 56.162 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi1ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 52.976 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi1ELi256ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi1ELi256ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    24 bytes stack frame, 24 bytes spill stores, 44 bytes spill loads
+ptxas info    : Used 255 registers, used 16 barriers, 24 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 128.420 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi256ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi256ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    16 bytes stack frame, 12 bytes spill stores, 12 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 16 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 87.227 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi64ELi64ELi4ELi2ELi1ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi64ELi64ELi4ELi2ELi1ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 82.770 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi64ELi64ELi4ELi2ELi1ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi64ELi64ELi4ELi2ELi1ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 176 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 65.007 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    104 bytes stack frame, 104 bytes spill stores, 136 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 104 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 87.600 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    120 bytes stack frame, 116 bytes spill stores, 244 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 120 bytes cumulative stack size, 396 bytes cmem[0]
+ptxas info    : Compile time = 86.295 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi256ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 160 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 40.653 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi256ELi128ELi64ELi2ELi4ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 164 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 38.657 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 86.713 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 68.722 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 136 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 67.832 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi4ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 131 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 57.376 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 86.361 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 67.628 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi2ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi2ELi2ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 174 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 85.632 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi2ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi2ELi2ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 167 registers, used 16 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 65.076 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 49.266 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 39.801 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 39.114 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 99 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 19.429 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 30.337 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi0ELi1ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.563 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi1ELi4ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 31.321 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi3ELi2ELi2ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 39.065 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi2ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 30.247 ms
+ptxas info    : Compiling entry function '_Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii' for 'sm_89'
+ptxas info    : Function properties for _Z14ws_gemm_kernelILi128ELi128ELi64ELi2ELi2ELi4ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0ELi0EEvPK6__halfS2_S2_Pviii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, used 1 barriers, 396 bytes cmem[0]
+ptxas info    : Compile time = 15.784 ms
+[3/3] c++ g4_4_warpspec_gemm.o g4_4_warpspec_gemm.cuda.o -shared -L/usr/local/lib/python3.12/dist-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o g4_7_ffn_gelu.so
+ninja: no work to do.
+
+config table: 77 entries (0-50 shipped, 51+ new)
+  [51] outf32=1  BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b GELU->fp32
+  [52] outf32=1  BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b split64 GELU->fp32
+  [53] outf32=0  BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b ACCF32
+  [54] outf32=1  BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b ACCF32 GELU->fp32
+  [55] outf32=1  BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs GELU->fp32
+  [56] outf32=1  BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split64 GELU->fp32
+  [57] outf32=0  BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs ACCF32
+  [58] outf32=1  BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs ACCF32 GELU->fp32
+  [59] outf32=1  BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 GELU->fp32
+  [60] outf32=1  BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split64 GELU->fp32
+  [61] outf32=0  BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 ACCF32
+  [62] outf32=1  BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 ACCF32 GELU->fp32
+  [63] outf32=1  BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs GELU->fp32
+  [64] outf32=1  BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs split64 GELU->fp32
+  [65] outf32=0  BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs ACCF32
+  [66] outf32=1  BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs ACCF32 GELU->fp32
+  [67] outf32=0  BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split64
+  [68] outf32=0  BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split64
+  [69] outf32=0  BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs split64
+  [70] outf32=0  BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b
+  [71] outf32=1  BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld4 extra0 | thr384 WARPSPEC smemEpi        smem=64KB ldm4b ACCF32 GELU->fp32
+  [72] outf32=0  BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld4 extra0 | thr384 WARPSPEC smemEpi        smem=64KB ldm4b ACCF32
+  [73] outf32=1  BM128 BN128 BK64 stg3 | cons 2x4 (wtile 64x32) ld4 extra0 | thr384 WARPSPEC smemEpi        smem=96KB ldm4b ACCF32 GELU->fp32
+  [74] outf32=1  BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi        smem=64KB ldm4b stcs ACCF32 GELU->fp32
+  [75] outf32=1  BM128 BN256 BK64 stg2 | cons 2x8 (wtile 64x32) ld0 extra0 | thr512 plain    smemEpi        smem=96KB ldm4b stcs ACCF32 GELU->fp32
+  [76] outf32=1  BM256 BN128 BK64 stg2 | cons 4x4 (wtile 64x32) ld0 extra0 | thr512 plain    smemEpi        smem=96KB ldm4b stcs swz8 ACCF32 GELU->fp32
+
+=== CHECK 0: shipped cfg[0] still BITWISE == g4_4_mma_gemm cfg[11]
+  M512 K512 N512: differing elements 0 / 262144  PASS
+  M1024 K256 N2048: differing elements 0 / 2097152  PASS
+  M256 K512 N256: differing elements 0 / 65536  PASS
+
+=== CHECK 1: exact-integer inputs
+  M512 K512 N512: 26/26 EXACT
+  M1024 K256 N2048: 26/26 EXACT
+  M256 K512 N256: 26/26 EXACT
+
+=== CHECK 2: one-hot probe of the new drain (index transposition)
+  0 / 130 one-hot placements wrong  PASS
+
+=== CHECK 3: fused GELU is BIT-IDENTICAL to F.gelu(approximate='none')
+  M512 K512 N512 cfg51 vs cfg70: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg52 vs cfg48: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg55 vs cfg39: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg56 vs cfg67: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg59 vs cfg37: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg60 vs cfg68: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg63 vs cfg33: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg64 vs cfg69: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg54 vs cfg53: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg58 vs cfg57: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg62 vs cfg61: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg66 vs cfg65: BIT-EXACT   [pre-act |x|max 4.46]
+  M512 K512 N512 cfg71 vs cfg72: BIT-EXACT   [pre-act |x|max 4.46]
+  (reference: erf vs tanh GELU on this data differ by 4.733e-04 -- step 35's cuBLASLt failure mode would be visible)
+  M1024 K256 N2048 cfg51 vs cfg70: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg52 vs cfg48: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg55 vs cfg39: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg56 vs cfg67: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg59 vs cfg37: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg60 vs cfg68: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg63 vs cfg33: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg64 vs cfg69: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg54 vs cfg53: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg58 vs cfg57: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg62 vs cfg61: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg66 vs cfg65: BIT-EXACT   [pre-act |x|max 5.09]
+  M1024 K256 N2048 cfg71 vs cfg72: BIT-EXACT   [pre-act |x|max 5.09]
+  (reference: erf vs tanh GELU on this data differ by 4.733e-04 -- step 35's cuBLASLt failure mode would be visible)
+  M256 K512 N256 cfg51 vs cfg70: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg52 vs cfg48: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg55 vs cfg39: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg56 vs cfg67: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg59 vs cfg37: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg60 vs cfg68: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg63 vs cfg33: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg64 vs cfg69: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg54 vs cfg53: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg58 vs cfg57: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg62 vs cfg61: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg66 vs cfg65: BIT-EXACT   [pre-act |x|max 4.46]
+  M256 K512 N256 cfg71 vs cfg72: BIT-EXACT   [pre-act |x|max 4.46]
+  (reference: erf vs tanh GELU on this data differ by 4.733e-04 -- step 35's cuBLASLt failure mode would be visible)
+
+=== CHECK 4: random fp16 vs fp64 reference, by accumulate mode
+  M512 K512 N512: fp16-accum worst 1.319e-02 | ACCF32 worst 1.947e-03   ratio 7x
+  M1024 K256 N2048: fp16-accum worst 9.914e-03 | ACCF32 worst 1.935e-03   ratio 5x
+  M256 K512 N256: fp16-accum worst 1.319e-02 | ACCF32 worst 1.748e-03   ratio 8x
+
+OVERALL: PASS

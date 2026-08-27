@@ -15,8 +15,17 @@ int ws_gemm_launch(int cfg, const void *In, const void *W, const void *bias,
                    size_t *smem_out);
 int ws_gemm_num_cfg();
 void ws_gemm_cfg_desc(int cfg, char *buf, int buflen);
+int ws_gemm_cfg_outf32(int cfg);
 
 int64_t num_cfg() { return ws_gemm_num_cfg(); }
+
+// G4.7: 1 = this cfg fuses the exact erf-form GELU and therefore writes an
+// FP32 output tensor; 0 = the shipped fp16-out behaviour. A property of the
+// CONFIG, so callers never have to guess the output dtype.
+int64_t cfg_outf32(int64_t c) {
+  TORCH_CHECK(c >= 0 && c < ws_gemm_num_cfg(), "bad cfg");
+  return ws_gemm_cfg_outf32((int)c);
+}
 
 std::string cfg_name(int64_t c) {
   TORCH_CHECK(c >= 0 && c < ws_gemm_num_cfg(), "bad cfg");
@@ -28,9 +37,12 @@ std::string cfg_name(int64_t c) {
 void ws_gemm(int64_t cfg, const torch::Tensor &inp, const torch::Tensor &w,
              const c10::optional<torch::Tensor> &bias, torch::Tensor &out) {
   TORCH_CHECK(inp.is_cuda() && w.is_cuda() && out.is_cuda(), "cuda only");
+  const bool outf32 = ws_gemm_cfg_outf32((int)cfg) == 1;
   TORCH_CHECK(inp.scalar_type() == torch::kHalf &&
-                  w.scalar_type() == torch::kHalf &&
-                  out.scalar_type() == torch::kHalf, "fp16 only");
+                  w.scalar_type() == torch::kHalf, "fp16 operands only");
+  TORCH_CHECK(out.scalar_type() == (outf32 ? torch::kFloat : torch::kHalf),
+              "cfg ", cfg, " requires a ", (outf32 ? "float32" : "float16"),
+              " output tensor");
   TORCH_CHECK(inp.is_contiguous() && w.is_contiguous() && out.is_contiguous(),
               "contiguous only");
   TORCH_CHECK(inp.dim() == 2 && w.dim() == 2 && out.dim() == 2, "2-D only");
@@ -57,7 +69,9 @@ void ws_gemm(int64_t cfg, const torch::Tensor &inp, const torch::Tensor &w,
 torch::Tensor ws_linear(int64_t cfg, const torch::Tensor &inp,
                         const torch::Tensor &w,
                         const c10::optional<torch::Tensor> &bias) {
-  auto out = torch::empty({inp.size(0), w.size(0)}, inp.options());
+  auto opts = inp.options();
+  if (ws_gemm_cfg_outf32((int)cfg) == 1) opts = opts.dtype(torch::kFloat);
+  auto out = torch::empty({inp.size(0), w.size(0)}, opts);
   ws_gemm(cfg, inp, w, bias, out);
   return out;
 }
@@ -65,6 +79,7 @@ torch::Tensor ws_linear(int64_t cfg, const torch::Tensor &inp,
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("num_cfg", &num_cfg);
   m.def("cfg_name", &cfg_name, py::arg("cfg"));
+  m.def("cfg_outf32", &cfg_outf32, py::arg("cfg"));
   m.def("ws_gemm", &ws_gemm, py::arg("cfg"), py::arg("inp"), py::arg("w"),
         py::arg("bias"), py::arg("out"));
   m.def("ws_linear", &ws_linear, py::arg("cfg"), py::arg("inp"), py::arg("w"),

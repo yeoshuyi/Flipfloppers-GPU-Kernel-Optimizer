@@ -69,6 +69,7 @@
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -135,6 +136,22 @@ __device__ __forceinline__ void mma_f16(uint32_t (&d)[2], const uint32_t (&a)[4]
         "r"(c[0]), "r"(c[1]));
 }
 
+// G4.7: FP32-ACCUMULATE twin of mma_f16. Same m16n8k16 shape, same A/B
+// fragment layout, same D element->(row,col) mapping (c0,c1 at row lane/4,
+// cols 2*(lane%4)(+1); c2,c3 at row lane/4+8) -- so every index in this file
+// is unchanged; only the accumulator's type and the tensor-core datapath
+// differ. This is the HALF-RATE path on GeForce Ada (CLAUDE.md trap 2), so it
+// exists ONLY to make epilogue fusion available with ZERO numerics change,
+// not to beat cuBLASLt on the GEMM itself.
+__device__ __forceinline__ void mma_f32(float (&d)[4], const uint32_t (&a)[4],
+                                        const uint32_t (&b)[2]) {
+  asm volatile(
+      "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
+      "{%0,%1,%2,%3}, {%4,%5,%6,%7}, {%8,%9}, {%0,%1,%2,%3};\n"
+      : "+f"(d[0]), "+f"(d[1]), "+f"(d[2]), "+f"(d[3])
+      : "r"(a[0]), "r"(a[1]), "r"(a[2]), "r"(a[3]), "r"(b[0]), "r"(b[1]));
+}
+
 __device__ __forceinline__ void ldm_x4(uint32_t (&r)[4], uint32_t addr) {
   asm volatile("ldmatrix.sync.aligned.m8n8.x4.shared.b16 {%0,%1,%2,%3}, [%4];\n"
                : "=r"(r[0]), "=r"(r[1]), "=r"(r[2]), "=r"(r[3])
@@ -171,6 +188,29 @@ __device__ __forceinline__ void st_global_v4_cs(void *p, uint4 v) {
                : "memory");
 }
 
+// ---------------------------------------------------------------------------
+// G4.7: EXACT erf-form GELU for the ffn_in epilogue.
+//
+// READ THIS BEFORE TOUCHING IT. docs/PROGRESS.md step 35 Finding 2 closed
+// GELU fusion via cuBLASLt's CUBLASLT_EPILOGUE_GELU_BIAS on ACCURACY: that
+// epilogue computes the TANH approximation, the model computes
+// F.gelu(approximate="none"), and the systematic mismatch was 4.74e-04
+// (csrc/cublaslt_gelu.cpp). This kernel is hand-written, so it is not stuck
+// with cuBLASLt's choice -- it computes the erf form, in fp32, with the SAME
+// expression and the SAME operation order as ATen's own CUDA kernel
+// (aten/src/ATen/native/cuda/ActivationGeluKernel.cu, approximate=None):
+//
+//     constexpr opmath_t kAlpha = M_SQRT1_2;
+//     return x * opmath_t(0.5) * (opmath_t(1) + ::erf(x * kAlpha));
+//
+// with opmath_t = float for a float input, and ::erf(float) = erff. Matching
+// the order matters: this is claimed as an EXACT transform, so the gate on it
+// is BIT-IDENTITY against F.gelu(x.float(), approximate="none"), not "close".
+__device__ __forceinline__ float gelu_erf_exact(float x) {
+  constexpr float kAlpha = (float)M_SQRT1_2;
+  return x * 0.5f * (1.0f + erff(x * kAlpha));
+}
+
 }  // namespace wsg
 
 // ---------------------------------------------------------------------------
@@ -192,13 +232,35 @@ __device__ __forceinline__ void st_global_v4_cs(void *p, uint4 v) {
 //   REGDB     1 = register double-buffer the ldmatrix fragments
 //   SPLIT     FP32 carry every SPLIT columns of K (0 = off), the step-37
 //             numerics mitigation, carried over unchanged
+//   EPIGELU   G4.7. 0 = the shipped behaviour, Out is fp16, no activation.
+//             1 = Out is FP32 and the epilogue applies the EXACT erf-form
+//             GELU (wsg::gelu_erf_exact) to every element before storing.
+//             The value the GELU sees is the fp16 GEMM+bias result, i.e.
+//             EXACTLY the tensor F.linear(fp16) would have produced, so
+//             EPIGELU=1 is a bit-exact fusion of
+//                 F.gelu(F.linear(...).float(), approximate="none")
+//             and NOT a precision-ladder step. Staging still goes through
+//             shared memory as fp16 -- the identical, already-verified
+//             swizzle -- and the fp32 widening happens in the drain, so the
+//             epilogue's shared-memory footprint and bank behaviour are
+//             byte-for-byte what SMEMEPI already had.
+//   ACCF32    G4.7. 0 = the shipped FP16-accumulate mma (the whole point of
+//             the G4.4/G4.3 line). 1 = mma.*.f32.f16.f16.f32, i.e. FP32
+//             accumulation with fp16 operands -- the HALF-RATE datapath, so
+//             strictly slower per FLOP, but numerically what cuBLASLt already
+//             does. Bias is then added in FP32 before the single fp16
+//             round-trip, exactly like cuBLASLt's bias epilogue. ACCF32=1 is
+//             therefore PRECISION-NEUTRAL: it introduces no new error source,
+//             which is what makes it a candidate for the causal path that
+//             step 41 could not reach. SPLIT is meaningless here (there is
+//             nothing to carry) and is rejected by static_assert.
 // ---------------------------------------------------------------------------
 template <int BM, int BN, int BK, int NSTAGE, int NCM, int NCN, int NLW,
           int NEXTRA, int SMEMEPI, int REGDB, int SPLIT, int LDM4B, int EPICS,
-          int SWZG>
+          int SWZG, int EPIGELU, int ACCF32>
 __global__ __launch_bounds__((NCM * NCN + NLW + NEXTRA) * WARP_SIZE)
 void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
-                    const __half *__restrict__ bias, __half *__restrict__ Out,
+                    const __half *__restrict__ bias, void *__restrict__ Out_v,
                     int M, int N, int K) {
   using namespace wsg;
 
@@ -229,6 +291,7 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
   static_assert(WM % 16 == 0 && WN % 8 == 0, "warp tile vs mma shape");
   static_assert(A_CHUNKS % LOAD_T == 0 && W_CHUNKS % LOAD_T == 0, "loads");
   static_assert(SPLIT == 0 || SPLIT % BK == 0, "SPLIT must be a multiple of BK");
+  static_assert(!(ACCF32 && SPLIT), "ACCF32 accumulates in fp32 already");
   static_assert(NSTAGE >= 2, "need >=2 stages");
   static_assert(!WARPSPEC || 2 * NSTAGE + 1 <= 16, "named barrier ids");
 
@@ -316,19 +379,36 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
   // ---- consumer state -----------------------------------------------------
   const int wm = warp / NCN;   // only meaningful when is_consumer
   const int wn = warp % NCN;
-  uint32_t acc[MT][NT][2];
+  // G4.7: the two accumulator banks are mutually exclusive -- the unused one
+  // is declared 1x1 so it costs no registers, and every use of either is
+  // behind `if constexpr (ACCF32)`.
+  constexpr int AM = ACCF32 ? 1 : MT;
+  constexpr int AN = ACCF32 ? 1 : NT;
+  constexpr int FM = ACCF32 ? MT : 1;
+  constexpr int FN = ACCF32 ? NT : 1;
+  uint32_t acc[AM][AN][2];
+  float accf[FM][FN][4];
   constexpr int CARRY = (SPLIT != 0) ? 1 : 0;
   constexpr int NC = CARRY ? 4 : 1;
-  float carry[MT][NT][NC];
+  float carry[AM][AN][NC];
+  if constexpr (ACCF32) {
 #pragma unroll
-  for (int i = 0; i < MT; ++i)
+    for (int i = 0; i < MT; ++i)
 #pragma unroll
-    for (int j = 0; j < NT; ++j) {
-      acc[i][j][0] = 0;
-      acc[i][j][1] = 0;
+      for (int j = 0; j < NT; ++j)
 #pragma unroll
-      for (int e = 0; e < NC; ++e) carry[i][j][e] = 0.f;
-    }
+        for (int e = 0; e < 4; ++e) accf[i][j][e] = 0.f;
+  } else {
+#pragma unroll
+    for (int i = 0; i < MT; ++i)
+#pragma unroll
+      for (int j = 0; j < NT; ++j) {
+        acc[i][j][0] = 0;
+        acc[i][j][1] = 0;
+#pragma unroll
+        for (int e = 0; e < NC; ++e) carry[i][j][e] = 0.f;
+      }
+  }
 
   const int a_ld_row_base = wm * WM + (lane & 15);
   const int a_ld_half = (lane >> 4);
@@ -415,15 +495,23 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
                                                (ks + 1) * 2 + a_ld_half)));
             load_bfrag(bf[nxt], tW, ks + 1);
           }
+          if constexpr (ACCF32) {
 #pragma unroll
-          for (int i = 0; i < MT; ++i)
+            for (int i = 0; i < MT; ++i)
 #pragma unroll
-            for (int j = 0; j < NT; ++j)
-              mma_f16(acc[i][j], af[cur][i], bf[cur][j], acc[i][j]);
+              for (int j = 0; j < NT; ++j)
+                mma_f32(accf[i][j], af[cur][i], bf[cur][j]);
+          } else {
+#pragma unroll
+            for (int i = 0; i < MT; ++i)
+#pragma unroll
+              for (int j = 0; j < NT; ++j)
+                mma_f16(acc[i][j], af[cur][i], bf[cur][j], acc[i][j]);
+          }
         }
         bar_arrive(BAR_EMPTY + stage, PIPE_T);
 
-        if (CARRY) {
+        if constexpr (CARRY) {
           const int kdone = (kt + 1) * BK;
           if ((kdone % (SPLIT ? SPLIT : 1)) == 0) {
 #pragma unroll
@@ -494,14 +582,22 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
                                              (ks + 1) * 2 + a_ld_half)));
           load_bfrag(bf[nx], tW, ks + 1);
         }
+        if constexpr (ACCF32) {
 #pragma unroll
-        for (int i = 0; i < MT; ++i)
+          for (int i = 0; i < MT; ++i)
 #pragma unroll
-          for (int j = 0; j < NT; ++j)
-            mma_f16(acc[i][j], af[cur][i], bf[cur][j], acc[i][j]);
+            for (int j = 0; j < NT; ++j)
+              mma_f32(accf[i][j], af[cur][i], bf[cur][j]);
+        } else {
+#pragma unroll
+          for (int i = 0; i < MT; ++i)
+#pragma unroll
+            for (int j = 0; j < NT; ++j)
+              mma_f16(acc[i][j], af[cur][i], bf[cur][j], acc[i][j]);
+        }
       }
 
-      if (CARRY) {
+      if constexpr (CARRY) {
         const int kdone = (kt + 1) * BK;
         if ((kdone % (SPLIT ? SPLIT : 1)) == 0) {
 #pragma unroll
@@ -530,9 +626,41 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
   // ==========================================================================
   const int gid = lane >> 2;
   const int tig = lane & 3;
+  __half *Out = reinterpret_cast<__half *>(Out_v);
+  float *OutF = reinterpret_cast<float *>(Out_v);
+
+  // G4.7. The accumulator -> "what F.linear would have produced" reduction,
+  // in ONE place, so the fp16-accumulate and fp32-accumulate arms cannot
+  // drift. Both arms end with a value that is EXACTLY an fp16 F.linear
+  // output, which is what makes the GELU fusion below an exact transform:
+  //   ACCF32=0: fp16 accumulate (+ optional fp32 SPLIT carry), bias in fp16
+  //             -- byte-identical to what step 41 shipped.
+  //   ACCF32=1: fp32 accumulate, bias added in FP32 and rounded ONCE, which
+  //             is exactly cuBLASLt's CUBLASLT_EPILOGUE_BIAS semantics.
+#define WS_REDUCE_ACC(i, j, h0, h1)                                            \
+  do {                                                                         \
+    if constexpr (ACCF32) {                                                    \
+      const float bf0 = bias ? __half2float(b0) : 0.f;                         \
+      const float bf1 = bias ? __half2float(b1) : 0.f;                         \
+      h0 = __floats2half2_rn(accf[i][j][0] + bf0, accf[i][j][1] + bf1);        \
+      h1 = __floats2half2_rn(accf[i][j][2] + bf0, accf[i][j][3] + bf1);        \
+    } else {                                                                   \
+      memcpy(&h0, &acc[i][j][0], 4);                                           \
+      memcpy(&h1, &acc[i][j][1], 4);                                           \
+      if constexpr (CARRY) {                                                   \
+        float2 f0 = __half22float2(h0);                                        \
+        float2 f1 = __half22float2(h1);                                        \
+        h0 = __floats2half2_rn(f0.x + carry[i][j][0], f0.y + carry[i][j][1]);  \
+        h1 = __floats2half2_rn(f1.x + carry[i][j][2], f1.y + carry[i][j][3]);  \
+      }                                                                        \
+      h0 = __hadd2(h0, __halves2half2(b0, b1));                                \
+      h1 = __hadd2(h1, __halves2half2(b0, b1));                                \
+    }                                                                          \
+  } while (0)
 
   if constexpr (!SMEMEPI) {
     // step 37's epilogue, verbatim: one st.global.b32 per accumulator pair.
+    // (EPIGELU widens that to one st.global.b64 of two fp32 activations.)
     if (is_consumer) {
 #pragma unroll
       for (int i = 0; i < MT; ++i)
@@ -542,19 +670,21 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
           const __half b0 = bias ? bias[col] : __float2half(0.f);
           const __half b1 = bias ? bias[col + 1] : __float2half(0.f);
           __half2 h0, h1;
-          memcpy(&h0, &acc[i][j][0], 4);
-          memcpy(&h1, &acc[i][j][1], 4);
-          if (CARRY) {
-            float2 f0 = __half22float2(h0);
-            float2 f1 = __half22float2(h1);
-            h0 = __floats2half2_rn(f0.x + carry[i][j][0], f0.y + carry[i][j][1]);
-            h1 = __floats2half2_rn(f1.x + carry[i][j][2], f1.y + carry[i][j][3]);
-          }
-          h0 = __hadd2(h0, __halves2half2(b0, b1));
-          h1 = __hadd2(h1, __halves2half2(b0, b1));
+          WS_REDUCE_ACC(i, j, h0, h1);
           const int r0 = m0 + wm * WM + i * 16 + gid;
-          *reinterpret_cast<__half2 *>(Out + (size_t)r0 * N + col) = h0;
-          *reinterpret_cast<__half2 *>(Out + (size_t)(r0 + 8) * N + col) = h1;
+          if constexpr (EPIGELU) {
+            const float2 f0 = __half22float2(h0);
+            const float2 f1 = __half22float2(h1);
+            const float2 g0 = make_float2(gelu_erf_exact(f0.x),
+                                          gelu_erf_exact(f0.y));
+            const float2 g1 = make_float2(gelu_erf_exact(f1.x),
+                                          gelu_erf_exact(f1.y));
+            *reinterpret_cast<float2 *>(OutF + (size_t)r0 * N + col) = g0;
+            *reinterpret_cast<float2 *>(OutF + (size_t)(r0 + 8) * N + col) = g1;
+          } else {
+            *reinterpret_cast<__half2 *>(Out + (size_t)r0 * N + col) = h0;
+            *reinterpret_cast<__half2 *>(Out + (size_t)(r0 + 8) * N + col) = h1;
+          }
         }
     }
   } else {
@@ -581,16 +711,7 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
           const __half b0 = bias ? bias[col] : __float2half(0.f);
           const __half b1 = bias ? bias[col + 1] : __float2half(0.f);
           __half2 h0, h1;
-          memcpy(&h0, &acc[i][j][0], 4);
-          memcpy(&h1, &acc[i][j][1], 4);
-          if (CARRY) {
-            float2 f0 = __half22float2(h0);
-            float2 f1 = __half22float2(h1);
-            h0 = __floats2half2_rn(f0.x + carry[i][j][0], f0.y + carry[i][j][1]);
-            h1 = __floats2half2_rn(f1.x + carry[i][j][2], f1.y + carry[i][j][3]);
-          }
-          h0 = __hadd2(h0, __halves2half2(b0, b1));
-          h1 = __hadd2(h1, __halves2half2(b0, b1));
+          WS_REDUCE_ACC(i, j, h0, h1);
           const int r0 = i * 16 + gid;
           *reinterpret_cast<__half2 *>(sEw + swz_off<WN>(r0, j) + 2 * tig) = h0;
           *reinterpret_cast<__half2 *>(sEw + swz_off<WN>(r0 + 8, j) + 2 * tig) =
@@ -614,12 +735,39 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
           sEpi + ws * (WM * WN) + swz_off<WN>(row, c));
       const int gr = m0 + (ws / NCN) * WM + row;
       const int gc = n0 + (ws % NCN) * WN + c * 8;
-      if constexpr (EPICS)
+      if constexpr (EPIGELU) {
+        // G4.7. The 16-B staged chunk is 8 fp16 F.linear outputs; widen and
+        // activate them here, then store 32 B as two 128-bit transactions.
+        // Staging stays fp16, so the swizzle, the bank arithmetic and the
+        // shared-memory budget above are UNCHANGED and still the verified
+        // ones -- only the drain's store width differs (8 lanes x 32 B = 256 B
+        // contiguous = 2 fully-utilised 128 B transactions, same efficiency).
+        const __half2 *hp = reinterpret_cast<const __half2 *>(&v);
+        float g[8];
+#pragma unroll
+        for (int q = 0; q < 4; ++q) {
+          const float2 t = __half22float2(hp[q]);
+          g[2 * q] = gelu_erf_exact(t.x);
+          g[2 * q + 1] = gelu_erf_exact(t.y);
+        }
+        float *op = OutF + (size_t)gr * N + gc;
+        const uint4 lo = *reinterpret_cast<const uint4 *>(&g[0]);
+        const uint4 hi = *reinterpret_cast<const uint4 *>(&g[4]);
+        if constexpr (EPICS) {
+          st_global_v4_cs(op, lo);
+          st_global_v4_cs(op + 4, hi);
+        } else {
+          *reinterpret_cast<uint4 *>(op) = lo;
+          *reinterpret_cast<uint4 *>(op + 4) = hi;
+        }
+      } else if constexpr (EPICS) {
         st_global_v4_cs(Out + (size_t)gr * N + gc, v);
-      else
+      } else {
         *reinterpret_cast<uint4 *>(Out + (size_t)gr * N + gc) = v;
+      }
     }
   }
+#undef WS_REDUCE_ACC
 }
 
 // ---------------------------------------------------------------------------
@@ -724,16 +872,77 @@ void ws_gemm_kernel(const __half *__restrict__ In, const __half *__restrict__ W,
   X(49, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 128, 1, 0, 0)                      \
   X(50, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 256, 1, 0, 0)
 
+// ===========================================================================
+// G4.7 -- THE FFN LIST. A SECOND, SEPARATE X-macro list, appended after the
+// shipped one, with two extra columns (EPIGELU, ACCF32). It is a separate
+// list SPECIFICALLY so that WS_CFG_LIST above -- the 51 configs step 41
+// measured, swept and shipped from -- is not edited at all: `git diff` on
+// those 51 rows is empty, cfg ids 0-50 keep their meaning, and cfg[0] stays
+// the bitwise control for g4_4_mma_gemm cfg[11].
+//
+// WHY THESE SHAPES. run127 (results/g4_3_warpspec_modelshapes_run127.log)
+// already measured the FFN GEMMs with the shipped configs and named the
+// per-shape winners: ffn_in (K=512, N=2048) went to cfg[39] at long_seq
+// (79.44 us, x1.452) and cfg[37] at large_batch (322.32 us, x1.425), with
+// cfg[26]/cfg[33]/cfg[29] close behind. Those four tiles are carried here,
+// each in four arms:
+//     no GELU / GELU  x  fp16-accumulate / fp32-accumulate
+// so that the epilogue-fusion win and the accumulate-precision cost can be
+// read off SEPARATELY instead of bundled -- which matters because the judge
+// harness runs causal shapes only, and step 41 closed FP16 ACCUMULATION on
+// causal accuracy. ACCF32 arms exist to answer "is the epilogue fusion worth
+// anything on its own, with zero numerics change?".
+//
+// X-macro: id, BM,BN,BK, NSTAGE, NCM,NCN, NLW,NEXTRA, SMEMEPI,REGDB,SPLIT,
+//              LDM4B, EPICS, SWZG, EPIGELU, ACCF32
+#define WS_CFG_LIST_G47(X)                                                    \
+  /* 51-54: cfg[26] generalist (warpspec, 4 loaders, ldm4b).               */ \
+  X(51, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0,  1, 0, 0, 1, 0)                 \
+  X(52, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 64, 1, 0, 0, 1, 0)                 \
+  X(53, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0,  1, 0, 0, 0, 1)                 \
+  X(54, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0,  1, 0, 0, 1, 1)                 \
+  /* 55-58: cfg[39] -- run127's ffn_in winner at long_seq (1x4 grid).      */ \
+  X(55, 128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0,  1, 1, 0, 1, 0)                 \
+  X(56, 128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 64, 1, 1, 0, 1, 0)                 \
+  X(57, 128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0,  1, 1, 0, 0, 1)                 \
+  X(58, 128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0,  1, 1, 0, 1, 1)                 \
+  /* 59-62: cfg[37] -- run127's ffn_in winner at large_batch (256x128).    */ \
+  X(59, 256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 0,  1, 1, 8, 1, 0)                 \
+  X(60, 256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 64, 1, 1, 8, 1, 0)                 \
+  X(61, 256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 0,  1, 1, 8, 0, 1)                 \
+  X(62, 256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 0,  1, 1, 8, 1, 1)                 \
+  /* 63-66: cfg[33] -- 128x256 twin, second at large_batch.                */ \
+  X(63, 128, 256, 64, 2, 2, 4, 0, 0, 1, 1, 0,  1, 1, 0, 1, 0)                 \
+  X(64, 128, 256, 64, 2, 2, 4, 0, 0, 1, 1, 64, 1, 1, 0, 1, 0)                 \
+  X(65, 128, 256, 64, 2, 2, 4, 0, 0, 1, 1, 0,  1, 1, 0, 0, 1)                 \
+  X(66, 128, 256, 64, 2, 2, 4, 0, 0, 1, 1, 0,  1, 1, 0, 1, 1)                 \
+  /* 67-70: the SPLIT-64 arms of the two winners WITHOUT gelu, so the      */ \
+  /*        "plain drop-in for ffn_in" arm can be priced too, and 71-74    */ \
+  /*        the fp32-accumulate 2x4 warp grid (MT*NT=16 -> only 64 accum   */ \
+  /*        registers, which is the config ACCF32 should prefer).          */ \
+  X(67, 128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 64, 1, 1, 0, 0, 0)                 \
+  X(68, 256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 64, 1, 1, 8, 0, 0)                 \
+  X(69, 128, 256, 64, 2, 2, 4, 0, 0, 1, 1, 64, 1, 1, 0, 0, 0)                 \
+  X(70, 128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0,  1, 0, 0, 0, 0)                 \
+  X(71, 128, 128, 64, 2, 2, 4, 4, 0, 1, 0, 0,  1, 0, 0, 1, 1)                 \
+  X(72, 128, 128, 64, 2, 2, 4, 4, 0, 1, 0, 0,  1, 0, 0, 0, 1)                 \
+  X(73, 128, 128, 64, 3, 2, 4, 4, 0, 1, 0, 0,  1, 0, 0, 1, 1)                 \
+  X(74, 128, 128, 64, 2, 2, 4, 0, 0, 1, 0, 0,  1, 1, 0, 1, 1)                 \
+  /* 75-76: fp32-accumulate at the 256x128 / 128x256 tiles, 2x4-style warp */ \
+  /*        grids so MT*NT stays at 16.                                    */ \
+  X(75, 128, 256, 64, 2, 2, 8, 0, 0, 1, 0, 0,  1, 1, 0, 1, 1)                 \
+  X(76, 256, 128, 64, 2, 4, 4, 0, 0, 1, 0, 0,  1, 1, 8, 1, 1)
+
 namespace {
 struct WsDesc {
   int BM, BN, BK, NSTAGE, NCM, NCN, NLW, NEXTRA, SMEMEPI, REGDB, SPLIT;
-  int LDM4B, EPICS, SWZG;
+  int LDM4B, EPICS, SWZG, EPIGELU, ACCF32;
 };
 }  // namespace
 
 template <int BM, int BN, int BK, int NSTAGE, int NCM, int NCN, int NLW,
           int NEXTRA, int SMEMEPI, int REGDB, int SPLIT, int LDM4B, int EPICS,
-          int SWZG>
+          int SWZG, int EPIGELU, int ACCF32>
 static int ws_launch(const void *In, const void *W, const void *bias, void *Out,
                      int M, int N, int K, cudaStream_t s, size_t *smem_out) {
   constexpr int NTHREAD = (NCM * NCN + NLW + NEXTRA) * WARP_SIZE;
@@ -744,7 +953,7 @@ static int ws_launch(const void *In, const void *W, const void *bias, void *Out,
   if (M % BM || N % BN || K % BK) return -2;
   if (SPLIT != 0 && (K % (SPLIT ? SPLIT : 1))) return -3;
   auto kern = ws_gemm_kernel<BM, BN, BK, NSTAGE, NCM, NCN, NLW, NEXTRA, SMEMEPI,
-                             REGDB, SPLIT, LDM4B, EPICS, SWZG>;
+                             REGDB, SPLIT, LDM4B, EPICS, SWZG, EPIGELU, ACCF32>;
   static bool attr_set = false;
   if (!attr_set) {
     cudaError_t e = cudaFuncSetAttribute(
@@ -755,32 +964,53 @@ static int ws_launch(const void *In, const void *W, const void *bias, void *Out,
   dim3 grid(N / BN, M / BM);
   kern<<<grid, NTHREAD, smem, s>>>(reinterpret_cast<const __half *>(In),
                                    reinterpret_cast<const __half *>(W),
-                                   reinterpret_cast<const __half *>(bias),
-                                   reinterpret_cast<__half *>(Out), M, N, K);
+                                   reinterpret_cast<const __half *>(bias), Out,
+                                   M, N, K);
   return 0;
 }
 
+// The shipped list carries 14 columns; EPIGELU/ACCF32 are appended as 0 here
+// rather than edited into 51 already-measured rows.
 #define WS_CASE(i, BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS, SZ) \
   case i:                                                                        \
     return ws_launch<BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS,   \
-                     SZ>(In, W, bias, Out, M, N, K, s, smem_out);
+                     SZ, 0, 0>(In, W, bias, Out, M, N, K, s, smem_out);
+
+#define WS_CASE47(i, BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS,   \
+                  SZ, GE, AF)                                                    \
+  case i:                                                                        \
+    return ws_launch<BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS,   \
+                     SZ, GE, AF>(In, W, bias, Out, M, N, K, s, smem_out);
 
 int ws_gemm_launch(int cfg, const void *In, const void *W, const void *bias,
                    void *Out, int M, int N, int K, cudaStream_t s,
                    size_t *smem_out) {
   switch (cfg) {
     WS_CFG_LIST(WS_CASE)
+    WS_CFG_LIST_G47(WS_CASE47)
     default:
       return -1;
   }
 }
 #undef WS_CASE
+#undef WS_CASE47
 
 #define WS_ROW(i, BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS, SZ) \
-  {BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS, SZ},
+  {BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS, SZ, 0, 0},
+#define WS_ROW47(i, BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS,   \
+                 SZ, GE, AF)                                                    \
+  {BM, BN, BK, ST, NCM, NCN, NLW, NEX, EPI, RDB, SP, L4, CS, SZ, GE, AF},
 
-static const WsDesc kWsCfg[] = {WS_CFG_LIST(WS_ROW)};
+static const WsDesc kWsCfg[] = {WS_CFG_LIST(WS_ROW) WS_CFG_LIST_G47(WS_ROW47)};
 #undef WS_ROW
+#undef WS_ROW47
+
+// G4.7: the output tensor's dtype is a property of the CONFIG, not of the
+// call, so the .cpp can check it before dispatching instead of guessing.
+int ws_gemm_cfg_outf32(int cfg) {
+  if (cfg < 0 || cfg >= (int)(sizeof(kWsCfg) / sizeof(kWsCfg[0]))) return -1;
+  return kWsCfg[cfg].EPIGELU ? 1 : 0;
+}
 
 int ws_gemm_num_cfg() { return (int)(sizeof(kWsCfg) / sizeof(kWsCfg[0])); }
 
@@ -814,6 +1044,14 @@ void ws_gemm_cfg_desc(int cfg, char *buf, int buflen) {
     if (d.SPLIT) {
       n = (int)strlen(buf);
       snprintf(buf + n, buflen - n, " split%d", d.SPLIT);
+    }
+    if (d.ACCF32) {
+      n = (int)strlen(buf);
+      snprintf(buf + n, buflen - n, " ACCF32");
+    }
+    if (d.EPIGELU) {
+      n = (int)strlen(buf);
+      snprintf(buf + n, buflen - n, " GELU->fp32");
     }
   }
 }
