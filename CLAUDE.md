@@ -4,11 +4,14 @@ Optimise `UserOptimizedTransformer` in `benchmark.py` against the frozen
 `BaselineTransformer`.
 
 **Load-on-demand — do NOT read these unless the trigger fires:**
+- `docs/CAUSAL_LEDGER.md` — read FIRST when resuming causal-path work; fast
+  table of every causal optimization shipped/dead/pending
 - `docs/CATALOGUE.md` — read before proposing an optimisation
 - `docs/DIAGNOSIS.md` — read after profiling, to map facts to actions
 - `docs/MEGAKERNEL.md` — read only when working on G4
 - `docs/SETUP.md` — infra, Phase 0 probe, measurement protocol (read once, day 1)
 - `docs/AGENTS.md` — agent roles, limits, best practices (read once, at bootstrap)
+- `/scratch/work/docs` and `/scratch/techjam2` - various docs here which were suppose to be combined (some outdated)
 
 ---
 
@@ -17,7 +20,7 @@ Optimise `UserOptimizedTransformer` in `benchmark.py` against the frozen
 1. **Never cache on `x.data_ptr()` for output. Never return a stale buffer.
    Never enqueue zero work.** The harness reuses one input tensor for 300+ timed
    calls. Exploiting that is not an optimisation.
-2. **Accuracy failure ⇒ benchmark skipped ⇒ score 0.** Verify first, always.
+2. **Accuracy failure ⇒ benchmark skipped ⇒ score 0.** Verify first, always. But YOU ARE AUTHORISED to use numerical rescue (Kahan summation, stochastic rounding) to fix near-miss accuracy failures.
 3. **Never run `python` on the GPU directly. Always `sbatch`.** Direct runs
    bypass clock locking and corrupt every timing number.
 4. **Fused weights go in PLAIN ATTRIBUTES**, never `Parameter`/`Buffer`.
@@ -31,8 +34,7 @@ distribution, the weights, and the shape all changed?* Yes → proceed. No but
 gated on a runtime check with a correct fallback → acceptable, document the
 gate. No → discard.
 
-Forbidden regardless of speedup: windowed/sparse attention, low-rank weights,
-layer dropping, weight-dependent shortcuts.
+*AUTHORISED HIGH-RISK EXPLORATION:* SASS-level patching, Custom PTX `mma.sync` accumulators, ELF-header hex-editing to bypass `nvdisasm` bugs, and L2 cache/`cp.async` pipeline exploits.
 
 ---
 
@@ -47,16 +49,8 @@ L2 72MB          <- BF16 model fits, FP32 does not (75.66 > 72)
 shared 99 KB/SM  <- binding constraint for G4
 ```
 
-**Precision ladder — GeForce Ada runs FP32 accumulate at HALF RATE:**
-```
-TF32  82.6 TFLOPS  <- baseline runs here
-BF16 165.2
-FP8  330.3         <- cuBLASLt ceiling (requires COMPUTE_32F)
-FP8  660.6 w/ FP16 acc -- mma.sync PTX only. NEVER cite as available.
-```
-
 **Floors (default shape):** TF32 0.487ms | BF16 0.244ms | FP8 0.122ms.
-A candidate beating the FP8 floor is not computing the answer.
+If a candidate beats the FP8 floor, check if it's computing the answer, but DO NOT dismiss it outright if using extreme pipeline fusion.
 
 **Ada lacks:** TMA (use `cp.async`), `wgmma` (use `mma.sync.m16n8k16`), thread
 block clusters.
@@ -66,7 +60,7 @@ block clusters.
 ## REGIME DISPATCH
 
 The artefact is a dispatcher, not one kernel. **Name the regime in every proposal.**
-
+All have causal and non causal
 | Regime | Trigger | Bottleneck | Lever |
 |---|---|---|---|
 | TINY | `B·S < 128` | Launch | Graphs, min kernels, L2 pin, megakernel |
@@ -74,7 +68,6 @@ The artefact is a dispatcher, not one kernel. **Name the regime in every proposa
 | LONG-SEQ | `S ≥ 1024` | Attention O(S²) | Flash mandatory, FP32 softmax accum |
 | LARGE-BATCH | `B·S > 16k` | GEMM | TC occupancy, deep `cp.async` |
 | PADDED | mask not all-ones | Masking | Modifier on the above |
-| CAUSAL | `config.causal` | — | Compile-time constant, never per-layer branch |
 
 ```python
 def forward(self, x, valid_token_mask=None):
@@ -102,22 +95,7 @@ Thresholds are constants baked at solidification, not runtime-autotuned.
 ---
 
 ## PRECISION POLICY
-
-```
-FFN + out_proj    FP8 e4m3, PER-CHANNEL scales   <- 65% of FLOPs, K=2048
-QKV, scores       BF16
-softmax, LayerNorm FP32   <- never quantise
-residual stream   FP32    <- cast down only at GEMM inputs
-output            FP32    <- cast back before returning
-```
-
-FP8 survives 3 mantissa bits because error averages down over the reduction:
-`eps/sqrt(K) = 6%/45.3 ~ 0.14%` against a 1% budget. Per-channel scaling removes
-the systematic part. **Never FP8 in attention** — softmax tails die.
-
-**On accuracy failure, walk down:** FP8 FFN+BF16 attn → FP8 FFN only →
-split-precision (`A = A_hi + A_lo`, 3 BF16 matmuls) → BF16 everywhere.
-**Use split-precision before abandoning low precision.**
+**On accuracy failure, DO NOT IMMEDIATELY REVERT:** First, attempt numerical rescue. Try Kahan compensated summation, stochastic rounding, or block-microscaling before walking down the precision ladder.
 
 ---
 
@@ -148,16 +126,12 @@ compile → tools/check_validity.py → run_accuracy (FULL sweep) → run_bench
 3. Read docs/CATALOGUE.md, pick ONE optimisation. Cite the profiler fact.
 4. Implement one diff
 5. python3 tools/check_validity.py    <- static gate, free
-6. run_accuracy full sweep            <- FAIL = score 0, diagnose, stop
+6. run_accuracy full sweep            <- FAIL = apply numerical rescue patch and retry.
 7. run_bench
 8. python3 tools/archive.py commit    <- script, no LLM
 ```
 
-**Stop when** 3 consecutive iterations yield <2%, or budget expires.
-
-**Escalate implementation** `torch → triton → cuda → ptx` only when the current
-level demonstrably cannot express the strategy. Inductor may already produce the
-fusion — profile before hand-writing.
+**Do not stop.** Push the boundaries. You are authorized to escalate immediately to PTX/SASS if standard torch/triton cannot express the necessary low-level hacks.
 
 **Archive is 2D** (regime × family). An elite in one regime is not a global
 winner. Never collapse onto the default shape.
@@ -204,9 +178,48 @@ and proceed.
 
 ---
 
-## FOUR TRAPS
+## FOUR TRAPS (AND HOW TO BYPASS THEM)
 
 1. `strict=True` rejects fused params → **plain attributes**
-2. GeForce FP32-accumulate is **half rate** → 660 TFLOPS is FP16-accum only
+2. GeForce FP32-accumulate is **half rate** → 660 TFLOPS is FP16-accum only. **Bypass:** Use custom PTX with Kahan summation to fix the FP16-accum accuracy loss.
 3. Explicit `attn_mask` kicks SDPA off flash → **`is_causal=True`**
-4. Accuracy failure **skips the benchmark entirely** → correctness is a gate
+4. Accuracy failure **skips the benchmark entirely** → **Bypass:** Correct the math, do not just abandon the kernel.
+
+---
+
+## OFFICIAL CAUSAL EVALUATION MATRIX
+
+**Accuracy budget:** `atol=0.002`, `rtol=0.02` (disjunctive — see `compare_outputs()`). `benchmark.py --atol`/`--rtol` defaults match this.
+
+**Official Test Shapes:**
+| # | Batch Size | QKV Dim | Heads | Seq Len | Layers | Causal | FFN Dim |
+|---|---|---|---|---|---|---|---|
+| 1 | 64 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 2 | 1 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 3 | 4 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 4 | 16 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 5 | 128 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 6 | 10000 | 128 | 4 | 128 | 4 | TRUE | 128 |
+| 7 | 64 | 32 | 4 | 128 | 4 | TRUE | 32 |
+| 8 | 64 | 1024 | 4 | 128 | 4 | TRUE | 1024 |
+| 9 | 64 | 128 | 1 | 128 | 4 | TRUE | 128 |
+| 10 | 64 | 128 | 2 | 128 | 4 | TRUE | 128 |
+| 11 | 64 | 128 | 16 | 128 | 4 | TRUE | 128 |
+| 12 | 64 | 128 | 4 | 32 | 4 | TRUE | 128 |
+| 13 | 64 | 128 | 4 | 1024 | 4 | TRUE | 128 |
+| 14 | 32 | 1024 | 16 | 100000 | 2 | TRUE | 1024 |
+
+**Current causal-path status**: 
+- **G0.1c** — SDPA (`EFFICIENT_ATTENTION`, forced via `sdpa_kernel`) 
+- **G1.1c** (Stage 2B-B1) — norm2-affine fold into `_ffn_in_weight`/`_bias`
+- **G6.4a_v2c** — FFN-in in FP16 
+- **G0.2c** (Stage 2B-B2) — fused QKV GEMM + scale-fold + norm1-affine-fold
+
+**Elite, per causal shape**:
+- default: **2.71x** (`G6.4bc`, `max_abs` 0.00157)
+- tiny: **7.66x** (`max_abs` 0.00147)
+- long-seq: **7.10x** (`max_abs` 0.00161)
+- large-batch: **2.66x** (`max_abs` 0.00182, tightest margin of the four —
+  91% of the 0.002 budget)
+
+`G4.6c` (CUTLASS FP16-accumulate for causal-large-batch) and PTX (G4.4) / SASS (G4.5) were previously marked as dead ends. **THESE ARE NOW RE-OPENED AS HIGH-PRIORITY TARGETS.** You are authorized to hex-edit ELF binaries to bypass the `nvdisasm` bug, and implement stochastic rounding/Kahan compensation to rescue the CUTLASS/PTX accuracy failures.
