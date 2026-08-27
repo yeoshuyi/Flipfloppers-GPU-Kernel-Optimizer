@@ -10,16 +10,24 @@ document while acting; commit after every meaningful unit.
 ## NOW
 
 - **Iteration:** 4 — T3: extend G4.7 fused ffn_in+GELU to memory-bound row 6
-- **Phase:** wiring smoke running; ship-verify NOT yet submitted
-- **Phase-0 RESULT (run148):** cfg 58 (ACCF32, precision-neutral) at d128/ffn128 = x0.99 (tok 8192),
-  x1.01 (tok 65536), **x1.66 (tok 1.28M)**. Extended `_ensure_ffn_plan` with a `tok>=2^19` admit
-  regime; committed `<hash>`. Gate logic verified for all 14 official rows.
-- **Next concrete action:** when wiring smoke passes (expect `_ffn_cur=58` at the d128 tok-1.05M
-  case, cfg58≈fallback) → submit `jobs/g5_2_ship_verify.sbatch` (BEFORE=09dee91, 40-trial AFTER,
-  official rows 6/13/1/8 + int_large_batch_causal + nc_large_batch). If smoke FAILS → fix wiring,
-  re-smoke (do NOT submit the 1.5h ship job on a broken gate).
-- **After ship-verify:** if row6 max_abs unchanged + speedup ≥ +0.3% + all PASS + controls unchanged
-  → PROGRESS step 46 (ship), ACCURACY_BUDGET §8 row, git commit. Else document negative.
+- **Phase:** 40-trial ship-verify running (job 150)
+- **Phase-0 (run148):** cfg 58 at d128/ffn128 = x0.99/x1.01/**x1.66** at tok 8192/65536/1.28M.
+- **Wiring smoke PASS (run149):** cfg 58 engages at d128/tok-1M, cfg58 vs fallback 9.3e-4
+  (precision-neutral), cfg58≠cfg51 (genuinely running). Gate-off controls all None.
+- Committed: `2d5c71a` (gate), `93e55b7` (RESUME), `<smoke-pass hash>`.
+- **In-flight:** job **150** = `jobs/g5_2_ship_verify.sbatch` → `results/g5_2_ship_verify_run150.log`.
+  BEFORE=09dee91 (5 trials) / AFTER working tree (40 trials). Shapes: off_row6 (engages),
+  off_row13/row1/row8 (gate-off controls), int_large_batch_causal (regime-1 regression check),
+  nc_large_batch (non-causal control). ~1.5h (row 6 baseline is B=10000).
+- **Next concrete action:** when 150 done → `cp /scratch/techjam2/runs/150.out
+  results/g5_2_ship_verify_run150.log`; parse BEFORE/AFTER per shape.
+  SHIP iff: row6 all-40 PASS + max_abs matches BEFORE's tail (precision-neutral) + speedup ≥ +0.3%
+  + every control unchanged within noise. Then: PROGRESS step 46, ACCURACY_BUDGET §8 ledger row,
+  refresh SUBMISSION/DOCUMENTATION causal-row6 note, git commit. (No archive cell fits row 6's
+  exact shape — document in PROGRESS/ACCURACY_BUDGET instead.)
+  NEGATIVE (regression / accuracy fail / <0.3%): revert the `_FFN_MEMBOUND_TOKENS` gate clause,
+  regen entrypoint, document step 46 negative, commit. Then T3 route (b) fused-ffn_out kernel,
+  or declare loop at end-state.
 - **Approach:** extend G4.7's shipped fused ffn_in+GELU kernel (precision-neutral, ACCF32 cfg 58)
   to the memory-bound d128 big-token rows (6: tok 1.28M, 13: tok 65536), where the [tok,128] hidden
   round-trip G4.7 eliminates dominates. run132 only tested d128 at tok 8192/65536 (x0.93-0.99);
