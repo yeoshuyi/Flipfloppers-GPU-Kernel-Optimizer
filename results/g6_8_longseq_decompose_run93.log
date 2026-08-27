@@ -1,0 +1,21 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+ext available: True
+  round 0: none  5419.0 in  5397.5 (md=0.00e+00)
+        in: out  5406.7 (md=0.00e+00)
+        out: both  5345.3 (md=0.00e+00)
+        both: IN[id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8] OUT[id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=1]
+  round 1: none  5419.0 in  5406.7 (md=0.00e+00) out  5410.8 (md=0.00e+00) both  5395.5 (md=0.00e+00)
+  round 2: none  5403.6 in  5333.0 (md=0.00e+00)
+        in: IN[id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8] out  5404.2 (md=0.00e+00) both  5360.6 (md=0.00e+00)
+        both: IN[id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8] OUT[id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=1]
+  round 3: none  5421.1 in  5407.7 (md=0.00e+00) out  5400.6 (md=0.00e+00) both  5316.6 (md=0.00e+00)
+        both: IN[id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8] OUT[id=21 tile=20 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2]
+  round 4: none  5404.7 in  5399.6 (md=0.00e+00) out  5398.5 (md=0.00e+00) both  5341.2 (md=0.00e+00)
+        both: IN[id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8] OUT[id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=1]
+
+  variant   median_us    min_us   x vs none (median)
+  none        5419.0    5403.6    1.0000x  (min 1.0000x)
+  in          5399.6    5333.0    1.0036x  (min 1.0132x)
+  out         5404.2    5398.5    1.0027x  (min 1.0009x)
+  both        5345.3    5316.6    1.0138x  (min 1.0164x)

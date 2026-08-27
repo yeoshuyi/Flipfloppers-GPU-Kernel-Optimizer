@@ -2155,3 +2155,87 @@ tiny — the only regime where the launch count is even a plausible bottleneck �
 using cuBLASLt's own in-place split-K, which changes nothing except the number
 of launches. That is a stronger closure than step 20's, because it is an
 experiment rather than an inference.
+
+### 36. G6.8 (extend G6.6's cuBLASLt algorithm to `ffn_in` at LONG-SEQ, M=8192) — clean negative, not integrated
+
+**Hypothesis.** Re-reading run 71
+(`results/g6_6_cublaslt_algo_probe_run71.log`, the `M=8192` block — the
+long_seq shape's own token count, B=8 x S=1024), one result was never
+chased: `ffn_in` K=512 N=2048 **with bias** shows
+`pytorch F.linear 274.08 us` vs `BEST -> algo[3] 245.22 us`,
+**x1.1177 (WIN)**. `ffn_out` at the same M is noise (x1.04). Step 33 killed
+a structurally identical M=1024 "win" as an artifact of its own eager
+baseline, but that had never been checked at M=8192, where inductor's
+fusion and kernel-selection heuristics could differ.
+
+**Two tells were already visible inside run 71 itself and both held up.**
+The cuBLASLt candidate times are the *same* with and without bias (244-253
+vs 245-254 us); the entire 1.1177x lives in the reference, which moves
+251.55 -> 274.08 us when a bias is added. The pure-algorithm win at this
+shape is **x1.0289 (bias=False)** — noise. And run 73
+(`results/g6_6_bias_path_probe_run73.log`, "FFN block, M=8192") had already
+measured the whole FFN block under CUDA-graph capture at **x0.9983**.
+
+**Fresh same-session baseline first** (step 33's drift lesson), job 91,
+`results/g6_8_longseq_baseline_recheck_run91.log`: long_seq **4.566x**,
+`max_abs = 0.000728816` — matches the shipped reference sweep run 90
+(4.562x, identical `max_abs`). No drift this session; deltas below are
+trustworthy as measured.
+
+**The decisive measurement** (job 92, `probes/g6_8_longseq_ffn_in_probe.py`,
+`results/g6_8_longseq_ffn_in_probe_run92.log`), using step 34's fair
+protocol (CUDA-graph replay + profiler kernel time + kernel names +
+bit-identity):
+
+* Under graph capture, eager `F.linear(x, w, b)` and the "winning" cuBLASLt
+  algo **dispatch the same kernel**,
+  `cutlass_80_tensorop_s1688gemm_128x128_16x5_tn_align4`, at
+  **244.49 vs 244.46 us (x1.0001)**, `maxdiff = 0.000e+00`. Step 34's tell:
+  one kernel cannot be 1.12x faster than itself. The same eager loop run 71
+  used reproduces the artifact here (264.98 us with bias vs 248.00 without,
+  vs 244.49 captured) — the bias "penalty" is the harness, not the GPU.
+* **`torch.compile`'s real lowering already beats the isolated probe's
+  premise at M=8192, exactly as at M=1024.** The shipped compiled model's
+  `ffn_in` GEMM is a *different tile* from eager's —
+  `cutlass_80_tensorop_s1688gemm_256x128_16x3_tn_align4` at
+  **248.02 us/launch** (x6/forward) — already within 0.9% of the best
+  cuBLASLt candidate (245.75 us). There is **no separate bias-add kernel**:
+  inductor folds `ffn_in`'s bias into `triton_poi_fused_addmm_gelu_view_2`
+  (which also does the GELU) and `ffn_out`'s into the LayerNorm/residual
+  fusions. There is no addmm penalty left to recover.
+
+**Decomposition of the residual** (job 93,
+`probes/g6_8_longseq_decompose.py`,
+`results/g6_8_longseq_decompose_run93.log`). Job 92's end-to-end A/B of the
+whole G6.6 path at long_seq measured x1.0209 bit-identical, which is not
+`ffn_in`'s GEMM — so the FFN branch was made selectable per half and all
+four variants timed interleaved, 5 rounds, on the real compiled model:
+
+| variant | median us | x vs shipped |
+|---|---|---|
+| shipped (`F.linear` both) | 5419.0 | 1.0000 |
+| cuBLASLt `ffn_in` only | 5399.6 | **1.0036** |
+| cuBLASLt `ffn_out` only | 5404.2 | 1.0027 |
+| cuBLASLt both | 5345.3 | 1.0138 |
+
+**`ffn_in` alone is 0.36% — the stated hypothesis is dead**, and it dies for
+precisely step 33's reason. Every round was bit-identical (`md = 0.00e+00`).
+
+**Not integrated.** `benchmark.py` and `csrc/cublaslt_algo.cpp` are
+untouched; G6.6 stays scoped to `tok <= _LT_MAX_TOKENS = 127`. The only
+non-noise number is "both" at 1.4-1.6%, which (a) is not the thing under
+test, (b) is below CLAUDE.md's own 2%/iteration stop threshold, and (c)
+would be bought by exposing long_seq — a large already-banked G6.4b win at
+4.566x — to exactly the risk step 33 named when it scoped the gate to TINY:
+selection is by measured speed alone, and run 71 shows `ffn_out` at M=8192
+*does* have split-K candidates with `maxdiff` 2.1e-5/2.7e-5 that a different
+cuBLAS build or a noisier calibration could pick. Job 92 already saw the
+calibration choose three different `ffn_out` algorithms across three rounds.
+Not worth 1.4%.
+
+**Lesson (third instance of the same one).** Steps 33, 34 and now 36 all
+died the same way: an isolated probe's *reference* was slower than what
+`torch.compile` actually emits. The cheap tell keeps working — same kernel
+name plus bit-identical output means the delta is the harness. Worth
+checking the compiled model's *actual* kernel before believing any
+GEMM-level probe again.
