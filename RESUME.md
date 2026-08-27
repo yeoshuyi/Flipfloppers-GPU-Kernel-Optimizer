@@ -9,8 +9,25 @@ document while acting; commit after every meaningful unit.
 
 ## NOW
 
-- **Iteration:** 6 — resolve whether T3(a)'s step-46 revert was a FALSE ALARM
-- **Phase:** g5_3 re-run with forced-d128 cases + census-based verdict (job in flight)
+- **Iteration:** 6 / T3(b) — OUT-PARAMETER fused-FFN op to survive capture at d128
+- **Phase:** g5_3 capture-verify of the out-param op (job in flight)
+- **RESOLVED (job 153):** step 46 was CORRECT. Census: d512 `ws_gemm_kernel` present (engaged);
+  d128 forced-on (tok 1.05M and row-6 shape) `ws_gemm_kernel` ABSENT + diff exactly 0.0 → genuine
+  silent fallback. The returning op's internal 655MB alloc doesn't survive cudagraph capture.
+- **T3(b) attempt (commit `<hash>`):** added `g43::ffn_gelu_linear_out` (mutates_args, no return,
+  uses the existing C++ `ws_gemm` out-param entry). `_ensure_ffn_plan` re-adds the tok≥2^19 regime,
+  sets `self._ffn_membound`; the traced causal FFN block pre-allocates `act` and calls the out-param
+  op when membound. Regime 1 (d512) untouched.
+- **Next concrete action:** read `results/g5_3_g47_capture_verify_run<J>.log`.
+  - d128 forced cases now show `ws_gemm_kernel` PRESENT → out-param op survives capture → run the
+    40-trial ship-verify (BEFORE = `G4_7_FFN_CFG=-1` forced-fallback build so the speedup is a clean
+    matched comparison, not 5-vs-40-trial confounded) on rows 6/13/1/8 + int_lb + nc_lb.
+    If row 6 speedup ≥ +0.5% and all PASS + max_abs neutral → ship: step 48, ACCURACY_BUDGET §8, commit.
+  - d128 still ABSENT → out-param op also fails. Revert the T3 code (keep the op def, gate off),
+    document step 48 negative. Then declare official-matrix precision-neutral optimization at
+    END-STATE, write a closing summary in PROGRESS, and pause the loop for user direction.
+- **In-flight jobs:** g5_3 v4 — sbatch `jobs/g5_3_capture_verify.sbatch` → `results/g5_3_g47_capture_verify_run<J>.log`. ~15 min.
+- **Pending decisions:** T3(b) ship vs official-matrix end-state — this job decides.
 - **THE KEY UNCERTAINTY:** job 152 showed d512 has `ws_gemm_kernel` x30 in the captured trace
   (ENGAGED) but cfg58-vs-fallback replay diff = 2.4e-7 (fp32 epsilon — precision-neutral, NOT a
   fallback). My step-46 "silent fallback" call for T3/d128 was based on run150's "BEFORE≡AFTER
