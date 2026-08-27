@@ -1,22 +1,21 @@
-// G5.MEGA -- per-sequence fused causal transformer megakernel, specialist for
-// official row 6 (B=10000, d_model=128, num_heads=4, seq_len=128, layers=4).
+// G5.MEGA v2 -- per-sequence fused causal transformer megakernel, row-6
+// specialist (B=10000, d_model=128, num_heads=4, seq_len=128, layers=4).
 //
-// ONE CUDA block per sequence; BLOCKDIM = SEQ threads; thread i owns query row i.
-// The fp32 residual stream `x` [SEQ][D] lives in shared memory for the entire
-// 4-layer forward -- zero HBM round-trips for the residual (step 43: that
-// traffic is 38.9% of row 6's forward).
+// ONE block per sequence; 128 threads = 4 warps.  The fp32 residual row `x[D]`
+// lives in REGISTERS (thread t owns query row t) for the whole 4-layer
+// forward -- zero HBM traffic for the residual (step 43: 38.9% of row 6).
+// Shared = two [SEQ][D] fp16 buffers sK, sV (64 KB).  qkv output round-trips a
+// per-block [SEQ][3D] fp16 global scratch (the d_model=128 shared budget won't
+// hold n1 + q + k + v at once).
 //
-// Precision is matched op-for-op to benchmark.py::_optimized_forward_causal so
-// this is precision-neutral by construction:
-//   * norm1/norm2  : pure (x-mean)*rsqrt(var+eps), fp32   (affine folded into weights)
-//   * qkv/out_proj/ffn_in GEMMs : fp16 storage, FP32 accumulate
-//   * attention    : fp16 q/k/v upcast to fp32, fp32 softmax w/ max-subtraction,
-//                    fp32 P, fp32 PV accumulate    (>= flash accuracy)
-//   * ffn hidden   : rounded to fp16 (matches ffn_hidden_fp16), then fp32 GELU(erf)
-//   * ffn_out      : fp32 weights, fp32 accumulate
-//   * final_norm   : (x-mean)*rsqrt * weight + bias, fp32   (affine kept)
-//
-// CORRECTNESS-FIRST: scalar loops, no mma.sync. Slow. Phase 1 optimises.
+// qkv / out_proj / ffn_in : mma.sync m16n8k16 f32-accumulate (matches the
+//   shipped fp16-storage/fp32-accum GEMMs).  A from shared, B streamed from L2.
+// ffn_out : scalar fp32, GELU(erf) inline on the fp16-rounded hidden --
+//   matches F.gelu(ffn_hidden_fp16.to(fp32)) then the fp32 nn.Linear.
+// attention : scalar per query row, online fp32 softmax + max-subtraction.
+// Precision matched op-for-op to benchmark.py::_optimized_forward_causal
+// (attention runs fp32 rather than fp16 flash -- >= shipped accuracy,
+//  verified in probes/g5_5_mega_correct.py).
 
 #include <cuda_fp16.h>
 #include <math.h>
@@ -27,57 +26,119 @@
 
 namespace {
 
-constexpr int D = 128;      // d_model
-constexpr int H = 4;        // num_heads
-constexpr int HD = D / H;   // head_dim = 32
+constexpr int D = 128;
+constexpr int H = 4;
+constexpr int HD = D / H;         // 32
 constexpr int SEQ = 128;
-constexpr int NL = 4;       // layers
-constexpr int FF = 128;     // ffn_dim
+constexpr int NL = 4;
+constexpr int FF = 128;
+constexpr int NW = 4;
+constexpr int WROWS = SEQ / NW;   // 32
+constexpr int MT = WROWS / 16;    // 2
+constexpr int KB = D / 16;        // 8
 constexpr float LN_EPS = 1e-5f;
-constexpr float kAlpha = 0.7071067811865475f;  // 1/sqrt(2), for erf-GELU
+constexpr float kAlpha = 0.7071067811865475f;
 
 __device__ __forceinline__ float gelu_erf(float v) {
   return v * 0.5f * (1.0f + erff(v * kAlpha));
 }
 
-// Per-layer weight pointers, all device pointers into the stacked tensors.
-struct Layer {
-  const __half *qkv_w;  // [3D][D]
-  const __half *qkv_b;  // [3D]
-  const __half *op_w;   // [D][D]
-  const __half *op_b;   // [D]
-  const __half *fi_w;   // [FF][D]
-  const __half *fi_b;   // [FF]
-  const float  *fo_w;   // [D][FF]
-  const float  *fo_b;   // [D]
-};
+__device__ __forceinline__ void mma_m16n8k16(float (&c)[4], const uint32_t (&a)[4],
+                                             const uint32_t (&b)[2]) {
+  asm volatile(
+      "mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 "
+      "{%0,%1,%2,%3}, {%4,%5,%6,%7}, {%8,%9}, {%0,%1,%2,%3};\n"
+      : "+f"(c[0]), "+f"(c[1]), "+f"(c[2]), "+f"(c[3])
+      : "r"(a[0]), "r"(a[1]), "r"(a[2]), "r"(a[3]), "r"(b[0]), "r"(b[1]));
+}
 
-__global__ void mega_causal_kernel(const float *__restrict__ xin,   // [B][SEQ][D]
-                                   float *__restrict__ xout,        // [B][SEQ][D]
-                                   const __half *qkv_w, const __half *qkv_b,
-                                   const __half *op_w, const __half *op_b,
-                                   const __half *fi_w, const __half *fi_b,
-                                   const float *fo_w, const float *fo_b,
-                                   const float *fn_w, const float *fn_b,
-                                   int B) {
-  const int b = blockIdx.x;
-  const int i = threadIdx.x;           // query row
-  if (b >= B) return;
-
-  extern __shared__ float smem[];
-  float *xs = smem;                    // [SEQ][D] fp32   -> SEQ*D*4 bytes
-  __half *kh = (__half *)(xs + SEQ * D);  // [SEQ][HD] fp16
-  __half *vh = kh + SEQ * HD;             // [SEQ][HD] fp16
-
-  // ---- load residual row ----
-  const float *xrow_in = xin + (size_t)b * SEQ * D;
+// Y[SEQ][N] = Ash[SEQ][D](fp16) @ Wg[N][D](fp16, row-major)^T   (no bias).
+// Warp `warp` owns rows [warp*WROWS : +WROWS].  One n8-tile at a time so the
+// live accumulator is MT*4 floats.  Ash MUST stay valid for the whole call
+// (the sink must not write back into Ash).  N multiple of 8.
+template <int N, class Sink>
+__device__ void gemm_rowreg(const __half *Ash, const __half *Wg, int warp,
+                            int lane, Sink sink) {
+  const int rb = warp * WROWS;
+  const int qlo = lane >> 2;
+  const int qk = (lane & 3) * 2;
+  constexpr int NT = N / 8;
+#pragma unroll 1
+  for (int j = 0; j < NT; ++j) {
+    float acc[MT][4];
 #pragma unroll
-  for (int d = 0; d < D; ++d) xs[i * D + d] = xrow_in[i * D + d];
-  __syncthreads();
+    for (int i = 0; i < MT; ++i)
+#pragma unroll
+      for (int e = 0; e < 4; ++e) acc[i][e] = 0.f;
+#pragma unroll
+    for (int ks = 0; ks < KB; ++ks) {
+      const int k0 = ks * 16;
+      const __half *w = Wg + (size_t)(j * 8 + qlo) * D + k0 + qk;
+      __half b0[2] = {w[0], w[1]}, b1[2] = {w[8], w[9]};
+      uint32_t bf[2] = {*reinterpret_cast<uint32_t *>(b0),
+                        *reinterpret_cast<uint32_t *>(b1)};
+#pragma unroll
+      for (int i = 0; i < MT; ++i) {
+        const int ar = rb + i * 16 + qlo;
+        const __half *p0 = Ash + ar * D + k0 + qk;
+        const __half *p1 = Ash + (ar + 8) * D + k0 + qk;
+        __half a0[2] = {p0[0], p0[1]}, a1[2] = {p1[0], p1[1]};
+        __half a2[2] = {p0[8], p0[9]}, a3[2] = {p1[8], p1[9]};
+        uint32_t af[4] = {*reinterpret_cast<uint32_t *>(a0),
+                          *reinterpret_cast<uint32_t *>(a1),
+                          *reinterpret_cast<uint32_t *>(a2),
+                          *reinterpret_cast<uint32_t *>(a3)};
+        mma_m16n8k16(acc[i], af, bf);
+      }
+    }
+#pragma unroll
+    for (int i = 0; i < MT; ++i) {
+      const int r = rb + i * 16 + qlo;
+      const int c = j * 8 + qk;
+      sink(r, c + 0, acc[i][0]);
+      sink(r, c + 1, acc[i][1]);
+      sink(r + 8, c + 0, acc[i][2]);
+      sink(r + 8, c + 1, acc[i][3]);
+    }
+  }
+}
 
-  // per-thread persistent context accumulator across heads (fp16, matches
-  // the fp16 `context` the shipped path feeds to out_proj)
-  __half ctx[D];
+__global__ __launch_bounds__(128) void mega_kernel(
+    const float *__restrict__ xin, float *__restrict__ xout,
+    __half *__restrict__ qkv_scratch,            // [B][SEQ][3D]
+    const __half *qkv_w, const __half *qkv_b, const __half *op_w,
+    const __half *op_b, const __half *fi_w, const __half *fi_b,
+    const float *fo_w, const float *fo_b, const float *fn_w, const float *fn_b,
+    int B) {
+  const int b = blockIdx.x;
+  if (b >= B) return;
+  const int tid = threadIdx.x;
+  const int warp = tid >> 5, lane = tid & 31;
+
+  extern __shared__ __half smem[];
+  __half *sK = smem;                 // [SEQ][D]
+  __half *sV = sK + SEQ * D;         // [SEQ][D]
+  __half *qkvg = qkv_scratch + (size_t)b * SEQ * 3 * D;
+
+  float xr[D];
+  const float *xin_row = xin + (size_t)b * SEQ * D + tid * D;
+#pragma unroll
+  for (int d = 0; d < D; ++d) xr[d] = xin_row[d];
+
+  auto ln_to = [&](__half *dst) {
+    float mean = 0.f;
+#pragma unroll
+    for (int d = 0; d < D; ++d) mean += xr[d];
+    mean *= (1.f / D);
+    float var = 0.f;
+#pragma unroll
+    for (int d = 0; d < D; ++d) { float t = xr[d] - mean; var += t * t; }
+    var *= (1.f / D);
+    float inv = rsqrtf(var + LN_EPS);
+#pragma unroll
+    for (int d = 0; d < D; ++d)
+      dst[tid * D + d] = __float2half((xr[d] - mean) * inv);
+  };
 
   for (int L = 0; L < NL; ++L) {
     const __half *QKVW = qkv_w + (size_t)L * 3 * D * D;
@@ -89,176 +150,117 @@ __global__ void mega_causal_kernel(const float *__restrict__ xin,   // [B][SEQ][
     const float *FOW = fo_w + (size_t)L * D * FF;
     const float *FOB = fo_b + (size_t)L * D;
 
-    // ---------- norm1 (no affine) -> n1 in registers (fp16) ----------
-    float mean = 0.f;
-#pragma unroll
-    for (int d = 0; d < D; ++d) mean += xs[i * D + d];
-    mean *= (1.f / D);
-    float var = 0.f;
+    // ---- qkv: n1 -> sK, GEMM -> global scratch ----
+    ln_to(sK);
+    __syncthreads();
+    gemm_rowreg<3 * D>(sK, QKVW, warp, lane, [&](int r, int n, float v) {
+      qkvg[r * 3 * D + n] = __float2half(v + __half2float(QKVB[n]));
+    });
+    __threadfence_block();
+    __syncthreads();
+    // stage k -> sK, v -> sV
 #pragma unroll
     for (int d = 0; d < D; ++d) {
-      float t = xs[i * D + d] - mean;
-      var += t * t;
+      sK[tid * D + d] = qkvg[tid * 3 * D + D + d];
+      sV[tid * D + d] = qkvg[tid * 3 * D + 2 * D + d];
     }
-    var *= (1.f / D);
-    float inv = rsqrtf(var + LN_EPS);
-    __half n1[D];
-#pragma unroll
-    for (int d = 0; d < D; ++d)
-      n1[d] = __float2half((xs[i * D + d] - mean) * inv);
+    __syncthreads();
 
-    // ---------- attention, head by head ----------
+    // ---- attention (online fp32 softmax), thread tid = query row ----
+    __half ctx[D];
+#pragma unroll
     for (int h = 0; h < H; ++h) {
-      // q_i / k_i / v_i for this head: [HD] each, from n1 @ QKVW rows
-      float qi[HD];
-#pragma unroll
-      for (int e = 0; e < HD; ++e) {
-        int jq = 0 * D + h * HD + e;   // q block
-        int jk = 1 * D + h * HD + e;   // k block
-        int jv = 2 * D + h * HD + e;   // v block
-        float aq = __half2float(QKVB[jq]);
-        float ak = __half2float(QKVB[jk]);
-        float av = __half2float(QKVB[jv]);
-#pragma unroll
-        for (int k = 0; k < D; ++k) {
-          float nk = __half2float(n1[k]);
-          aq += nk * __half2float(QKVW[(size_t)jq * D + k]);
-          ak += nk * __half2float(QKVW[(size_t)jk * D + k]);
-          av += nk * __half2float(QKVW[(size_t)jv * D + k]);
-        }
-        qi[e] = aq;
-        kh[i * HD + e] = __float2half(ak);
-        vh[i * HD + e] = __float2half(av);
-      }
-      __syncthreads();
-
-      // online softmax over keys j = 0..i (causal), scale = 1.0
-      float m = -CUDART_INF_F;
-      float l = 0.f;
-      float acc[HD];
+      float m = -CUDART_INF_F, l = 0.f, acc[HD];
 #pragma unroll
       for (int e = 0; e < HD; ++e) acc[e] = 0.f;
-      for (int j = 0; j <= i; ++j) {
+      const __half *qrow = qkvg + tid * 3 * D + h * HD;   // this thread's q, head h
+      for (int j = 0; j <= tid; ++j) {
         float s = 0.f;
 #pragma unroll
         for (int e = 0; e < HD; ++e)
-          s += qi[e] * __half2float(kh[j * HD + e]);
-        float m_new = fmaxf(m, s);
-        float corr = __expf(m - m_new);
-        float p = __expf(s - m_new);
+          s += __half2float(qrow[e]) * __half2float(sK[j * D + h * HD + e]);
+        float mn = fmaxf(m, s);
+        float corr = __expf(m - mn), p = __expf(s - mn);
         l = l * corr + p;
 #pragma unroll
         for (int e = 0; e < HD; ++e)
-          acc[e] = acc[e] * corr + p * __half2float(vh[j * HD + e]);
-        m = m_new;
+          acc[e] = acc[e] * corr + p * __half2float(sV[j * D + h * HD + e]);
+        m = mn;
       }
       float linv = 1.f / l;
 #pragma unroll
-      for (int e = 0; e < HD; ++e)
-        ctx[h * HD + e] = __float2half(acc[e] * linv);
-      __syncthreads();   // before next head overwrites kh/vh
+      for (int e = 0; e < HD; ++e) ctx[h * HD + e] = __float2half(acc[e] * linv);
     }
+    __syncthreads();
 
-    // ---------- out_proj + residual (row-local) ----------
+    // ---- out_proj: ctx -> sK, GEMM -> sV (fp16), add to xr ----
 #pragma unroll
-    for (int jo = 0; jo < D; ++jo) {
-      float a = __half2float(OPB[jo]);
+    for (int d = 0; d < D; ++d) sK[tid * D + d] = ctx[d];
+    __syncthreads();
+    gemm_rowreg<D>(sK, OPW, warp, lane, [&](int r, int n, float v) {
+      sV[r * D + n] = __float2half(v + __half2float(OPB[n]));
+    });
+    __syncthreads();
 #pragma unroll
-      for (int k = 0; k < D; ++k)
-        a += __half2float(ctx[k]) * __half2float(OPW[(size_t)jo * D + k]);
-      xs[i * D + jo] += a;
-    }
+    for (int d = 0; d < D; ++d) xr[d] += __half2float(sV[tid * D + d]);
 
-    // ---------- norm2 (no affine) -> n2 in registers ----------
-    mean = 0.f;
+    // ---- FFN ----
+    ln_to(sK);
+    __syncthreads();
+    gemm_rowreg<FF>(sK, FIW, warp, lane, [&](int r, int n, float v) {
+      sV[r * D + n] = __float2half(v + __half2float(FIB[n]));   // ffn_hidden_fp16
+    });
+    __syncthreads();
 #pragma unroll
-    for (int d = 0; d < D; ++d) mean += xs[i * D + d];
-    mean *= (1.f / D);
-    var = 0.f;
-#pragma unroll
-    for (int d = 0; d < D; ++d) {
-      float t = xs[i * D + d] - mean;
-      var += t * t;
-    }
-    var *= (1.f / D);
-    inv = rsqrtf(var + LN_EPS);
-    __half n2[D];
-#pragma unroll
-    for (int d = 0; d < D; ++d)
-      n2[d] = __float2half((xs[i * D + d] - mean) * inv);
-
-    // ---------- ffn_in (fp32 accum -> fp16 hidden) + GELU ----------
-    float g[FF];
-#pragma unroll
-    for (int f = 0; f < FF; ++f) {
-      float a = __half2float(FIB[f]);
-#pragma unroll
-      for (int k = 0; k < D; ++k)
-        a += __half2float(n2[k]) * __half2float(FIW[(size_t)f * D + k]);
-      g[f] = gelu_erf(__half2float(__float2half(a)));  // round to fp16 then erf-GELU in fp32
-    }
-
-    // ---------- ffn_out (fp32) + residual ----------
-#pragma unroll
-    for (int jo = 0; jo < D; ++jo) {
-      float a = FOB[jo];
+    for (int n = 0; n < D; ++n) {
+      float a = FOB[n];
 #pragma unroll
       for (int k = 0; k < FF; ++k)
-        a += g[k] * FOW[(size_t)jo * FF + k];
-      xs[i * D + jo] += a;
+        a += gelu_erf(__half2float(sV[tid * D + k])) * FOW[(size_t)n * FF + k];
+      xr[n] += a;
     }
     __syncthreads();
   }
 
-  // ---------- final_norm (WITH affine) -> output ----------
+  // ---- final_norm (with affine) ----
   float mean = 0.f;
 #pragma unroll
-  for (int d = 0; d < D; ++d) mean += xs[i * D + d];
+  for (int d = 0; d < D; ++d) mean += xr[d];
   mean *= (1.f / D);
   float var = 0.f;
 #pragma unroll
-  for (int d = 0; d < D; ++d) {
-    float t = xs[i * D + d] - mean;
-    var += t * t;
-  }
+  for (int d = 0; d < D; ++d) { float t = xr[d] - mean; var += t * t; }
   var *= (1.f / D);
   float inv = rsqrtf(var + LN_EPS);
-  float *orow = xout + (size_t)b * SEQ * D;
+  float *orow = xout + (size_t)b * SEQ * D + tid * D;
 #pragma unroll
   for (int d = 0; d < D; ++d)
-    orow[i * D + d] = (xs[i * D + d] - mean) * inv * fn_w[d] + fn_b[d];
+    orow[d] = (xr[d] - mean) * inv * fn_w[d] + fn_b[d];
 }
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
-// entry: everything pre-checked on the Python side (row-6 specialist).
-void mega_causal_forward(const torch::Tensor &x,          // [B,SEQ,D] fp32
-                         torch::Tensor &out,              // [B,SEQ,D] fp32
-                         const torch::Tensor &qkv_w,      // [NL,3D,D] fp16
-                         const torch::Tensor &qkv_b,      // [NL,3D]  fp16
-                         const torch::Tensor &op_w,       // [NL,D,D] fp16
-                         const torch::Tensor &op_b,       // [NL,D]   fp16
-                         const torch::Tensor &fi_w,       // [NL,FF,D] fp16
-                         const torch::Tensor &fi_b,       // [NL,FF]  fp16
-                         const torch::Tensor &fo_w,       // [NL,D,FF] fp32
-                         const torch::Tensor &fo_b,       // [NL,D]   fp32
-                         const torch::Tensor &fn_w,       // [D] fp32
-                         const torch::Tensor &fn_b) {     // [D] fp32
+void mega_causal_forward(const torch::Tensor &x, torch::Tensor &out,
+                         const torch::Tensor &qkv_w, const torch::Tensor &qkv_b,
+                         const torch::Tensor &op_w, const torch::Tensor &op_b,
+                         const torch::Tensor &fi_w, const torch::Tensor &fi_b,
+                         const torch::Tensor &fo_w, const torch::Tensor &fo_b,
+                         const torch::Tensor &fn_w, const torch::Tensor &fn_b) {
   TORCH_CHECK(x.is_cuda() && x.scalar_type() == torch::kFloat, "x f32 cuda");
   TORCH_CHECK(x.dim() == 3 && x.size(1) == SEQ && x.size(2) == D, "x shape");
-  TORCH_CHECK(out.sizes() == x.sizes() && out.scalar_type() == torch::kFloat, "out");
   const int B = (int)x.size(0);
-
-  size_t smem = (size_t)SEQ * D * sizeof(float) + (size_t)2 * SEQ * HD * sizeof(__half);
+  auto scratch = torch::empty({B, SEQ, 3 * D},
+                              x.options().dtype(torch::kHalf));
+  size_t smem = (size_t)2 * SEQ * D * sizeof(__half);
   static bool set = false;
   if (!set) {
-    cudaFuncSetAttribute(mega_causal_kernel,
+    cudaFuncSetAttribute(mega_kernel,
                          cudaFuncAttributeMaxDynamicSharedMemorySize, (int)smem);
     set = true;
   }
-  mega_causal_kernel<<<B, SEQ, smem, c10::cuda::getCurrentCUDAStream()>>>(
+  mega_kernel<<<B, 128, smem, c10::cuda::getCurrentCUDAStream()>>>(
       x.data_ptr<float>(), out.data_ptr<float>(),
+      (__half *)scratch.data_ptr(),
       (const __half *)qkv_w.data_ptr(), (const __half *)qkv_b.data_ptr(),
       (const __half *)op_w.data_ptr(), (const __half *)op_b.data_ptr(),
       (const __half *)fi_w.data_ptr(), (const __half *)fi_b.data_ptr(),
