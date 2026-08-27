@@ -8,6 +8,8 @@ Optimise `UserOptimizedTransformer` in `benchmark.py` against the frozen
   table of every causal optimization shipped/dead/pending
 - `docs/CATALOGUE.md` — read before proposing an optimisation
 - `docs/DIAGNOSIS.md` — read after profiling, to map facts to actions
+- `docs/ACCURACY_BUDGET.md` — read when near the accuracy ceiling and an
+  optimisation's speed gain is small; spend/benefit rule for LOOP step 8
 - `docs/MEGAKERNEL.md` — read only when working on G4
 - `docs/SETUP.md` — infra, Phase 0 probe, measurement protocol (read once, day 1)
 - `docs/AGENTS.md` — agent roles, limits, best practices (read once, at bootstrap)
@@ -189,7 +191,18 @@ and proceed.
 
 ## OFFICIAL CAUSAL EVALUATION MATRIX
 
-**Accuracy budget:** `atol=0.002`, `rtol=0.02` (disjunctive — see `compare_outputs()`). `benchmark.py --atol`/`--rtol` defaults match this.
+**Canonical baseline harness:** `~/torch_transformer_benchmark.py` (judges'
+copy, published 2026-08-27). Our `benchmark.py` carries a byte-equivalent copy
+of its frozen half (`BaselineTransformer`, `compare_outputs`,
+`generate_random_case`, the timing harness, `parse_args`); `tools/verify_baseline.py`
+asserts this on every ship. Repo `torch_transformer_benchmark.py` is **generated**
+by `tools/sync_entrypoint.py` (their harness + our `UserOptimizedTransformer`) —
+edit `benchmark.py`, never it.
+
+**Accuracy budget:** `atol=0.002`, `rtol=0.02` (disjunctive — see `compare_outputs()`).
+**Confirmed**, not provisional: the 2026-08-27 `torch_transformer_benchmark.py`
+sets exactly these as the argparse defaults. `benchmark.py --atol`/`--rtol` match.
+See `docs/ACCURACY_BUDGET.md` for the spend/benefit rule when near this ceiling.
 
 **Official Test Shapes:**
 | # | Batch Size | QKV Dim | Heads | Seq Len | Layers | Causal | FFN Dim |

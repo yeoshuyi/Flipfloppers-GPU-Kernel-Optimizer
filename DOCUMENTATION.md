@@ -15,6 +15,13 @@ invented):
   authoritative measured-speedup numbers
 - `benchmark.py` — current shipped code, read for structure and inline
   comments (not modified, not fully read)
+- `torch_transformer_benchmark.py` — GENERATED (`tools/sync_entrypoint.py`):
+  judges' 2026-08-27 canonical harness + our `UserOptimizedTransformer`. A
+  standalone drop-in; never hand-edited.
+- `tools/verify_baseline.py` — asserts `benchmark.py`'s frozen half is
+  byte-equivalent (AST) to `~/torch_transformer_benchmark.py`
+- `docs/ACCURACY_BUDGET.md` — spend/benefit rule for optimisations near the
+  0.002 ceiling; §8 ledger of shipped lossy steps
 - `SUBMISSION.md` — competition narrative, cross-referenced only
 
 **A note on currency.** `docs/PROGRESS.md`'s prose stops at step 40
@@ -77,17 +84,18 @@ given historical number was measured against:**
   measured, gated, and reported against this tighter bound. Several closures
   in this record are budget-relative facts under *this* bound specifically —
   e.g. G6.4a's FFN-FP16 near-miss (step 27) failed here.
-- **`atol=0.002, rtol=0.02`** (2%) — the *current* enforced default in
-  `benchmark.py --atol`/`--rtol` (`benchmark.py` L11, `parse_args` L1322-1323),
-  per a "grading spec update relayed 2026-08-27" that `benchmark.py`'s own
-  docstring says was "communicated verbally, citing direct judge
-  correspondence — not independently verified against a written document in
-  this environment." This is the bound that actually governs scoring today.
-  `docs/CAUSAL_LEDGER.md` states this explicitly as "the real enforced
-  default." The older, tighter bound remains reachable via `--atol`/`--rtol`
-  flags and, per `benchmark.py`'s own comment, is still used as this
-  project's internal *engineering* validation target "wherever practical,
-  since anything passing the tighter bar automatically passes this one too."
+- **`atol=0.002, rtol=0.02`** (2%) — the enforced default, now **confirmed in
+  writing**: the judges published `~/torch_transformer_benchmark.py` on
+  2026-08-27 with exactly these as the `parse_args` defaults, superseding the
+  earlier "relayed verbally, not independently verified" status. Our
+  `benchmark.py` already matched it; `tools/verify_baseline.py` now asserts the
+  frozen harness (BaselineTransformer + `compare_outputs` + timing loop +
+  `parse_args`) stays byte-equivalent to that file, and repo
+  `torch_transformer_benchmark.py` is generated from it by
+  `tools/sync_entrypoint.py`. This is the bound that governs scoring today.
+  The older, tighter 0.001/0.01 bound remains reachable via `--atol`/`--rtol`
+  and is still used as the internal engineering target wherever practical
+  (anything passing it passes 0.002/0.02 automatically).
 
 **Practical effect:** the budget change is what made `G6.4a_v2` (FFN-in
 FP16) and the entire `*c`-suffixed causal-path FP16 work shippable — both

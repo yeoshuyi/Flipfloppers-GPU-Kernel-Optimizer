@@ -125,6 +125,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("VALIDITY GATE: pass")
+    if a.path.endswith("benchmark.py"):
+        print("  note: also run tools/verify_baseline.py before a ship "
+              "(frozen harness == judges' torch_transformer_benchmark.py)")
     sys.exit(0)
 
 # ---------------------------------------------------------------------------

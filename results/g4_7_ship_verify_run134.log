@@ -1,0 +1,1887 @@
+##################### PASS: BEFORE (/work/_before_benchmark.py, T=5, G4_7_FFN_CFG=58) #####################
+=== BEFORE int_long_seq_causal ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00137949 | max_rel=324.863 | failed=0/4194304
+trial 02/5: PASS | max_abs=0.00131631 | max_rel=503.069 | failed=0/4194304
+trial 03/5: PASS | max_abs=0.00141668 | max_rel=1347.88 | failed=0/4194304
+trial 04/5: PASS | max_abs=0.00132137 | max_rel=221.575 | failed=0/4194304
+trial 05/5: PASS | max_abs=0.00130975 | max_rel=27487.4 | failed=0/4194304
+summary: PASS | max_abs=0.00141668 | max_rel=27487.4 | failed=0/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=31.7686 ms | mean=31.7711 ms | p90=31.7778 ms | min=31.7501 ms | throughput=257864.88 token/s
+optimized: median=4.4730 ms | mean=4.4755 ms | p90=4.4843 ms | min=4.4503 ms | throughput=1831423.26 token/s
+speedup  : 7.102x based on median latency
+
+=== BEFORE int_large_batch_causal ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00156271 | max_rel=10308.2 | failed=0/16777216
+trial 02/5: PASS | max_abs=0.00159395 | max_rel=29056.5 | failed=0/16777216
+trial 03/5: PASS | max_abs=0.00169801 | max_rel=1390.95 | failed=0/16777216
+trial 04/5: PASS | max_abs=0.00175023 | max_rel=5039.3 | failed=0/16777216
+trial 05/5: PASS | max_abs=0.00163555 | max_rel=27487.4 | failed=0/16777216
+summary: PASS | max_abs=0.00175023 | max_rel=29056.5 | failed=0/83886080
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=45.4769 ms | mean=45.4783 ms | p90=45.4892 ms | min=45.4533 ms | throughput=720542.21 token/s
+optimized: median=17.0971 ms | mean=17.0947 ms | p90=17.1080 ms | min=17.0506 ms | throughput=1916580.07 token/s
+speedup  : 2.660x based on median latency
+
+=== BEFORE off_row1_tok8192 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=65.1683 | failed=0/1048576
+trial 02/5: PASS | max_abs=0.00107318 | max_rel=37.6065 | failed=0/1048576
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=167.744 | failed=0/1048576
+trial 04/5: PASS | max_abs=0.00118493 | max_rel=46.8257 | failed=0/1048576
+trial 05/5: PASS | max_abs=0.001279 | max_rel=1523.26 | failed=0/1048576
+summary: PASS | max_abs=0.0013676 | max_rel=1523.26 | failed=0/5242880
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0220 ms | mean=1.0253 ms | p90=1.0332 ms | min=1.0015 ms | throughput=8016031.80 token/s
+optimized: median=0.2120 ms | mean=0.2140 ms | p90=0.2130 ms | min=0.2099 ms | throughput=38647342.14 token/s
+speedup  : 4.821x based on median latency
+
+=== BEFORE off_row8_tok8192 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=1024, num_heads=4, ffn_dim=1024, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00141025 | max_rel=1492.71 | failed=0/8388608
+trial 02/5: PASS | max_abs=0.00123686 | max_rel=1.8467e+08 | failed=0/8388608
+trial 03/5: PASS | max_abs=0.00135434 | max_rel=1373.88 | failed=0/8388608
+trial 04/5: PASS | max_abs=0.00137815 | max_rel=754.581 | failed=0/8388608
+trial 05/5: PASS | max_abs=0.0013321 | max_rel=1419.81 | failed=0/8388608
+summary: PASS | max_abs=0.00141025 | max_rel=1.8467e+08 | failed=0/41943040
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=8.3842 ms | mean=8.3852 ms | p90=8.3896 ms | min=8.3753 ms | throughput=977078.75 token/s
+optimized: median=4.3399 ms | mean=4.3406 ms | p90=4.3438 ms | min=4.3214 ms | throughput=1887613.33 token/s
+speedup  : 1.932x based on median latency
+
+=== BEFORE off_row13_tok65536 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=1024, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=2.02073e+08 | failed=0/8388608
+trial 02/5: PASS | max_abs=0.00128078 | max_rel=244.875 | failed=0/8388608
+trial 03/5: PASS | max_abs=0.00116193 | max_rel=2109.24 | failed=0/8388608
+trial 04/5: PASS | max_abs=0.00114298 | max_rel=1837.1 | failed=0/8388608
+trial 05/5: PASS | max_abs=0.00111926 | max_rel=2600.44 | failed=0/8388608
+summary: PASS | max_abs=0.0013676 | max_rel=2.02073e+08 | failed=0/41943040
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=70.1563 ms | mean=70.1591 ms | p90=70.1716 ms | min=70.1204 ms | throughput=934142.92 token/s
+optimized: median=2.2108 ms | mean=2.2124 ms | p90=2.2170 ms | min=2.2006 ms | throughput=29643354.66 token/s
+speedup  : 31.733x based on median latency
+
+=== BEFORE off_row6_tok1.28M ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=10000, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00195017 | max_rel=20683.8 | failed=0/163840000
+trial 02/5: PASS | max_abs=0.00153732 | max_rel=7880.3 | failed=0/163840000
+trial 03/5: PASS | max_abs=0.00154169 | max_rel=2.47806e+07 | failed=0/163840000
+trial 04/5: PASS | max_abs=0.00150752 | max_rel=8905.06 | failed=0/163840000
+trial 05/5: PASS | max_abs=0.00154489 | max_rel=2.54421e+08 | failed=0/163840000
+summary: PASS | max_abs=0.00195017 | max_rel=2.54421e+08 | failed=0/819200000
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=290.5989 ms | mean=290.5970 ms | p90=290.6204 ms | min=290.5089 ms | throughput=4404696.53 token/s
+optimized: median=52.4954 ms | mean=52.4961 ms | p90=52.5098 ms | min=52.4513 ms | throughput=24383106.77 token/s
+speedup  : 5.536x based on median latency
+
+=== BEFORE off_row4_gateoff ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=16, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=10.0783 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00106415 | max_rel=19.6737 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=244.999 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00118493 | max_rel=46.8257 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00108433 | max_rel=1327.53 | failed=0/262144
+summary: PASS | max_abs=0.0013676 | max_rel=1327.53 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0501 ms | mean=1.0539 ms | p90=1.0588 ms | min=1.0383 ms | throughput=1950297.92 token/s
+optimized: median=0.1116 ms | mean=0.1139 ms | p90=0.1137 ms | min=0.1106 ms | throughput=18348623.77 token/s
+speedup  : 9.408x based on median latency
+
+=== BEFORE off_row7_ffn32 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=32, num_heads=4, ffn_dim=32, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00211424 | max_rel=79.7228 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00129086 | max_rel=33.6045 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00132155 | max_rel=372.853 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00137094 | max_rel=21.8546 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00123984 | max_rel=44.0058 | failed=0/262144
+summary: PASS | max_abs=0.00211424 | max_rel=372.853 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0509 ms | mean=1.0544 ms | p90=1.0619 ms | min=1.0350 ms | throughput=7795015.48 token/s
+optimized: median=0.1034 ms | mean=0.1062 ms | p90=0.1055 ms | min=0.1024 ms | throughput=79207922.51 token/s
+speedup  : 10.161x based on median latency
+
+=== BEFORE nc_long_seq ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00121683 | max_rel=36566 | failed=0/4194304
+trial 02/5: PASS | max_abs=0.00124934 | max_rel=2095.12 | failed=0/4194304
+trial 03/5: PASS | max_abs=0.00129864 | max_rel=232.553 | failed=0/4194304
+trial 04/5: PASS | max_abs=0.00115025 | max_rel=424.499 | failed=0/4194304
+trial 05/5: PASS | max_abs=0.00108594 | max_rel=796.195 | failed=0/4194304
+summary: PASS | max_abs=0.00129864 | max_rel=36566 | failed=0/20971520
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.7020 ms | mean=24.7029 ms | p90=24.7081 ms | min=24.6877 ms | throughput=331633.71 token/s
+optimized: median=4.3919 ms | mean=4.3920 ms | p90=4.3950 ms | min=4.3786 ms | throughput=1865236.73 token/s
+speedup  : 5.624x based on median latency
+
+=== BEFORE nc_large_batch ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0012216 | max_rel=14655 | failed=0/16777216
+trial 02/5: PASS | max_abs=0.00126165 | max_rel=8820.49 | failed=0/16777216
+trial 03/5: PASS | max_abs=0.00139403 | max_rel=2507.66 | failed=0/16777216
+trial 04/5: PASS | max_abs=0.00130057 | max_rel=3801.12 | failed=0/16777216
+trial 05/5: PASS | max_abs=0.00128192 | max_rel=6097.38 | failed=0/16777216
+summary: PASS | max_abs=0.00139403 | max_rel=14655 | failed=0/83886080
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=41.9053 ms | mean=41.9211 ms | p90=41.9666 ms | min=41.8806 ms | throughput=781953.38 token/s
+optimized: median=16.2202 ms | mean=16.2234 ms | p90=16.2305 ms | min=16.2029 ms | throughput=2020202.08 token/s
+speedup  : 2.584x based on median latency
+
+##################### PASS: AFTER58 (/work/benchmark.py, T=40, G4_7_FFN_CFG=58) #####################
+=== AFTER58 int_long_seq_causal ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:11.707000 155940 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 8 at -2! Mismatching argument at index 1 had torch.Size([8, 512]); but expected shape should be broadcastable to [8, 1024, 512]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(8, 1024, 512)), FakeTensor(..., device='cuda:0', size=(8, 512))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 8 at -2! Mismatching argument at index 1 had torch.Size([8, 512]); but expected shape should be broadcastable to [8, 1024, 512]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 int_large_batch_causal ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:17.388000 156023 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 256 at -2! Mismatching argument at index 1 had torch.Size([256, 512]); but expected shape should be broadcastable to [256, 128, 512]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(256, 128, 512)), FakeTensor(..., device='cuda:0', size=(256, 512))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 256 at -2! Mismatching argument at index 1 had torch.Size([256, 512]); but expected shape should be broadcastable to [256, 128, 512]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 off_row1_tok8192 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:22.868000 156107 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 128, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(64, 128, 128)), FakeTensor(..., device='cuda:0', size=(64, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 128, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 off_row8_tok8192 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=1024, num_heads=4, ffn_dim=1024, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:28.541000 156190 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 1024]); but expected shape should be broadcastable to [64, 128, 1024]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(64, 128, 1024)), FakeTensor(..., device='cuda:0', size=(64, 1024))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 1024]); but expected shape should be broadcastable to [64, 128, 1024]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 off_row13_tok65536 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=1024, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:34.037000 156275 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 1024, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(64, 1024, 128)), FakeTensor(..., device='cuda:0', size=(64, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 1024, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 off_row6_tok1.28M ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=10000, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:26:39.687000 156359 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 10000 at -2! Mismatching argument at index 1 had torch.Size([10000, 128]); but expected shape should be broadcastable to [10000, 128, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(10000, 128, 128)), FakeTensor(..., device='cuda:0', size=(10000, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 10000 at -2! Mismatching argument at index 1 had torch.Size([10000, 128]); but expected shape should be broadcastable to [10000, 128, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER58 off_row4_gateoff ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=16, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/40: PASS | max_abs=0.0013676 | max_rel=10.0783 | failed=0/262144
+trial 02/40: PASS | max_abs=0.00106415 | max_rel=19.6737 | failed=0/262144
+trial 03/40: PASS | max_abs=0.00134333 | max_rel=244.999 | failed=0/262144
+trial 04/40: PASS | max_abs=0.00118493 | max_rel=46.8257 | failed=0/262144
+trial 05/40: PASS | max_abs=0.00108433 | max_rel=1327.53 | failed=0/262144
+trial 06/40: PASS | max_abs=0.00116334 | max_rel=664.734 | failed=0/262144
+trial 07/40: PASS | max_abs=0.00122488 | max_rel=7.06749 | failed=0/262144
+trial 08/40: PASS | max_abs=0.00102592 | max_rel=97.7666 | failed=0/262144
+trial 09/40: PASS | max_abs=0.00111079 | max_rel=221.034 | failed=0/262144
+trial 10/40: PASS | max_abs=0.00122195 | max_rel=31.3551 | failed=0/262144
+trial 11/40: PASS | max_abs=0.00110137 | max_rel=42.409 | failed=0/262144
+trial 12/40: PASS | max_abs=0.00127614 | max_rel=71.635 | failed=0/262144
+trial 13/40: PASS | max_abs=0.0010931 | max_rel=345.932 | failed=0/262144
+trial 14/40: PASS | max_abs=0.00102711 | max_rel=62.3123 | failed=0/262144
+trial 15/40: PASS | max_abs=0.00110388 | max_rel=30.6623 | failed=0/262144
+trial 16/40: PASS | max_abs=0.00123888 | max_rel=10.5101 | failed=0/262144
+trial 17/40: PASS | max_abs=0.00111723 | max_rel=26.3386 | failed=0/262144
+trial 18/40: PASS | max_abs=0.00110167 | max_rel=31.9485 | failed=0/262144
+trial 19/40: PASS | max_abs=0.00128776 | max_rel=102.908 | failed=0/262144
+trial 20/40: PASS | max_abs=0.00114369 | max_rel=99.856 | failed=0/262144
+trial 21/40: PASS | max_abs=0.00111675 | max_rel=62.0167 | failed=0/262144
+trial 22/40: PASS | max_abs=0.00107598 | max_rel=19.0198 | failed=0/262144
+trial 23/40: PASS | max_abs=0.0011614 | max_rel=1333.25 | failed=0/262144
+trial 24/40: PASS | max_abs=0.00134373 | max_rel=10.484 | failed=0/262144
+trial 25/40: PASS | max_abs=0.00124753 | max_rel=201.608 | failed=0/262144
+trial 26/40: PASS | max_abs=0.00105089 | max_rel=26.2576 | failed=0/262144
+trial 27/40: PASS | max_abs=0.00129473 | max_rel=20.0334 | failed=0/262144
+trial 28/40: PASS | max_abs=0.0010051 | max_rel=12.0006 | failed=0/262144
+trial 29/40: PASS | max_abs=0.00120521 | max_rel=56.5607 | failed=0/262144
+trial 30/40: PASS | max_abs=0.00123149 | max_rel=44.3619 | failed=0/262144
+trial 31/40: PASS | max_abs=0.00113147 | max_rel=26.5713 | failed=0/262144
+trial 32/40: PASS | max_abs=0.00113937 | max_rel=14.6509 | failed=0/262144
+trial 33/40: PASS | max_abs=0.00100029 | max_rel=35.5628 | failed=0/262144
+trial 34/40: PASS | max_abs=0.00104651 | max_rel=20.5482 | failed=0/262144
+trial 35/40: PASS | max_abs=0.00117338 | max_rel=42.3866 | failed=0/262144
+trial 36/40: PASS | max_abs=0.0011121 | max_rel=33.9292 | failed=0/262144
+trial 37/40: PASS | max_abs=0.00105274 | max_rel=370.654 | failed=0/262144
+trial 38/40: PASS | max_abs=0.0014451 | max_rel=15.5906 | failed=0/262144
+trial 39/40: PASS | max_abs=0.00126335 | max_rel=4.72304 | failed=0/262144
+trial 40/40: PASS | max_abs=0.00108248 | max_rel=20.4716 | failed=0/262144
+summary: PASS | max_abs=0.0014451 | max_rel=1333.25 | failed=0/10485760
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0475 ms | mean=1.0580 ms | p90=1.0713 ms | min=1.0264 ms | throughput=1955064.05 token/s
+optimized: median=0.1116 ms | mean=0.1135 ms | p90=0.1137 ms | min=0.1106 ms | throughput=18348623.77 token/s
+speedup  : 9.385x based on median latency
+
+=== AFTER58 off_row7_ffn32 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=32, num_heads=4, ffn_dim=32, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/40: PASS | max_abs=0.00211424 | max_rel=79.7228 | failed=0/262144
+trial 02/40: PASS | max_abs=0.00129086 | max_rel=33.6045 | failed=0/262144
+trial 03/40: PASS | max_abs=0.00132155 | max_rel=372.853 | failed=0/262144
+trial 04/40: PASS | max_abs=0.00137094 | max_rel=21.8546 | failed=0/262144
+trial 05/40: PASS | max_abs=0.00123984 | max_rel=44.0058 | failed=0/262144
+trial 06/40: PASS | max_abs=0.00142705 | max_rel=101.095 | failed=0/262144
+trial 07/40: PASS | max_abs=0.0014047 | max_rel=138.766 | failed=0/262144
+trial 08/40: PASS | max_abs=0.00126457 | max_rel=24.9111 | failed=0/262144
+trial 09/40: PASS | max_abs=0.00174165 | max_rel=67.375 | failed=0/262144
+trial 10/40: PASS | max_abs=0.00138652 | max_rel=56.6077 | failed=0/262144
+trial 11/40: PASS | max_abs=0.0014419 | max_rel=23.9724 | failed=0/262144
+trial 12/40: PASS | max_abs=0.00145982 | max_rel=15.0413 | failed=0/262144
+trial 13/40: PASS | max_abs=0.00158012 | max_rel=57.1064 | failed=0/262144
+trial 14/40: PASS | max_abs=0.00149597 | max_rel=32.8144 | failed=0/262144
+trial 15/40: PASS | max_abs=0.00150753 | max_rel=33.5592 | failed=0/262144
+trial 16/40: PASS | max_abs=0.00141767 | max_rel=23.538 | failed=0/262144
+trial 17/40: PASS | max_abs=0.00130099 | max_rel=11.1842 | failed=0/262144
+trial 18/40: PASS | max_abs=0.00141615 | max_rel=19.7843 | failed=0/262144
+trial 19/40: PASS | max_abs=0.001279 | max_rel=20.1926 | failed=0/262144
+trial 20/40: PASS | max_abs=0.00146392 | max_rel=36.1308 | failed=0/262144
+trial 21/40: PASS | max_abs=0.00133061 | max_rel=31.697 | failed=0/262144
+trial 22/40: PASS | max_abs=0.00140989 | max_rel=78.7534 | failed=0/262144
+trial 23/40: PASS | max_abs=0.0014925 | max_rel=107.482 | failed=0/262144
+trial 24/40: PASS | max_abs=0.00125492 | max_rel=10.6725 | failed=0/262144
+trial 25/40: PASS | max_abs=0.00134047 | max_rel=109.113 | failed=0/262144
+trial 26/40: PASS | max_abs=0.00128877 | max_rel=591.337 | failed=0/262144
+trial 27/40: PASS | max_abs=0.00127232 | max_rel=48.8998 | failed=0/262144
+trial 28/40: PASS | max_abs=0.00182253 | max_rel=71.4059 | failed=0/262144
+trial 29/40: PASS | max_abs=0.00130469 | max_rel=15.0522 | failed=0/262144
+trial 30/40: PASS | max_abs=0.00139344 | max_rel=13.6584 | failed=0/262144
+trial 31/40: PASS | max_abs=0.00148822 | max_rel=94.2733 | failed=0/262144
+trial 32/40: PASS | max_abs=0.00149214 | max_rel=28.1882 | failed=0/262144
+trial 33/40: PASS | max_abs=0.00119377 | max_rel=12.4222 | failed=0/262144
+trial 34/40: PASS | max_abs=0.00117087 | max_rel=112.387 | failed=0/262144
+trial 35/40: PASS | max_abs=0.001854 | max_rel=16.0348 | failed=0/262144
+trial 36/40: PASS | max_abs=0.00120261 | max_rel=45.471 | failed=0/262144
+trial 37/40: PASS | max_abs=0.00124478 | max_rel=33.4363 | failed=0/262144
+trial 38/40: PASS | max_abs=0.00125599 | max_rel=36.5443 | failed=0/262144
+trial 39/40: PASS | max_abs=0.00133974 | max_rel=77.1978 | failed=0/262144
+trial 40/40: PASS | max_abs=0.0015139 | max_rel=42.7058 | failed=0/262144
+summary: PASS | max_abs=0.00211424 | max_rel=591.337 | failed=0/10485760
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0221 ms | mean=1.0266 ms | p90=1.0322 ms | min=1.0106 ms | throughput=8014777.15 token/s
+optimized: median=0.1034 ms | mean=0.1062 ms | p90=0.1055 ms | min=0.1024 ms | throughput=79207922.51 token/s
+speedup  : 9.883x based on median latency
+
+=== AFTER58 nc_long_seq ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/40: PASS | max_abs=0.00121683 | max_rel=36566 | failed=0/4194304
+trial 02/40: PASS | max_abs=0.00124934 | max_rel=2095.12 | failed=0/4194304
+trial 03/40: PASS | max_abs=0.00129864 | max_rel=232.553 | failed=0/4194304
+trial 04/40: PASS | max_abs=0.00115025 | max_rel=424.499 | failed=0/4194304
+trial 05/40: PASS | max_abs=0.00108594 | max_rel=796.195 | failed=0/4194304
+trial 06/40: PASS | max_abs=0.00116726 | max_rel=601.795 | failed=0/4194304
+trial 07/40: PASS | max_abs=0.00116287 | max_rel=1000.97 | failed=0/4194304
+trial 08/40: PASS | max_abs=0.00115567 | max_rel=627.056 | failed=0/4194304
+trial 09/40: PASS | max_abs=0.00136587 | max_rel=740.695 | failed=0/4194304
+trial 10/40: PASS | max_abs=0.00116444 | max_rel=317.835 | failed=0/4194304
+trial 11/40: PASS | max_abs=0.00112247 | max_rel=1705.01 | failed=0/4194304
+trial 12/40: PASS | max_abs=0.0011559 | max_rel=2216.26 | failed=0/4194304
+trial 13/40: PASS | max_abs=0.00122624 | max_rel=131.229 | failed=0/4194304
+trial 14/40: PASS | max_abs=0.001095 | max_rel=248.779 | failed=0/4194304
+trial 15/40: PASS | max_abs=0.00116443 | max_rel=845.015 | failed=0/4194304
+trial 16/40: PASS | max_abs=0.00111578 | max_rel=8981.82 | failed=0/4194304
+trial 17/40: PASS | max_abs=0.00118935 | max_rel=49808.9 | failed=0/4194304
+trial 18/40: PASS | max_abs=0.00110901 | max_rel=657.683 | failed=0/4194304
+trial 19/40: PASS | max_abs=0.00120634 | max_rel=386.984 | failed=0/4194304
+trial 20/40: PASS | max_abs=0.00119662 | max_rel=2195.62 | failed=0/4194304
+trial 21/40: PASS | max_abs=0.00113058 | max_rel=263.607 | failed=0/4194304
+trial 22/40: PASS | max_abs=0.00109574 | max_rel=346.964 | failed=0/4194304
+trial 23/40: PASS | max_abs=0.00121287 | max_rel=12649.6 | failed=0/4194304
+trial 24/40: PASS | max_abs=0.00113332 | max_rel=376.647 | failed=0/4194304
+trial 25/40: PASS | max_abs=0.00109446 | max_rel=2466.41 | failed=0/4194304
+trial 26/40: PASS | max_abs=0.00114793 | max_rel=7632.95 | failed=0/4194304
+trial 27/40: PASS | max_abs=0.00113949 | max_rel=223.61 | failed=0/4194304
+trial 28/40: PASS | max_abs=0.00118729 | max_rel=1654 | failed=0/4194304
+trial 29/40: PASS | max_abs=0.00114882 | max_rel=1174.23 | failed=0/4194304
+trial 30/40: PASS | max_abs=0.00115845 | max_rel=1187.84 | failed=0/4194304
+trial 31/40: PASS | max_abs=0.0011929 | max_rel=211.001 | failed=0/4194304
+trial 32/40: PASS | max_abs=0.00111437 | max_rel=591.35 | failed=0/4194304
+trial 33/40: PASS | max_abs=0.00111139 | max_rel=493.784 | failed=0/4194304
+trial 34/40: PASS | max_abs=0.00119483 | max_rel=339.703 | failed=0/4194304
+trial 35/40: PASS | max_abs=0.00120592 | max_rel=335.022 | failed=0/4194304
+trial 36/40: PASS | max_abs=0.00121719 | max_rel=1944.24 | failed=0/4194304
+trial 37/40: PASS | max_abs=0.0011923 | max_rel=1147.71 | failed=0/4194304
+trial 38/40: PASS | max_abs=0.0011549 | max_rel=329.914 | failed=0/4194304
+trial 39/40: PASS | max_abs=0.00115621 | max_rel=1144.27 | failed=0/4194304
+trial 40/40: PASS | max_abs=0.00126685 | max_rel=725.668 | failed=0/4194304
+summary: PASS | max_abs=0.00136587 | max_rel=49808.9 | failed=0/167772160
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=24.7204 ms | mean=24.7214 ms | p90=24.7277 ms | min=24.7050 ms | throughput=331386.43 token/s
+optimized: median=4.4013 ms | mean=4.4029 ms | p90=4.4044 ms | min=4.3940 ms | throughput=1861283.51 token/s
+speedup  : 5.617x based on median latency
+
+=== AFTER58 nc_large_batch ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=256, seq_len=128, d_model=512, num_heads=8, ffn_dim=2048, num_layers=6, causal=False)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/40: PASS | max_abs=0.0012216 | max_rel=14655 | failed=0/16777216
+trial 02/40: PASS | max_abs=0.00126165 | max_rel=8820.49 | failed=0/16777216
+trial 03/40: PASS | max_abs=0.00139403 | max_rel=2507.66 | failed=0/16777216
+trial 04/40: PASS | max_abs=0.00130057 | max_rel=3801.12 | failed=0/16777216
+trial 05/40: PASS | max_abs=0.00128192 | max_rel=6097.38 | failed=0/16777216
+trial 06/40: PASS | max_abs=0.00144541 | max_rel=3185.97 | failed=0/16777216
+trial 07/40: PASS | max_abs=0.00123 | max_rel=3972.84 | failed=0/16777216
+trial 08/40: PASS | max_abs=0.001251 | max_rel=913.276 | failed=0/16777216
+trial 09/40: PASS | max_abs=0.00131477 | max_rel=9789.83 | failed=0/16777216
+trial 10/40: PASS | max_abs=0.00132418 | max_rel=2100.69 | failed=0/16777216
+trial 11/40: PASS | max_abs=0.001297 | max_rel=1110.45 | failed=0/16777216
+trial 12/40: PASS | max_abs=0.00123847 | max_rel=4956.04 | failed=0/16777216
+trial 13/40: PASS | max_abs=0.00131357 | max_rel=6963.24 | failed=0/16777216
+trial 14/40: PASS | max_abs=0.00134456 | max_rel=7520.53 | failed=0/16777216
+trial 15/40: PASS | max_abs=0.00135219 | max_rel=1498.5 | failed=0/16777216
+trial 16/40: PASS | max_abs=0.00121844 | max_rel=2323.67 | failed=0/16777216
+trial 17/40: PASS | max_abs=0.00136083 | max_rel=24424.6 | failed=0/16777216
+trial 18/40: PASS | max_abs=0.00130439 | max_rel=6261.8 | failed=0/16777216
+trial 19/40: PASS | max_abs=0.00128114 | max_rel=1706.94 | failed=0/16777216
+trial 20/40: PASS | max_abs=0.00125778 | max_rel=5988.28 | failed=0/16777216
+trial 21/40: PASS | max_abs=0.00129315 | max_rel=10889.1 | failed=0/16777216
+trial 22/40: PASS | max_abs=0.00126255 | max_rel=2890.5 | failed=0/16777216
+trial 23/40: PASS | max_abs=0.00136755 | max_rel=7884.37 | failed=0/16777216
+trial 24/40: PASS | max_abs=0.00136524 | max_rel=11627.5 | failed=0/16777216
+trial 25/40: PASS | max_abs=0.00140512 | max_rel=8126.04 | failed=0/16777216
+trial 26/40: PASS | max_abs=0.0015794 | max_rel=3816.26 | failed=0/16777216
+trial 27/40: PASS | max_abs=0.00129586 | max_rel=4702.06 | failed=0/16777216
+trial 28/40: PASS | max_abs=0.00125325 | max_rel=1774.76 | failed=0/16777216
+trial 29/40: PASS | max_abs=0.00133461 | max_rel=7135.44 | failed=0/16777216
+trial 30/40: PASS | max_abs=0.00125027 | max_rel=1779.47 | failed=0/16777216
+trial 31/40: PASS | max_abs=0.00121427 | max_rel=1.20675e+08 | failed=0/16777216
+trial 32/40: PASS | max_abs=0.00144041 | max_rel=4312.15 | failed=0/16777216
+trial 33/40: PASS | max_abs=0.00130033 | max_rel=7997.84 | failed=0/16777216
+trial 34/40: PASS | max_abs=0.00123537 | max_rel=2745.99 | failed=0/16777216
+trial 35/40: PASS | max_abs=0.00129908 | max_rel=1453.49 | failed=0/16777216
+trial 36/40: PASS | max_abs=0.00129679 | max_rel=971.514 | failed=0/16777216
+trial 37/40: PASS | max_abs=0.00125322 | max_rel=4078.98 | failed=0/16777216
+trial 38/40: PASS | max_abs=0.00127685 | max_rel=37887.6 | failed=0/16777216
+trial 39/40: PASS | max_abs=0.00134712 | max_rel=1751.89 | failed=0/16777216
+trial 40/40: PASS | max_abs=0.00131226 | max_rel=33323.5 | failed=0/16777216
+summary: PASS | max_abs=0.0015794 | max_rel=1.20675e+08 | failed=0/671088640
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=41.9645 ms | mean=41.9655 ms | p90=41.9748 ms | min=41.9420 ms | throughput=780849.69 token/s
+optimized: median=16.2501 ms | mean=16.2470 ms | p90=16.2611 ms | min=16.2081 ms | throughput=2016476.45 token/s
+speedup  : 2.582x based on median latency
+
+##################### PASS: AFTER51 (/work/benchmark.py, T=40, G4_7_FFN_CFG=51) #####################
+=== AFTER51 off_row1_tok8192 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:27:48.557000 157017 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 128, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(64, 128, 128)), FakeTensor(..., device='cuda:0', size=(64, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 128, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER51 off_row13_tok65536 ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=1024, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:27:54.104000 157102 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 1024, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(64, 1024, 128)), FakeTensor(..., device='cuda:0', size=(64, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 64 at -2! Mismatching argument at index 1 had torch.Size([64, 128]); but expected shape should be broadcastable to [64, 1024, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+
+=== AFTER51 off_row6_tok1.28M ===
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=10000, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0] failed while attempting to run meta for aten.add.Tensor
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0] Traceback (most recent call last):
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_subclasses/fake_tensor.py", line 3086, in _dispatch_impl
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     r = func(*args, **kwargs)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]         ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_ops.py", line 875, in __call__
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     return self._op(*args, **kwargs)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 313, in _fn
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(*args, **kwargs)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_compile.py", line 54, in inner
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     return disable_fn(*args, **kwargs)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1446, in _fn
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     return fn(*args, **kwargs)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_prims_common/wrappers.py", line 151, in _fn
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     result = fn(**bound.arguments)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]              ^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 1218, in add
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     a, b = _maybe_broadcast(a, b)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]            ^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 475, in _maybe_broadcast
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     common_shape = _broadcast_shapes(
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]                    ^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/_refs/__init__.py", line 463, in _broadcast_shapes
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     torch._check(
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1768, in _check
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     _check_with(RuntimeError, cond, message)  # pyrefly: ignore [bad-argument-type]
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]   File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 1750, in _check_with
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0]     raise error_type(message_evaluated)
+E0827 15:27:59.783000 157188 torch/_subclasses/fake_tensor.py:3090] [0/0] RuntimeError: Attempting to broadcast a dimension of length 10000 at -2! Mismatching argument at index 1 had torch.Size([10000, 128]); but expected shape should be broadcastable to [10000, 128, 128]
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1806, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1770, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1451, in run_accuracy_tests
+    candidate = optimized(x, valid_mask)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 977, in forward
+    return self._compiled_causal(x, valid_token_mask, no_pad_causal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1166, in compile_wrapper
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2628, in __call__
+    result = self._torchdynamo_orig_backend(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2319, in __call__
+    result = self._inner_convert(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 777, in __call__
+    result = _compile(
+             ^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 2102, in _compile
+    guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_utils_internal.py", line 96, in wrapper_function
+    return function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1687, in compile_inner
+    result = _compile_inner(code, one_graph, hooks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1747, in _compile_inner
+    dynamo_output = compile_frame(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1584, in compile_frame
+    bytecode, tracer_output = transform_code_object(code, transform)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/bytecode_transformation.py", line 1821, in transform_code_object
+    tracer_output = transformations(instructions, code_options)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 1555, in transform
+    tracer_output = trace_frame(
+                    ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 368, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 954, in trace_frame
+    run_tracer()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/convert_frame.py", line 935, in run_tracer
+    tracer.run()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1950, in run
+    while self.step():
+          ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 1603, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 4437, in BINARY_OP
+    return _binary_op_lookup[inst.arg](self, inst)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/symbolic_convert.py", line 505, in impl
+    self.push(fn_var.call_function(self, self.popn(nargs), {}))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1588, in call_function
+    return handler(tx, args, kwargs)  # type: ignore[return-value]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builtin.py", line 1544, in _handle_insert_op_in_graph
+    return wrap_fx_proxy(tx, proxy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3561, in wrap_fx_proxy
+    return wrap_fx_proxy_cls(target_cls=TensorVariable, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3636, in wrap_fx_proxy_cls
+    out: VTTypeAlias = _wrap_fx_proxy(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/variables/builder.py", line 3767, in _wrap_fx_proxy
+    example_value = get_fake_value(proxy.node, tx, allow_non_graph_fake=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3949, in get_fake_value
+    return _get_fake_value_impl(node, tx, allow_non_graph_fake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4154, in _get_fake_value_impl
+    _wrap_graph_break_with_torch_runtime_err(
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3938, in _wrap_graph_break_with_torch_runtime_err
+    raise exc.with_traceback(e.__traceback__) from None
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 3935, in _wrap_graph_break_with_torch_runtime_err
+    gb_fn()
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/utils.py", line 4155, in <lambda>
+    lambda: unimplemented(
+            ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/exc.py", line 723, in unimplemented
+    raise Unsupported(
+torch._dynamo.exc.TorchRuntimeError: RuntimeError when making fake tensor call
+  Explanation: Dynamo failed to run FX node with fake tensors: call_function <built-in function add>(*(FakeTensor(..., device='cuda:0', size=(10000, 128, 128)), FakeTensor(..., device='cuda:0', size=(10000, 128))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 10000 at -2! Mismatching argument at index 1 had torch.Size([10000, 128]); but expected shape should be broadcastable to [10000, 128, 128]')
+  Hint: Your code may result in an error when running in eager. Please double check that your code doesn't contain a similar error when actually running eager/uncompiled. You can do this by removing the `torch.compile` call, or by using `torch.compiler.set_stance("force_eager")`. 
+
+  Developer debug context: 
+
+ For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb4315.html
+
+from user code:
+   File "/work/benchmark.py", line 1131, in _optimized_forward_causal
+    x = x + ffn
+        ^^^^^^^
+
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+
+

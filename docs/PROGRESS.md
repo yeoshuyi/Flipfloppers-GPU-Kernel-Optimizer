@@ -3028,3 +3028,110 @@ cannot afford at any mitigation setting.
 remaining prize, needing a GELU epilogue on `ffn_in` and a residual on
 `ffn_out`; (b) anything that buys back causal accuracy headroom *upstream* of
 this kernel, since causal is blocked by its existing budget, not by G4.3.
+
+---
+
+### 42. G4.7 (fused `ffn_in` + exact-erf GELU epilogue on G4.3's kernel) — **SHIPPED for causal, +9.5% / +12.1% at d512/ffn2048 long_seq / large_batch. Precision-neutral.**
+
+Pursued item (a) from step 41. The idea: reuse the G4.3 warp-spec `mma.sync`
+GEMM for `ffn_in`, but with an **FP32-accumulate** arm and a fused epilogue
+that computes the model's actual erf-form GELU (`F.gelu(approximate="none")`)
+**exactly**. That makes it a pure kernel-count reduction — GEMM *plus* a full
+elementwise cast+GELU pass over `[tok, ffn_dim]` collapse into one kernel — with
+**no new precision-reducing step**, so the causal budget that closed G4.3 for
+causal (step 41) does not apply.
+
+**Stage 0a — correctness gate** (`jobs/g4_7_ffn_correct.sbatch`, job 131,
+`results/g4_7_ffn_correct_run131.log`). The load-bearing claim is BIT-IDENTITY,
+not "close": step 35 Finding 2 closed cuBLASLt's GELU epilogue because it
+computes the *tanh* approximation (systematic 4.74e-04 mismatch). This kernel
+is hand-written. Result: for every `(gelu_cfg, plain_twin)` pair that differs
+only in the epilogue, `gelu_cfg(X,W,b)` is **bit-identical** to
+`F.gelu(plain_twin(X,W,b).float(), "none")` at all 39 (cfg, shape) points;
+integer/one-hot GEMM checks exact; shipped `cfg[0]` still bitwise ==
+`g4_4_mma_gemm cfg[11]`; the FP32-accumulate (ACCF32) arms sit ~1000x tighter
+than the FP16-accumulate arms against an fp64 reference. **PASS.**
+
+**Stage 0b — microbench** (`probes/g4_7_ffn_sweep.py`, job 132,
+`results/g4_7_ffn_sweep_run132.log`). Priced against the *real* baseline —
+`torch.addmm` fp16 **plus** a `torch.compile`'d cast+GELU (what inductor emits
+inside the compiled region), not the GEMM alone. The **precision-neutral**
+(ACCF32 fused-GELU) arm vs that chain:
+
+| shape | ACCF32 fused-GELU vs chain |
+|---|---|
+| d512 / ffn2048, tok 8192 (long_seq) | **x1.42** |
+| d512 / ffn2048, tok 32768 (large_batch) | **x1.55** |
+| d128 / ffn128, tok 8192 / 65536 | x0.99 / x0.995 (**loss/wash**) |
+| d1024 / ffn1024, tok 8192 | x0.93 (**loss**) |
+
+FP32-accumulate `mma` is half rate on this hardware (trap 2); the saved
+elementwise pass only pays for it once `ffn_dim` is large. The FP16-accumulate
+fused arm wins everywhere (x1.2–x2.2) but is a precision-reducing step —
+`probes/g4_7_ffn_wiring_smoke.py` (job 138) measured it at **2.1e-3 over just
+2 layers at K=512**, over budget, consistent with step 41.
+
+**Three silent-fallback bugs, each caught before trusting a number:** (1) job
+133 — `_ensure_ffn_plan` was placed after the causal branch's early `return`;
+(2) job 134 — `register_fake` assumed a 2-D `[tok,K]` input but the causal path
+passes 3-D `[B,S,d_model]`, so dynamo blew up on the residual add and every
+AFTER pass ran the fallback (`|| true` hid it); (3) job 139 — at
+`ffn_dim <= 1024` the fused path hit a `torch._dynamo` `recompile_limit`
+interaction under `reduce-overhead` cudagraphs and silently fell back
+(AFTER-cfg58 ≡ AFTER-cfg51 bit-identical trial-by-trial was the tell). Fixes 1
+and 2 wired it correctly; fix 3 is the **empirical shape gate**:
+`_ensure_ffn_plan` engages only at `d_model >= 512 AND ffn_dim >= 2048 AND
+tok >= 8192` — exactly the shapes measured to be a net win — and is a clean,
+documented no-op everywhere else, including the entire official 14-row matrix
+(`ffn_dim in {32,128,1024}`). A 1-minute GPU smoke
+(`probes/g4_7_ffn_wiring_smoke.py`) now guards the wiring against regressions;
+it is the pattern for any future `torch.compile`-boundary custom op.
+
+**Ship verify** (`jobs/g4_7_ship_verify.sbatch` job 139 at the loose gate,
+`jobs/g4_7_ship_verify_v2.sbatch` job 142 at the final gate,
+`results/g4_7_ship_verify_v2_run142.log`). Matched BEFORE (`0691311`,
+pre-G4.7) / AFTER (working tree), AFTER at the full 40 accuracy trials, same
+job, locked clocks:
+
+| shape | gate | before | after | Δ | `max_abs` before → after | budget used |
+|---|---|---|---|---|---|---|
+| **long_seq_causal** (d512/ffn2048, tok 8192) | ON | 7.106 | **7.781** | **+9.5%** | 0.00161 → **0.00161** | 81% |
+| **large_batch_causal** (d512/ffn2048, tok 32768) | ON | 2.659 | **2.982** | **+12.1%** | 0.00182 → **0.00182** | 91% |
+| default_causal (d512/ffn2048, tok 1024) | off (tok) | 2.770 | 2.736 | −1.2% (noise) | — → 0.00157221 | gate off |
+| official row 1 (d128/ffn128) | off (shape) | 4.884 | 4.923 | +0.8% (noise) | — → 0.00155726 | gate off |
+| nc_large_batch (non-causal) | n/a | 2.581 | 2.584 | 0.0% | — → 0.00158 | not this path |
+
+`max_abs` on the two engaged shapes is **identical to the pre-G4.7 40-trial
+record** (`long_seq_causal` 0.00161, `large_batch_causal` 0.00182, from
+`results/final_reverify_run118.log` / CLAUDE.md's causal ledger) — the epilogue
+is provably precision-neutral, not merely "measured the same". Gate-off shapes'
+`max_abs` are the pre-G4.7 values too. **All shapes PASS, `failed=0`, 40
+trials.**
+
+**Shipped, scoped: causal, `d_model >= 512` and `ffn_dim >= 2048` and
+`tok >= 8192`, `_FFN_CFG = 58`** (`cfg[58]` = BM128 BN128 BK64, FP32-accumulate
+`mma`, fused exact-erf GELU, fp32 out). `_ensure_ffn_plan` decides eagerly
+outside the compiled region; `g43::ffn_gelu_linear` is a `torch.library`
+custom op mirroring G4.3's `g43::ws_linear`, with the 3-D→2-D reshape owned by
+the op. Any rejected shape falls back to the exact
+`F.gelu(F.linear(...).float(), "none")` it replaces. This is the **first
+causal-path GEMM optimisation** in the project — G4.3's attention kernel is
+non-causal-only.
+
+**Honest scope caveat.** `long_seq_causal` / `large_batch_causal` are the
+**project's own regime-sweep shapes** (d512, ffn2048), the same ones steps
+40/41 reported ship results on — **not** rows of CLAUDE.md's official 14-row
+causal matrix, whose `ffn_dim` is always 32, 128 or 1024. On that matrix G4.7's
+gate never engages, and per the run132 table it would be a wash-to-loss if it
+did. So: a real, precision-neutral +10–12% on two causal cells the project has
+always scored, and a deliberate no-op on the official matrix.
+
+**Reusable assets.** A verified FP32-accumulate `mma.sync` arm and a
+bit-exact fused erf-GELU epilogue on the G4.3 kernel (26 new configs, cfg
+51–76). `docs/ACCURACY_BUDGET.md` §8 now carries the measured
+`Δspeed` / `Δmax_abs` ledger this step's data seeded.
+
+**What would reopen this:** the `ffn_out` GEMM + residual epilogue (step 41's
+other half), which would need an fp32 residual add fused into the store; and
+buying causal-large-batch headroom upstream so the FP16-accumulate arm (cfg 51,
+x1.2–x2.2) becomes reachable on the small-`ffn_dim` official shapes.

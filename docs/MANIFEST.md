@@ -15,14 +15,21 @@ README.md                    why 1 subagent instead of 6; token discipline
 docs/                        LOAD ON DEMAND — never all at once
   CATALOGUE.md               ~1.5k tok  G0–G4, 33 optimisations. Read before proposing.
   DIAGNOSIS.md               ~0.4k tok  profiler fact → action. Read after profiling.
+  ACCURACY_BUDGET.md         ~1.8k tok  spend/benefit rule near the 0.002 ceiling. Read for LOOP step 8.
   MEGAKERNEL.md              ~2.1k tok  G4 only: smem budget, warp roles, failure modes.
   SETUP.md                   ~2.4k tok  infra + Phase 0 + measurement. Read once, day 1.
   AGENTS.md                  ~2.2k tok  roles, limits, best practices. Read once, at bootstrap.
+
+torch_transformer_benchmark.py  GENERATED standalone drop-in (judges' harness +
+                             our UserOptimizedTransformer). Never hand-edit.
 
 tools/
   check_validity.py          static gate — replaces the adversary agent (0 tokens)
   archive.py                 MAP-Elites — replaces the archivist agent (0 tokens)
   slurm.py                   submit() / poll() — never block on srun
+  verify_baseline.py         AST-diff benchmark.py's frozen half vs the judges'
+                             ~/torch_transformer_benchmark.py — before every ship
+  sync_entrypoint.py         regenerate torch_transformer_benchmark.py
 
 probes/
   phase0.py                  capability probe — RUN THIS FIRST

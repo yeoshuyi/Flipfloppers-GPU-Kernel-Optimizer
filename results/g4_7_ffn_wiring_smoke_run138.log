@@ -1,0 +1,34 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+
+=== causal d512/ffn2048 tok8192  (TransformerConfig(batch_size=8, seq_len=1024, d_model=512, num_heads=8, ffn_dim=2048, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=58  cfg51=51   (expect fallback=None, cfg58=58, cfg51=51)
+  fallback shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(8, 1024, 512) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 4.488e-04   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 2.111e-03   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 2.111e-03   (expect > 0 -- configs must differ)
+  --> PASS
+
+=== causal d128/ffn128 tok8192 (official row-1 shape)  (TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=58  cfg51=51   (expect fallback=None, cfg58=58, cfg51=51)
+  fallback shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(64, 128, 128) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 2.401e-04   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 1.204e-03   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 1.204e-03   (expect > 0 -- configs must differ)
+  --> PASS
+
+=== causal d128/ffn128 tok2048 (below gate)  (TransformerConfig(batch_size=16, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=2, causal=True))
+  _ffn_cur: fallback=None  cfg58=None  cfg51=None   (expect fallback=None, cfg58=None, cfg51=None)
+  fallback shape=(16, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg58    shape=(16, 128, 128) dtype=torch.float32 finite=True  ok
+  cfg51    shape=(16, 128, 128) dtype=torch.float32 finite=True  ok
+  max|cfg58 - fallback| = 0.000e+00   (expect < 2e-3 -- GEMM reorder only)
+  max|cfg51 - fallback| = 0.000e+00   (fp16-accum, expect larger than cfg58)
+  max|cfg58 - cfg51|    = 0.000e+00   (expect > 0 -- configs must differ)
+  --> PASS
+
+OVERALL: PASS

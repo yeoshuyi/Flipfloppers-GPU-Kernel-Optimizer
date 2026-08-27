@@ -316,8 +316,8 @@ That is the real, correctness-respecting theoretical floor for Default —
 FLOPs are contractually barred from ever reaching the FP8 rate. (This
 derivation deliberately uses the project's original, tighter accuracy bound
 — `max_abs=1e-3`/`max_rel=1e-2` — as the stronger, more conservative claim;
-the actual enforced default later in the project loosened to `0.002/0.02`,
-see CLAUDE.md's "OFFICIAL CAUSAL EVALUATION MATRIX" section, but the
+the enforced default is `0.002/0.02`, confirmed by the judges' canonical
+`torch_transformer_benchmark.py` published 2026-08-27, but the
 attention-precision constraint above is a structural policy, not a
 tolerance-dependent one — it doesn't move with the budget.) Our shipped
 Default result (0.558 ms) sits above even this corrected floor: we use
