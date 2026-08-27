@@ -2768,3 +2768,263 @@ differently-timed runs, not a code difference.
    (0.00182/0.002) as the binding constraint on ANY further precision
    work there, and look for genuinely new ideas rather than retrying
    these combinations.
+
+### 41. G4.3 (warp specialisation + CUTLASS-grade epilogue on G4.4's kernel) — **SHIPPED non-causal, +4.8%/+5.4% at long_seq/large_batch. CLOSED on accuracy for causal.**
+
+**What reopened this.** Step 37 built the hand-written
+`mma.sync.aligned.m16n8k16.f16.f16` FP16-ACCUMULATE GEMM (G4.4,
+`csrc/g4_4_mma_gemm.cu`) and closed it: best config `cfg[11]`
+(BM128/BN128/BK64/stg2) reached **181.93 TF = 55.1%** of the 330.3 TF
+FP16-accumulate tier at the primary judgment shape (qkv/large_batch,
+M=32768), against cuBLASLt's **150.69 TF = 91.2%** of its own half-rate
+tier. `2.00 × (0.551/0.912) = 1.21`, and the measurement was **x1.207**
+against a **x1.3** gate — `results/g4_4_stage0c_tiles_run98.log:191`,
+verified again in this step's own jobs (276.7-276.8 us, x1.235-1.236, three
+independent re-measurements). Step 37's own stated next lever, never
+attempted: *"a CUTLASS-grade epilogue (shared-memory-staged 128-bit stores)
+and warp specialisation — MEGAKERNEL.md G4.3's territory."*
+
+**The arithmetic that pointed at the levers** (per 128×128×512 output block,
+2.52 GHz, Ada: 128 B/clk/SM shared bandwidth, one `m16n8k16` per warp
+scheduler every 8 clks — written out at `csrc/g4_4_warpspec_gemm.cu:15-51` (lines 19-26 are the clock count)):
+
+```
+mma issue       4096 mma/block over 4 schedulers          =  8192 clk   (floor)
+ldmatrix bytes  cfg[11] 2x4 warp grid, 64x32 warp tile:
+                3072 B/warp/k-step x 8 warps x 4 x 8      = 786432 B
+                786432 / 128 B/clk                        =  6144 clk
+                                             8192 + 6144  = 14336 clk
+8192 / 0.551                                              = 14868 clk  <- MEASURED
+```
+
+i.e. the measured 55.1% is almost exactly *"mma and ldmatrix do not
+overlap at all"*. That predicted three separable levers, and
+`csrc/g4_4_warpspec_gemm.cu` makes each a template flag so they can be
+priced apart instead of bundled.
+
+**New file, old file untouched.** `csrc/g4_4_warpspec_gemm.cu` +
+`csrc/g4_4_warpspec_gemm.cpp`, same discipline as `csrc/cublaslt_gelu.cpp`
+sitting beside the shipped `csrc/cublaslt_algo.cpp`. `git diff` on
+`csrc/g4_4_mma_gemm.cu` is empty.
+
+**Stage 0a — correctness gate BEFORE any timing.** Step 37's discipline,
+extended for what is actually new here (the named-barrier protocol, the
+epilogue swizzle, the fat warp tile). `probes/g4_3_warpspec_correctness.py`,
+jobs 123/125, `results/g4_3_warpspec_stage0a_run123.log` and
+`..._r2_run125.log`. Five checks, **all 48 configs PASS both runs**:
+
+| check | result |
+|---|---|
+| 1. warpspec `cfg[0]` **bitwise ==** `g4_4_mma_gemm cfg[11]` | True at 3 shapes, **0/262144 differing elements** |
+| 2. exact-integer input (fp16-representable partial sums) | `EXACT` (0.0 error), 48/48 configs × 3 shapes |
+| 3. one-hot sweep (catches index transposition) | **0 / 150 mismatches**, 48/48 configs |
+| 4/5. random fp16 vs fp64, 3 shapes | 3.5e-3 … 6.0e-3, i.e. the fp16-accumulate floor |
+
+Check 1 is the load-bearing one: it makes `cfg[0]` an honest in-file control
+for step 37's champion, so every delta below is measured against a
+bit-identical reimplementation rather than across jobs.
+
+**Round 1 — lever isolation.** `probes/g4_3_warpspec_sweep.py`, job 124,
+`results/g4_3_warpspec_sweep_run124.log`. Same protocol as step 34/37:
+CUDA-graph replay, best-of-5, cross-checked against `torch.profiler` (agree
+to 0.2-4.0%). Both baselines re-measured **in the same job**.
+
+At qkv/large_batch (M=32768), `run124.log:81-97`:
+
+| lever | from | to | effect |
+|---|---|---|---|
+| fat 64×64 consumer warp tile (2×4 → 2×2 warps) | 276.7 | 284.5 | **x0.973 — LOST** |
+| register double-buffered `ldmatrix` fragments | 276.7 | 279.8 | **x0.989 — LOST** |
+| **smem-staged 128-bit epilogue** | 276.7 | 262.8 | **x1.053** |
+| all three stacked | 276.7 | 258.7 | x1.070 |
+| **+ warp specialisation, 3 stages** (`cfg[17]`) | 259.0 | 246.3 | **x1.052** |
+| 4 pipeline stages via a 128×64 tile | 258.7 | 496.4 | x0.521 — dead |
+
+**Finding 1 — the epilogue, not the warp tile, was the bug.** Step 37's
+epilogue writes `__half2` (4 B/thread/instruction), so one warp store
+instruction touches 8 different output rows × 16 B = 8 transactions for 128 B
+of payload. Staging the accumulators through the *already-allocated, by then
+dead* pipeline shared memory (MEGAKERNEL.md's "activation → output" page
+reuse — it costs **zero extra shared memory**) and re-reading them
+chunk-major turns that into `st.global.v4.b32`: 32 lanes × 16 B = 4 fully
+utilised 128 B transactions. Worth **x1.05 at large_batch, x1.26 at
+out_proj, and x1.32 at default** (`run124.log:86-87, 116-117, 149`). The
+write- and read-side bank arithmetic is worked out in the code at
+`csrc/g4_4_warpspec_gemm.cu:564-572`; both sides are conflict-free by
+construction, no padding.
+
+**Finding 2 — my LDSM-bandwidth model was wrong, and the measurement says
+so.** Fat 64×64 consumer warp tiles cut shared-memory *read traffic* by a
+third (24576 → 16384 B per k-step per block) and **still lost x0.973**. The
+prediction in the file header (66.7% of tier from that lever alone) did not
+happen. Recording it as a wrong prediction rather than quietly deleting it:
+the serialisation model explains the *magnitude* of the 55.1% correctly and
+still mispredicts which lever moves it.
+
+**Finding 3 — deeper pipelining only pays WITH warp specialisation.** This
+is MEGAKERNEL.md G4.3's "stages 2→4" tuning point showing up, and it is
+conditional in a way the doc does not say:
+
+```
+plain  (block-wide __syncthreads)  stg2 258.7 us -> stg3 259.0 us   x0.999
+warpspec (per-stage FULL/EMPTY)    stg2 271.7 us -> stg3 250.2 us   x1.086
+```
+
+A `__syncthreads` pipeline cannot exploit the extra stage — every warp is
+blocked on the *current* tile regardless of depth. Decoupled Loader warps
+can, because they only ever block on the stage they want to **overwrite**.
+That is the whole mechanism of warp specialisation at this scale, and it is
+worth nothing without the depth to spend it on.
+
+**Finding 4 — the two idle MEGAKERNEL roles are not free, they are
+NEGATIVE-cost.** For a single-output-tile GEMM the Storer has no cross-block
+reduce and the Controller has no page state to arbitrate, so both idle.
+Keeping them anyway (8 warps rather than 6) measured **x1.044 FASTER**
+(`run124.log:91`) — the extra resident warps hide latency the 4 Consumer
+warps cannot hide alone. Going further, **4 Loader warps beat 2** by x1.067.
+Reported because it is the opposite of the intuition that idle warps waste
+issue slots.
+
+**Round 2 — three more CUTLASS-grade levers.** Job 126,
+`results/g4_3_warpspec_sweep_r2_run126.log`: `ldmatrix.x4` for the B
+fragments (half the LDSM instructions), `st.global.cs` evict-first output
+stores, and Triton/CUTLASS group-M threadblock rasterisation. Together they
+bought **~1%**, inside the 1.9% run-to-run spread. **The search has
+saturated**, and it saturated at:
+
+```
+qkv large_batch   235.79 us  218.59 TF  x1.451  = 66.2% of the FP16-accum tier
+qkv default        10.75 us  149.89 TF  x1.345  (step 37 was x0.987)
+out_proj lb        77.97 us  220.35 TF  x1.480  (step 37 was x1.133)
+```
+
+**The x1.3 gate step 37 missed is MET at both judged shapes** —
+`run126.log:143` and `:232` — and the tier efficiency moved **55.1% → 66.2%**.
+It did not reach the 80% step 37 named as the reopening condition; it did not
+need to, because 66.2% already clears the gate.
+
+**Stage 0c — does it survive the shapes the harness actually runs?**
+`probes/g4_3_warpspec_modelshapes.py`, job 127,
+`results/g4_3_warpspec_modelshapes_run127.log`. Rounds 1/2 judged on
+d_model=512 (K=512, N=1536); CLAUDE.md's official causal matrix runs QKV dim
+**128** for 11 of its 14 shapes. K=128 is only two k-tiles at BK=64, so this
+had to be measured, not assumed. 28 (M,K,N) triples, 8 finalist configs:
+
+| M | verdict |
+|---|---|
+| 128 – 2048 | **LOSES**, x0.35 to x1.03 (a fixed per-launch floor of 4-10 us dominates) |
+| 8192 – 65536 | **WINS everywhere**: x1.085 (d128 out_proj) to x1.547 (d1024 out_proj) |
+| 1 280 000 | x1.006 — DRAM-bound, nothing to win |
+
+That is the shipping gate, and it is measured rather than guessed:
+**tok ≥ 8192**. The FFN GEMMs were measured too (x1.43-x1.59) purely to size
+a future prize; they need a GELU/residual epilogue and are **not** wired in.
+
+**Integration.** `benchmark.py`: `_ws_ext()` / `_ws_register_op()` /
+`g43::ws_linear` mirror G6.6's `_lt_ext()` / `g66::lt_linear` exactly —
+a `torch.library.custom_op` with a fake impl, because the call site is inside
+`torch.compile(mode="reduce-overhead")` and a bare pybind call would
+graph-break. `_ensure_ws_plan()` decides **eagerly**, outside the compiled
+region, so `ws_q`/`ws_o` are trace-time constants and there is no runtime
+branch inside the CUDA-graph-captured body. Keyed on a shape; never an
+input, an output, or a `data_ptr`. Any rejected shape falls back to the exact
+`F.linear` it replaces.
+
+**Then the ship run came back FAST AND WRONG.** Job 128,
+`results/g4_3_ship_verify_run128.log` — matched BEFORE/AFTER in one job on
+the same locked clocks:
+
+```
+long_seq_causal     7.108 -> 7.559  (+6.3%)   max_abs 0.00142 -> 0.00550  FAIL
+large_batch_causal  2.662 -> 2.828  (+6.2%)   max_abs 0.00175 -> 0.00763  FAIL
+large_batch         2.453 -> 2.605  (+6.2%)   max_abs 0.00119 -> 0.00198  PASS at 98.9% of budget
+```
+
+CLAUDE.md's precision policy is explicit that this is not a revert
+condition. `probes/g4_3_numerical_rescue.py`, job 129,
+`results/g4_3_numerical_rescue_run129.log`, prices every rescue on the
+ladder — the `SPLIT` FP32 accumulate carry MEGAKERNEL.md G4.4 mandates
+(built in step 37, never needed until now) at three chunk sizes, crossed with
+scoping the kernel to one projection or the other:
+
+| rescue | large_batch_causal | long_seq_causal | large_batch (non-causal) |
+|---|---|---|---|
+| none (BEFORE) | 0.00189 PASS | 0.00159 PASS | 0.00125 PASS |
+| no carry, both GEMMs | 0.00643 FAIL | 0.00514 FAIL | 0.00189 PASS (95%) |
+| SPLIT 256 | 0.00480 FAIL | 0.00375 FAIL | 0.00154 PASS |
+| SPLIT 128 | 0.00356 FAIL | 0.00297 FAIL | 0.00143 PASS |
+| **SPLIT 64** | 0.00301 FAIL | 0.00270 FAIL | **0.00125 PASS** |
+| SPLIT 64, qkv only | 0.00238 FAIL | 0.00203 marginal | 0.00123 PASS |
+
+**The carry works and costs ~0.5% of model time** (long_seq: +3.95% without
+it, +3.41% with it — the −20% rows in that log are a `torch._dynamo`
+`recompile_limit` artefact, the warning is printed immediately above them,
+and they are not the kernel). It is simply not enough for causal, and the
+ladder has no rungs left: a chunk below BK=64 *is* FP32 accumulation, which
+is the half-rate tier this kernel exists to escape.
+
+**Why causal specifically, and why this is structural.** The causal path
+(G6.4bc, FP16 attention) already sits at **91-95% of the 0.002 atol budget on
+FP16 STORAGE alone** — `max_abs 0.00175` at large_batch_causal, which
+CLAUDE.md itself flags as "the tightest margin of the four". There is
+~0.00025 of headroom, and the best-mitigated FP16 *accumulation* adds ~0.0012.
+Off by 5×. Non-causal starts at 0.00119 with 0.0008 of headroom and fits.
+**This is not a tuning failure; it is the causal path having already spent
+the budget.** Consistent with step 37's own prediction, and with step 40's
+closing note naming causal-large-batch's margin as the binding constraint on
+any further precision work.
+
+**Shipped, scoped: non-causal, tok ≥ 8192, `cfg[48]` (= `cfg[26]` + SPLIT 64).**
+`_optimized_forward_causal` is left **byte-identical** to what it was — the
+only change inside it is a comment recording why the kernel is absent. Final
+verification, job 130, `results/g4_3_ship_verify_final_run130.log`, matched
+BEFORE/AFTER in one job, AFTER at the full **40 accuracy trials**:
+
+| shape | before | after | Δ | max_abs before | max_abs after | budget used |
+|---|---|---|---|---|---|---|
+| **long_seq** | 5.374 | **5.629** | **+4.75%** | 0.00125 | 0.00137 | 68% |
+| **large_batch** | 2.452 | **2.584** | **+5.38%** | 0.00124 | 0.00158 | 79% |
+| tiny | 7.316 | 7.265 | −0.7% | — | 0.000841 | gate off |
+| default | 2.505 | 2.522 | +0.7% | — | 0.00113 | gate off |
+| default_causal | 2.768 | 2.715 | −1.9% | — | 0.00157 | gate off |
+| long_seq_causal | 7.109 | 7.110 | 0.0% | — | 0.00161 | gate off |
+| large_batch_causal | 2.662 | 2.662 | 0.0% | — | 0.00182 | gate off |
+| large_batch_causal_padded | 2.656 | 2.655 | −0.04% | — | 0.00182 | gate off |
+| long_seq_causal_padded | 6.411 | 6.415 | +0.06% | — | 0.00161 | gate off |
+
+**All 9 shapes PASS.** Both `max_abs` columns are the **40-trial** figures —
+the "before" ones from `results/final_reverify_run118.log` (the pre-G4.3
+40-trial record) rather than from run130's BEFORE pass, which ran 5 trials
+for speed only and therefore under-reports the tail. The gate-off shapes'
+`max_abs` values are *identical*
+to the pre-G4.3 40-trial record (`results/final_reverify_run118.log`:
+tiny 0.000840604, default 0.00112808, default_causal 0.00157221) and to
+CLAUDE.md's own causal ledger (long-seq 0.00161, large-batch 0.00182) — so
+the causal and small-shape paths are provably untouched, not merely
+"measured the same".
+
+**Honest caveat, per CLAUDE.md's "track the trend" rule.** non-causal
+large_batch's `max_abs` rises **0.00124 → 0.00158** (79% of budget). That is
+a real 1.28× degradation, bought deliberately for +5.4%. Without the SPLIT 64
+carry it would have been 0.00198 (99%), which is why the carry is not
+optional and why `_WS_CFG` names `cfg[48]` and not `cfg[26]`. A future
+session tightening precision anywhere in the non-causal path should treat
+this cell as the new second-tightest margin after causal-large-batch.
+
+**Archive.** `long-seq__fp16` 4.56x → **5.63x**, `large-batch__fp16` 1.98x →
+**2.58x** (both elites had gone stale at the g6_4b measurement and are now
+re-measured at the current head).
+
+**Reusable assets left behind.** A verified 48-config warp-specialised
+`mma.sync` GEMM with per-stage named-barrier producer/consumer decoupling, a
+zero-extra-shared-memory CUTLASS-grade 128-bit epilogue, and — the thing this
+project did not previously have — **a measured price for FP16 accumulation
+inside a real model**: it is worth ~5% of forward time at the two large
+non-causal shapes and it costs 0.00034 of `max_abs`, which the causal path
+cannot afford at any mitigation setting.
+
+**What would reopen this:** (a) the FFN GEMMs, measured at x1.43-x1.59 in
+`run127.log` and roughly **8/3 of the attention GEMMs' FLOPs** — the largest
+remaining prize, needing a GELU epilogue on `ffn_in` and a residual on
+`ffn_out`; (b) anything that buys back causal accuracy headroom *upstream* of
+this kernel, since causal is blocked by its existing budget, not by G4.3.

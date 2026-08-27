@@ -7,8 +7,11 @@
 #SBATCH --output=/scratch/techjam2/runs/%j.out
 
 # G4.3 ship verification.
-#   PASS 1 (BEFORE) = git HEAD's benchmark.py, copied verbatim to
-#                     /work/_before_benchmark.py. 5 accuracy trials -- it is
+#   PASS 1 (BEFORE) = the pre-G4.3 benchmark.py. Regenerate it with
+#                       git show 044754a:benchmark.py > /work/_before_benchmark.py
+#                     (044754a is the commit this step branched from). The file
+#                     is deliberately NOT tracked -- it is a throwaway copy of a
+#                     commit git already has. 5 accuracy trials -- it is
 #                     already verified (results/final_reverify_run118.log);
 #                     this pass exists ONLY to produce a speedup measured in
 #                     the SAME job, on the same locked clocks, as the after.
