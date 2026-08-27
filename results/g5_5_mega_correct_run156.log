@@ -1,0 +1,62 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+[1/3] c++ -MMD -MF g5_mega_causal.o.d -DTORCH_EXTENSION_NAME=g5_mega_causal -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -fPIC -std=c++20 -c /work/csrc/g5_mega_causal.cpp -o g5_mega_causal.o 
+[2/3] /usr/local/cuda/bin/nvcc -MD -MF g5_mega_causal.cuda.o.d -DTORCH_EXTENSION_NAME=g5_mega_causal -DTORCH_API_INCLUDE_EXTENSION_H -isystem /usr/local/lib/python3.12/dist-packages/torch/include -isystem /usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -isystem /usr/local/cuda/include -isystem /usr/include/python3.12 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options '-fPIC' -gencode=arch=compute_89,code=sm_89 -Xptxas -v -diag-suppress 179 -std=c++20 -c /work/csrc/g5_mega_causal.cu -o g5_mega_causal.cuda.o 
+ptxas info    : 31 bytes gmem, 248 bytes cmem[4]
+ptxas info    : Compiling entry function '_ZN50_GLOBAL__N__2ca84b94_17_g5_mega_causal_cu_177639a918mega_causal_kernelEPKfPfPK6__halfS5_S5_S5_S5_S5_S1_S1_S1_S1_i' for 'sm_89'
+ptxas info    : Function properties for _ZN50_GLOBAL__N__2ca84b94_17_g5_mega_causal_cu_177639a918mega_causal_kernelEPKfPfPK6__halfS5_S5_S5_S5_S5_S1_S1_S1_S1_i
+    544 bytes stack frame, 582 bytes spill stores, 514 bytes spill loads
+ptxas info    : Used 255 registers, used 1 barriers, 544 bytes cumulative stack size, 452 bytes cmem[0]
+ptxas info    : Compile time = 59789.055 ms
+[3/3] c++ g5_mega_causal.o g5_mega_causal.cuda.o -shared -L/usr/local/lib/python3.12/dist-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o g5_mega_causal.so
+  qkv_w  (4, 384, 128) torch.float16
+  qkv_b  (4, 384) torch.float16
+  op_w   (4, 128, 128) torch.float16
+  op_b   (4, 128) torch.float16
+  fi_w   (4, 128, 128) torch.float16
+  fi_b   (4, 128) torch.float16
+  fo_w   (4, 128, 128) torch.float32
+  fo_b   (4, 128) torch.float32
+  fn_w   (128,) torch.float32
+  fn_b   (128,) torch.float32
+  norm1.eps = 1e-05  norm2.eps = 1e-05  final_norm.eps = 1e-05
+Traceback (most recent call last):
+  File "/work/probes/g5_5_mega_correct.py", line 115, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/probes/g5_5_mega_correct.py", line 85, in main
+    ref64 = base(x.double(), None).float()                             # fp64 baseline
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 529, in forward
+    x = layer(x, valid_token_mask, self.config.causal)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 501, in forward
+    x = x + self.attention(self.norm1(x), valid_token_mask, causal)
+                           ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/normalization.py", line 228, in forward
+    return F.layer_norm(
+           ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/functional.py", line 2987, in layer_norm
+    return torch.layer_norm(
+           ^^^^^^^^^^^^^^^^^
+RuntimeError: expected scalar type Double but found Float

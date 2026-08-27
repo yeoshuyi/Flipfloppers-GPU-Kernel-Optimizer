@@ -8,6 +8,7 @@ and the 0.002 budget check.
 
 Small batch (B=64) -- the math is batch-independent; row 6 is B=10000.
 """
+import copy
 import os
 import sys
 
@@ -63,6 +64,7 @@ def main():
     cfg.validate()
     torch.manual_seed(0)
     base = B.BaselineTransformer(cfg).to(DEV, torch.float32).eval()
+    base64 = copy.deepcopy(base).to(torch.float64).eval()
     opt = B.UserOptimizedTransformer(cfg).to(DEV, torch.float32).eval()
     B.copy_model_weights(base, opt, strict=True)
     opt._ensure_folded_weights(DEV, torch.float32)
@@ -82,7 +84,7 @@ def main():
         x = torch.randn(cfg.batch_size, cfg.seq_len, cfg.d_model, device=DEV,
                         generator=torch.Generator(device=DEV).manual_seed(100 + trial))
         ref = opt._optimized_forward_causal(x, None, True).float()          # shipped math, eager
-        ref64 = base(x.double(), None).float()                             # fp64 baseline
+        r64 = base64(x.double(), None)                                      # fp64 baseline
 
         out = torch.empty_like(x)
         ext.mega_causal_forward(x, out, W["qkv_w"], W["qkv_b"], W["op_w"],
@@ -91,11 +93,11 @@ def main():
         torch.cuda.synchronize()
 
         d_ref = (out - ref).abs()
-        d_64 = (out.double() - base(x.double(), None)).abs()
-        ref_d64 = (ref.double() - base(x.double(), None)).abs()
+        d_64 = (out.double() - r64).abs()
+        ref_d64 = (ref.double() - r64).abs()
         atol, rtol = 2e-3, 2e-2
-        fail_mega = ((d_64 > atol) & (d_64 > rtol * base(x.double(), None).abs())).sum().item()
-        fail_ref = ((ref_d64 > atol) & (ref_d64 > rtol * base(x.double(), None).abs())).sum().item()
+        fail_mega = ((d_64 > atol) & (d_64 > rtol * r64.abs())).sum().item()
+        fail_ref = ((ref_d64 > atol) & (ref_d64 > rtol * r64.abs())).sum().item()
         print(f"trial {trial}: max|mega-shipped_ref|={d_ref.max().item():.3e}  "
               f"max|mega-fp64|={d_64.max().item():.3e} (fail {fail_mega})  "
               f"| shipped max|.-fp64|={ref_d64.max().item():.3e} (fail {fail_ref})")
