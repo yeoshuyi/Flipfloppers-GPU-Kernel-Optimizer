@@ -3323,3 +3323,36 @@ trusting any future fused-FFN gate — **including a re-verification of G4.7
 regime 1 (d512/ffn2048), whose +9.5%/+12.1% is corroborated across two jobs
 (run139, run142) and the run132 microbench but was smoke-checked the same
 inadequate way.** That re-verification is iteration 5.
+
+---
+
+### 47. Iteration 5 — G4.7 regime 1 (d512/ffn2048) DOES engage through CUDA-graph capture
+
+Step 46's silent-fallback finding at d128 put G4.7 (step 42) itself under
+suspicion — its ship was smoke-checked the same inadequate way (one eager
+pre-capture call). `probes/g5_3_g47_capture_verify.py` (job 151,
+`results/g5_3_g47_capture_verify_run151.log`) checks it the capture-aware way:
+40 warmup forwards to force `reduce-overhead` graph capture, then profile the
+replays and census for the warp-spec kernel symbol.
+
+**d512/ffn2048: `_ffn_cur = 58`, and
+`ws_gemm_kernel<128,128,64,2,1,4,4,0,1,1,0,1,1,0,1,1>` is present in the
+captured-graph trace, ×30 (15 profile iters × 2 layers).** The fused kernel
+genuinely runs under capture. G4.7's +9.5%/+12.1% (run139, run142) is real —
+**no revert.** For d128 (T3 gate now reverted) `_ffn_cur = None` and no
+warp-spec kernel appears — consistent with step 46.
+
+**Why d512 survives capture and d128 (T3) did not** is not fully isolated, but
+the scale gap points at the custom op's output allocation: d512/ffn2048 fp32
+output is `[8192, 2048]` = 64 MB; the T3 d128 case is `[1.28M, 128]` = 655 MB,
+×4 layers at B=10000 — plausibly beyond what inductor's cudagraph-tree pool
+will place, so that op silently drops to eager and, under replay, falls back.
+This makes `ffn_dim >= 2048` (regime 1's floor) double as an implicit
+output-size bound; a d128 route would need the fusion done *without* a
+graph-captured custom op that allocates (e.g. an out-parameter op, or the
+fusion pushed into a hand-written kernel that also does `ffn_out`).
+
+**Process fix:** `probes/g4_7_ffn_wiring_smoke.py`'s one-call check is retained
+only as an import/gate sanity test; `probes/g5_3_g47_capture_verify.py` (≥ 40
+warmup calls, then trace-census for the kernel symbol) is now the required
+gate before shipping any fused-FFN change.
