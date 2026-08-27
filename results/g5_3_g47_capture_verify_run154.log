@@ -1,0 +1,37 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+================ d512/ffn2048 tok8192  (G4.7 regime 1 -- SHIPPED, gate on) ================
+USDT:2026-08-27 17:03:21 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:21 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 17:03:21 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:21 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 17:03:24 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:25 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 17:03:26 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:27 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 17:03:32 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:33 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 17:03:36 175148:175148 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 17:03:36 175148:175148 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  _ffn_cur (effective)                 : 58
+  ws_gemm_kernel in cfg58 CAPTURED trace: True   (this is the truth signal)
+  max|cfg58_replay - fallback_replay|   : 2.384e-07   (precision-neutral => tiny; NOT an engagement test)
+     WS kernel: void ws_gemm_kernel<128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1>(__half const*,   x30
+  VERDICT: ENGAGED through capture
+
+================ d128/ffn128  tok1.05M  (T3 -- gate FORCED on) ================
+  _ffn_cur (effective)                 : 58
+  ws_gemm_kernel in cfg58 CAPTURED trace: True   (this is the truth signal)
+  max|cfg58_replay - fallback_replay|   : 4.768e-07   (precision-neutral => tiny; NOT an engagement test)
+     WS kernel: void ws_gemm_kernel<128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1>(__half const*,   x30
+  VERDICT: ENGAGED through capture
+
+================ d128/ffn128  tok1.28M L4 (T3 = official row 6 shape -- gate FORCED on) ================
+  _ffn_cur (effective)                 : 58
+  ws_gemm_kernel in cfg58 CAPTURED trace: True   (this is the truth signal)
+  max|cfg58_replay - fallback_replay|   : 2.642e-04   (precision-neutral => tiny; NOT an engagement test)
+     WS kernel: void ws_gemm_kernel<128, 128, 64, 2, 1, 4, 4, 0, 1, 1, 0, 1, 1, 0, 1, 1>(__half const*,   x60
+  VERDICT: ENGAGED through capture
+
+OVERALL: PASS
