@@ -11,7 +11,21 @@ sbatch only; no git remote (local commits ARE the deliverable); document while a
 ## NOW
 
 - **Iteration:** 7 — **G5.MEGA**: per-sequence fused megakernel for official row 6 (user: "try 1 then 2")
-- **Phase:** 0 — design + skeleton
+- **Phase:** 0 — correctness probe running (job in flight)
+- **Written:** `csrc/g5_mega_causal.{cu,cpp}` (correctness-first: 128 threads/block = 1 per query row,
+  scalar loops, shared `xs`[128][128]fp32 + `kh`/`vh`[128][32]fp16 head buffers, `ctx`/`n1`/`n2`/`g`
+  in registers, online softmax). `probes/g5_5_mega_correct.py` + `jobs/g5_5_mega_correct.sbatch`.
+  Committed `<hash>`.
+- **Next concrete action:** read `results/g5_5_mega_correct_run<J>.log`.
+  - compile error → fix the .cu, resubmit.
+  - `max|mega - shipped_ref| ≤ 5e-4` and `fail_mega == 0` on all 5 trials → Phase 0 PASS. Commit,
+    move to Phase 1 (speed: mma.sync GEMMs / flash-tiled attention / occupancy; `probes/g5_5_mega_sweep.py`
+    vs the shipped path at row-6 shape).
+  - diverges from the shipped ref → debug which stage (add per-stage dumps to the probe). Likely
+    suspects: LN eps, qkv weight layout/transpose, head split indexing, GELU rounding point,
+    ffn_out fp32-vs-TF32, final_norm affine.
+- **In-flight jobs:** g5_5 mega correctness — sbatch `jobs/g5_5_mega_correct.sbatch` →
+  `results/g5_5_mega_correct_run<J>.log`. ~10 min (includes the nvcc build).
 - **Why:** step 43 — row 6's 52.5ms forward is 38.9% LN/residual traffic + 8% standalone GELU. The
   fp32 residual `x` [1.28M,128] (655MB) round-trips HBM ~2 reads + 2 writes per layer × 4. A megakernel
   with **one CUDA block per sequence** (S=128, d=128 → one sequence fits on-chip) does all 4 layers
