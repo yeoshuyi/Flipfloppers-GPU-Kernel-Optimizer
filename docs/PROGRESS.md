@@ -1680,3 +1680,47 @@ Closes Tier 2 entirely: FP16 attention shipped (step 28), FP16 FFN closed
 (step 27), INT8 FFN closed (this step). Committed alongside this write-up:
 the probe script and job log. No `benchmark.py` changes (precheck only,
 never wired into the model).
+
+### 30. G3.6 (minimax deg-7 GELU) — catalogue's own accuracy claim verifiably wrong, closed without a GPU job
+
+**What was tried:** `docs/CATALOGUE.md`'s G3.6 claims a degree-7 minimax
+polynomial approximates GELU to ~1e-6 over `x<-5→0, x>5→x` exact, poly
+between. Before wiring anything into `benchmark.py`, computed the actual
+polynomial (Chebyshev-node least-squares fit in Chebyshev basis, converted
+to monomial coefficients, pure CPU/numpy — no GPU, no `sbatch` needed,
+this is a closed-form math check) to verify the claim, per the catalogue's
+own instruction to "measure against `erff` first."
+
+**Result: the catalogue's accuracy estimate is simply wrong, confirmed
+by direct computation, not by guessing.** A real degree-7 fit over
+`[-5,5]` achieves max abs error **0.084 — 84x over the entire 0.001 atol
+budget by itself**, before any amplification through `ffn_out`'s GEMM or
+6-layer compounding. A degree sweep shows why: error only drops to
+1.6e-3 at degree 15 and 1.3e-4 at degree 19 — reaching the claimed 1e-6
+would need a polynomial in the high 20s in degree, not 7. This is the
+second time this session a `docs/CATALOGUE.md` numeric estimate has been
+found wrong under real measurement (the first: G2.8's GEMM-count table,
+step 24) — worth flagging as a pattern (the catalogue's speedup/effort
+estimates have held up better than its precision-accuracy estimates
+specifically, across both cases found).
+
+**Why this closes rather than "just use a higher degree":** a
+polynomial with enough terms to actually clear budget (roughly degree
+20+, by the trend) needs that many multiply-adds per element via Horner's
+method, evaluated on every one of the model's ~800K-16M+ GELU activations
+per forward call depending on shape — plausibly *more* arithmetic than
+native `F.gelu`'s own hardware-accelerated `erf` intrinsic, for a
+catalogued gain that was only ever 1.02-1.05x at the (wrong) degree-7
+estimate. There's no degree where this both clears budget and beats the
+kernel it replaces.
+
+**Closed without spending a GPU job** — the polynomial-fitting itself is
+decisive, pure math, independent of the model or hardware (same category
+of closure as steps 19/20/24's roofline arithmetic). No `benchmark.py`
+changes. Nothing to commit from this step beyond this write-up (the local
+fitting script lived outside the repo, in the scratchpad, not part of
+the project's own artifact trail).
+
+Closes Tier 3's cheap item. Remaining: G1.6 + G2.3 (L2 persistence via a
+real C++ extension) — the one item left in the plan, and the highest-
+effort one, now that the build toolchain is confirmed working.
