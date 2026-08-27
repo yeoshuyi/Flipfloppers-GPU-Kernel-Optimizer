@@ -1,0 +1,24 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+ninja: no work to do.
+  qkv_w  (4, 384, 128) torch.float16
+  qkv_b  (4, 384) torch.float16
+  op_w   (4, 128, 128) torch.float16
+  op_b   (4, 128) torch.float16
+  fi_w   (4, 128, 128) torch.float16
+  fi_b   (4, 128) torch.float16
+  fo_w   (4, 128, 128) torch.float32
+  fo_b   (4, 128) torch.float32
+  fn_w   (128,) torch.float32
+  fn_b   (128,) torch.float32
+  norm1.eps = 1e-05  norm2.eps = 1e-05  final_norm.eps = 1e-05
+trial 0: max|mega-shipped_ref|=1.148e-03  max|mega-fp64|=1.113e-03 (fail 0)  | shipped max|.-fp64|=1.276e-03 (fail 0)
+  WARN: mega diverges from the shipped reference math
+trial 1: max|mega-shipped_ref|=1.461e-03  max|mega-fp64|=1.387e-03 (fail 0)  | shipped max|.-fp64|=1.278e-03 (fail 0)
+  WARN: mega diverges from the shipped reference math
+trial 2: max|mega-shipped_ref|=1.200e-03  max|mega-fp64|=1.162e-03 (fail 0)  | shipped max|.-fp64|=1.457e-03 (fail 0)
+  WARN: mega diverges from the shipped reference math
+trial 3: max|mega-shipped_ref|=1.250e-03  max|mega-fp64|=1.174e-03 (fail 0)  | shipped max|.-fp64|=1.405e-03 (fail 0)
+  WARN: mega diverges from the shipped reference math
+trial 4: max|mega-shipped_ref|=1.158e-03  max|mega-fp64|=1.054e-03 (fail 0)  | shipped max|.-fp64|=1.492e-03 (fail 0)
+  WARN: mega diverges from the shipped reference math
+OVERALL: FAIL

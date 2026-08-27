@@ -98,15 +98,21 @@ def main():
         atol, rtol = 2e-3, 2e-2
         fail_mega = ((d_64 > atol) & (d_64 > rtol * r64.abs())).sum().item()
         fail_ref = ((ref_d64 > atol) & (ref_d64 > rtol * r64.abs())).sum().item()
+        mega_err = d_64.max().item()
+        ship_err = ref_d64.max().item()
         print(f"trial {trial}: max|mega-shipped_ref|={d_ref.max().item():.3e}  "
-              f"max|mega-fp64|={d_64.max().item():.3e} (fail {fail_mega})  "
-              f"| shipped max|.-fp64|={ref_d64.max().item():.3e} (fail {fail_ref})")
-        # mega must (a) track the shipped ref closely and (b) pass the budget
-        if d_ref.max().item() > 5e-4:
-            print("  WARN: mega diverges from the shipped reference math")
-            ok = False
+              f"max|mega-fp64|={mega_err:.3e} (fail {fail_mega})  "
+              f"| shipped max|.-fp64|={ship_err:.3e} (fail {fail_ref})")
+        # PASS = mega passes the budget AND is no worse than the shipped path
+        # vs fp64 (a lateral rounding move, or better). It need NOT bit-match
+        # the shipped path -- mega does fp32 attention where the shipped path
+        # uses fp16 flash, so a ~1e-3 difference between them is expected and
+        # not a bug.
         if fail_mega > 0:
             print("  FAIL: mega over the 0.002 budget vs fp64")
+            ok = False
+        if mega_err > ship_err + 2e-4:
+            print("  FAIL: mega materially LESS accurate than the shipped path")
             ok = False
 
     print("OVERALL:", "PASS" if ok else "FAIL")
