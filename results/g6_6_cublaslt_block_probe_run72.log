@@ -1,0 +1,52 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+
+--- Q1 launch-bound check: ffn_in  M=64 K=512 N=2048 ---
+  [ 0] gpu=    9.95 us  cpu_issue=    3.73 us   gpu-bound   id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+  [ 1] gpu=    9.71 us  cpu_issue=    2.94 us   gpu-bound   id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [ 2] gpu=    9.31 us  cpu_issue=    4.34 us   gpu-bound   id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3] gpu=    8.45 us  cpu_issue=    4.35 us   gpu-bound   id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [ 4] gpu=    7.66 us  cpu_issue=    4.36 us   gpu-bound   id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+  [ 5] gpu=    9.20 us  cpu_issue=    4.35 us   gpu-bound   id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 6] gpu=   10.49 us  cpu_issue=    4.26 us   gpu-bound   id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 7] gpu=   10.41 us  cpu_issue=    4.27 us   gpu-bound   id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+--- Q1 launch-bound check: ffn_out M=64 K=2048 N=512 ---
+  [ 0] gpu=   11.64 us  cpu_issue=    4.25 us   gpu-bound   id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+  [ 1] gpu=    7.83 us  cpu_issue=    4.28 us   gpu-bound   id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 2] gpu=    9.28 us  cpu_issue=    4.26 us   gpu-bound   id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3] gpu=    7.98 us  cpu_issue=    4.32 us   gpu-bound   id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+  [ 4] gpu=    9.24 us  cpu_issue=    4.26 us   gpu-bound   id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 5] gpu=   10.57 us  cpu_issue=    4.25 us   gpu-bound   id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 6] gpu=   12.53 us  cpu_issue=    4.26 us   gpu-bound   id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 7] gpu=   30.63 us  cpu_issue=    2.91 us   gpu-bound   id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+=== FFN block, M=64 (K=512->2048->512) ===
+  best lt algo ffn_in  = [4] 7.68 us  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+  best lt algo ffn_out = [1] 7.99 us  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  eager    F.linear chain      :    23.63 us
+  A graph_torch (no launch ovh):    21.69 us
+  C compiled reduce-overhead   :    34.58 us   <- SHIPPED
+  B graph_lt  (cuBLASLt best)  :    14.83 us
+  B vs A  = 1.4625x     B vs C = 2.3319x
+  maxdiff(B,A) = 6.736e-05   (|ref|max = 1.174)
+
+=== FFN block, M=1024 (K=512->2048->512) ===
+  best lt algo ffn_in  = [0] 33.39 us  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  best lt algo ffn_out = [0] 32.61 us  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  eager    F.linear chain      :    86.00 us
+  A graph_torch (no launch ovh):    84.64 us
+  C compiled reduce-overhead   :    91.47 us   <- SHIPPED
+  B graph_lt  (cuBLASLt best)  :    70.94 us
+  B vs A  = 1.1931x     B vs C = 1.2894x
+  maxdiff(B,A) = 6.735e-06   (|ref|max = 1.174)
+
+=== FFN block, M=8192 (K=512->2048->512) ===
+  best lt algo ffn_in  = [3] 245.18 us  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  best lt algo ffn_out = [1] 222.35 us  id=21 tile=20 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  eager    F.linear chain      :   593.40 us
+  A graph_torch (no launch ovh):   584.36 us
+  C compiled reduce-overhead   :   603.75 us   <- SHIPPED
+  B graph_lt  (cuBLASLt best)  :   586.68 us
+  B vs A  = 0.9960x     B vs C = 1.0291x
+  maxdiff(B,A) = 0.000e+00   (|ref|max = 1.266)

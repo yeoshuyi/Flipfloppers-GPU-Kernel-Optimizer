@@ -1,0 +1,42 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+
+=== FFN block, M=64 ===
+  cuda-graph kernel time (no launch overhead):
+    A  F.linear(+bias)         21.71 us   1.0000x  (shipped)
+    D  mm + bias both          24.28 us   0.8941x  maxdiff=0.000e+00
+    E  mm + bias ffn_out       22.85 us   0.9502x  maxdiff=0.000e+00
+    B  cuBLASLt bias-epi       14.80 us   1.4668x  maxdiff=6.736e-05
+  torch.compile reduce-overhead (shipped condition):
+    A    35.18 us | D    34.71 us (1.0136x) | E    35.30 us (0.9964x)
+  |ref|max = 1.174
+
+=== FFN block, M=1024 ===
+  cuda-graph kernel time (no launch overhead):
+    A  F.linear(+bias)         84.50 us   1.0000x  (shipped)
+    D  mm + bias both          78.16 us   1.0810x  maxdiff=6.735e-06
+    E  mm + bias ffn_out       74.99 us   1.1268x  maxdiff=6.735e-06
+    B  cuBLASLt bias-epi       70.94 us   1.1911x  maxdiff=6.735e-06
+  torch.compile reduce-overhead (shipped condition):
+    A    91.39 us | D    91.98 us (0.9936x) | E    91.82 us (0.9953x)
+  |ref|max = 1.174
+
+=== FFN block, M=8192 ===
+  cuda-graph kernel time (no launch overhead):
+    A  F.linear(+bias)        587.16 us   1.0000x  (shipped)
+    D  mm + bias both         760.96 us   0.7716x  maxdiff=0.000e+00
+    E  mm + bias ffn_out      597.42 us   0.9828x  maxdiff=0.000e+00
+    B  cuBLASLt bias-epi      588.15 us   0.9983x  maxdiff=0.000e+00
+  torch.compile reduce-overhead (shipped condition):
+    A   604.16 us | D   602.92 us (1.0021x) | E   603.32 us (1.0014x)
+  |ref|max = 1.266
+
+=== FFN block, M=32768 ===
+  cuda-graph kernel time (no launch overhead):
+    A  F.linear(+bias)       2386.71 us   1.0000x  (shipped)
+    D  mm + bias both        3072.16 us   0.7769x  maxdiff=0.000e+00
+    E  mm + bias ffn_out     2493.58 us   0.9571x  maxdiff=0.000e+00
+    B  cuBLASLt bias-epi     2388.39 us   0.9993x  maxdiff=0.000e+00
+  torch.compile reduce-overhead (shipped condition):
+    A  2516.80 us | D  2516.25 us (1.0002x) | E  2516.49 us (1.0001x)
+  |ref|max = 1.378

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import copy
 import math
+import os
 import statistics
 import time
 from dataclasses import dataclass
@@ -24,6 +25,140 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+# --------------------------------------------------------------------------
+# G6.6: explicit cuBLASLt algorithm + BIAS epilogue for the two FFN GEMMs.
+#
+# Fact cited (docs/PROGRESS.md step 31): the FFN's TF32 CUTLASS GEMM
+# (ffn_in/ffn_out, plain F.linear) runs at ~47% of TF32 peak with ~26%
+# occupancy on the default shape.
+#
+# What the probes actually found (runs 71/72/73):
+#   * Algorithm selection alone is a NEGATIVE at the default shape -- the best
+#     of 8 cublasLtMatmulAlgoGetHeuristic candidates beats PyTorch's own pick
+#     by 1.001x. cuBLASLt's default heuristic is already right there.
+#   * The real gap is PyTorch's BIAS path. Same shape, same algorithm:
+#     F.linear(x, w) is 32.37us, F.linear(x, w, b) is 44.62us, and cuBLASLt
+#     with CUBLASLT_EPILOGUE_BIAS is 32.61us. The bias costs PyTorch 12.2us
+#     and costs cuBLASLt 0.2us. It is not bandwidth (ffn_in's output is 4x
+#     larger and its bias costs only 2.5us) -- PyTorch selects a different,
+#     slower kernel when a bias is present.
+#   * At TINY (M=64) algorithm selection IS worth 1.32x/1.49x, via split-K
+#     variants the default heuristic does not pick, and the measurement is
+#     genuinely GPU-bound (cpu issue 4.3us vs 7.7-30us of kernel time).
+#   * Writing `F.linear(x, w) + b` instead is NOT a fix: 1.08x at M=1024 but
+#     0.77x at M=8192/32768.
+#
+# This is deliberately NOT step 25's max-autotune failure repeated: every
+# candidate here comes from cuBLASLt's own heuristic and runs the same native
+# TF32 tensor-core datapath PyTorch already dispatches into. Triton's
+# ALLOW_TF32 3-pass FP32 decomposition -- the thing that broke max-autotune --
+# is never in the candidate set. Measured maxdiff against F.linear is 6.7e-6
+# at M=1024 and bit-identical at M=8192/32768.
+#
+# Loaded lazily and defensively: any failure (no compiler, no cuBLASLt, older
+# CUDA) leaves _LT_EXT as None and every call site falls back to F.linear.
+# --------------------------------------------------------------------------
+_LT_EXT = None
+_LT_EXT_TRIED = False
+_LT_OP_READY = False
+
+# Regime gate, a baked constant, not a runtime autotune. This is CLAUDE.md's
+# own TINY boundary (B*S < 128), and it is where the END-TO-END measurement put
+# the win -- not where the isolated block probe predicted it:
+#
+#   shape    tok    optimized ms, run63 -> run74     block-probe prediction
+#   tiny      64      0.2390 -> 0.1980  (1.21x)            1.47x
+#   default 1024      0.6502 -> 0.6483  (1.003x, noise)    1.19x
+#
+# The default-shape prediction did not survive contact with the real model, and
+# run 75 shows why it is not a mis-fire: the plan DID fire at tok=1024 (algos
+# 0/0) and produced bit-identical output for no time. Run 73's baseline was
+# eager ops captured in a raw CUDA graph, which still paid PyTorch's addmm bias
+# penalty; inductor's lowering of the whole model already avoids it, so at the
+# default shape there was never 1.19x on the table. What survives is TINY,
+# where the win comes from split-K algorithms (run 75 picked idx 4/1 = splitk
+# 4 and 16) that cuBLASLt's default heuristic does not choose and that are
+# worth 1.32x/1.49x on the GEMMs themselves (run 71).
+#
+# Scoped to TINY deliberately rather than left at a wider bound: selection is
+# by speed alone, so a different cuBLAS build could pick a split-K variant at a
+# larger shape and shift max_abs there for no measured gain. Confining it to
+# the one regime that pays confines that risk too.
+_LT_MAX_TOKENS = 127
+_LT_REQUESTED = 16          # cublasLtMatmulAlgoGetHeuristic candidate count
+_LT_WS_BYTES = 32 * 1024 * 1024
+_LT_WARMUP = 5              # one-time eager calibration, ~20ms total
+_LT_ITERS = 30
+
+
+def _lt_ext():
+    """Build/load the cuBLASLt extension once. None means 'not available'."""
+    global _LT_EXT, _LT_EXT_TRIED
+    if _LT_EXT_TRIED:
+        return _LT_EXT
+    _LT_EXT_TRIED = True
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "csrc", "cublaslt_algo.cpp")
+    if not os.path.exists(src) or not torch.cuda.is_available():
+        return None
+    try:
+        from torch.utils.cpp_extension import load
+        build_dir = os.environ.get(
+            "TORCH_EXT_BUILD_DIR",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), ".ext_build"))
+        os.makedirs(build_dir, exist_ok=True)
+        # cpp_extension.load() needs a writable, container-visible TMPDIR;
+        # the container default is not usable (docs/PROGRESS.md step 32).
+        os.environ.setdefault("TMPDIR", build_dir)
+        # with_cuda=True is mandatory even with no .cu source -- torch infers
+        # CUDA only from the .cu extension, so without it <cuda_runtime.h> and
+        # -lcudart are both missing (docs/PROGRESS.md step 32).
+        _LT_EXT = load(name="cublaslt_algo", sources=[src],
+                       build_directory=build_dir, with_cuda=True,
+                       extra_ldflags=["-lcublasLt"], verbose=False)
+    except Exception:                                        # noqa: BLE001
+        _LT_EXT = None
+    return _LT_EXT
+
+
+def _lt_register_op() -> bool:
+    """Wrap the extension in a torch.library custom op.
+
+    Needed because the call site lives inside torch.compile(mode=
+    "reduce-overhead"): a bare pybind11 call would graph-break, and a
+    graph break in that region costs more than the GEMM saves. As a
+    registered op with a fake impl, dynamo traces through it and inductor
+    emits it as an extern call inside the same CUDA graph.
+    """
+    global _LT_OP_READY
+    if _LT_OP_READY:
+        return True
+    ext = _lt_ext()
+    if ext is None:
+        return False
+    try:
+        @torch.library.custom_op("g66::lt_linear", mutates_args=())
+        def lt_linear(inp: torch.Tensor, w: torch.Tensor, bias: torch.Tensor,
+                      pid: int, idx: int) -> torch.Tensor:
+            try:
+                return ext.lt_linear(pid, idx, inp, w, bias)
+            except Exception:                                # noqa: BLE001
+                # A problem is created for one fixed M; if dynamo ever
+                # re-specialises the batch dimension the C++ side rejects the
+                # call rather than computing the wrong thing. Fall back to the
+                # exact op this replaces instead of aborting the run.
+                return F.linear(inp, w, bias)
+
+        @lt_linear.register_fake
+        def _(inp, w, bias, pid, idx):
+            return inp.new_empty((inp.shape[0], w.shape[0]))
+
+        _LT_OP_READY = True
+    except Exception:                                        # noqa: BLE001
+        _LT_OP_READY = False
+    return _LT_OP_READY
 
 
 @dataclass(frozen=True)
@@ -263,6 +398,11 @@ class UserOptimizedTransformer(BaselineTransformer):
         self._mask_cache: dict = {}
         self._compiled_impl = None
         self._compiled_causal = None
+        # G6.6: token-count -> (pid_in, algo_in, pid_out, algo_out) or None.
+        # Keyed on a SHAPE, built from the frozen weights; never an input or
+        # an output, and never a data_ptr.
+        self._lt_plan: dict = {}
+        self._lt_cur = None
         # G6.4b: FP16 for attention only (FFN stays exact TF32 -- G6.4a
         # closed that direction, PROGRESS.md step 27). Same accumulation-
         # precision guard as G6.4a; harmless here even though SDPA's own
@@ -354,6 +494,92 @@ class UserOptimizedTransformer(BaselineTransformer):
             self._build_ffn_in_fold(layer, device, dtype)
 
     @staticmethod
+    def _time_eager(fn, warmup: int = _LT_WARMUP, iters: int = _LT_ITERS) -> float:
+        for _ in range(warmup):
+            fn()
+        torch.cuda.synchronize()
+        e0 = torch.cuda.Event(enable_timing=True)
+        e1 = torch.cuda.Event(enable_timing=True)
+        e0.record()
+        for _ in range(iters):
+            fn()
+        e1.record()
+        torch.cuda.synchronize()
+        return e0.elapsed_time(e1) / iters
+
+    def _build_lt_plan(self, tok: int, device: torch.device):
+        """G6.6. Pick a cuBLASLt algorithm for each of the two FFN GEMMs at this
+        token count, or return None to keep F.linear.
+
+        EAGER ONLY -- same rule and same reason as _build_qkv_fold: this runs a
+        real timing loop and caches Python ints, neither of which may happen
+        inside the cudagraph'd region.
+
+        Two gates, both documented per CLAUDE.md's validity test:
+          1. tok <= _LT_MAX_TOKENS (a baked constant, see its definition).
+          2. the chosen algorithm must actually beat F.linear on this machine
+             for BOTH halves, measured here, once. This is a one-time eager
+             calibration with a correct fallback (F.linear), not per-call
+             branching -- it exists so an unforeseen shape or a different
+             cuBLAS build can never turn this into a regression.
+        Caches a property of the SHAPE and the frozen weights. No input tensor,
+        no output, and no data_ptr is involved.
+        """
+        ext = _lt_ext()
+        if ext is None:
+            return None
+        layer0 = self.layers[0]
+        w1, b1 = layer0._ffn_in_weight, layer0._ffn_in_bias
+        w2, b2 = layer0.ffn_out.weight, layer0.ffn_out.bias
+        d_model, ffn_dim = w1.shape[1], w1.shape[0]
+
+        a1 = torch.randn(tok, d_model, device=device, dtype=torch.float32)
+        a2 = torch.randn(tok, ffn_dim, device=device, dtype=torch.float32)
+        o1 = torch.empty(tok, ffn_dim, device=device, dtype=torch.float32)
+        o2 = torch.empty(tok, d_model, device=device, dtype=torch.float32)
+
+        chosen = []
+        for K, N, inp, w, b, out in ((d_model, ffn_dim, a1, w1, b1, o1),
+                                     (ffn_dim, d_model, a2, w2, b2, o2)):
+            pid = ext.create_problem(tok, N, K, True, _LT_WS_BYTES, _LT_REQUESTED)
+            best = None
+            for i in range(ext.num_algos(pid)):
+                try:
+                    t = ext.time_algo(pid, i, inp, w, b, out,
+                                      _LT_WARMUP, _LT_ITERS)
+                except Exception:                            # noqa: BLE001
+                    continue
+                if best is None or t < best[1]:
+                    best = (i, t)
+            if best is None:
+                return None
+            ref = self._time_eager(lambda: F.linear(inp, w, b))
+            if best[1] >= ref:
+                return None                                   # gate 2 failed
+            chosen.append((pid, best[0]))
+        return (chosen[0][0], chosen[0][1], chosen[1][0], chosen[1][1])
+
+    def _ensure_lt_plan(self, tok: int, device: torch.device,
+                        dtype: torch.dtype) -> None:
+        # Sets self._lt_cur, read as a compile-time constant by the traced
+        # region below. Must run eagerly, before the compiled call.
+        if (dtype != torch.float32 or device.type != "cuda"
+                or tok > _LT_MAX_TOKENS):
+            self._lt_cur = None
+            return
+        if tok in self._lt_plan:
+            self._lt_cur = self._lt_plan[tok]
+            return
+        plan = None
+        if _lt_register_op():
+            try:
+                plan = self._build_lt_plan(tok, device)
+            except Exception:                                # noqa: BLE001
+                plan = None
+        self._lt_plan[tok] = plan
+        self._lt_cur = plan
+
+    @staticmethod
     def _split_heads_view(x: torch.Tensor, num_heads: int, head_dim: int) -> torch.Tensor:
         # G0.3: no .contiguous() -- unlike baseline's own torch.matmul,
         # SDPA's fused kernels accept the strided [B,H,S,D] view directly.
@@ -422,6 +648,10 @@ class UserOptimizedTransformer(BaselineTransformer):
         # Must also happen eagerly, outside the compiled call -- see
         # _build_qkv_fold's docstring for why.
         self._ensure_folded_weights(x.device, x.dtype)
+        # G6.6: same eager-only rule -- picks the cuBLASLt algorithm for this
+        # shape's two FFN GEMMs (or leaves F.linear in place). Reads the folded
+        # weights above, so it has to come after them.
+        self._ensure_lt_plan(x.shape[0] * x.shape[1], x.device, x.dtype)
 
         # G2.4: torch.compile(mode="reduce-overhead") -- CUDA graphs, to
         # remove the remaining per-kernel launch overhead in the TINY
@@ -447,6 +677,11 @@ class UserOptimizedTransformer(BaselineTransformer):
         valid_token_mask: Optional[torch.Tensor],
         no_pad: bool,
     ) -> torch.Tensor:
+        # G6.6: constant for the whole traced region -- either None (keep
+        # F.linear) or the four ints naming the two chosen cuBLASLt algorithms.
+        # Chosen eagerly in forward(); dynamo bakes it in as a guard, so this
+        # is a specialisation dimension, never a per-call branch.
+        lt = self._lt_cur
         for layer in self.layers:
             attn = layer.attention
             # G1.1: norm1's affine is folded into _qkv_weight/_qkv_bias
@@ -498,8 +733,24 @@ class UserOptimizedTransformer(BaselineTransformer):
             n2 = F.layer_norm(
                 x, layer.norm2.normalized_shape, eps=layer.norm2.eps
             )
-            ffn_hidden = F.linear(n2, layer._ffn_in_weight, layer._ffn_in_bias)
-            ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
+            if lt is None:
+                ffn_hidden = F.linear(n2, layer._ffn_in_weight,
+                                      layer._ffn_in_bias)
+                ffn = layer.ffn_out(F.gelu(ffn_hidden, approximate="none"))
+            else:
+                # G6.6: same two GEMMs, same native TF32 tensor-core datapath,
+                # but through cuBLASLt with an explicitly chosen algorithm and
+                # a fused BIAS epilogue. n2 is contiguous (F.layer_norm's own
+                # output), so both reshapes are views, not copies.
+                pid_i, alg_i, pid_o, alg_o = lt
+                n2f = n2.reshape(-1, n2.shape[-1])
+                ffn_hidden = torch.ops.g66.lt_linear(
+                    n2f, layer._ffn_in_weight, layer._ffn_in_bias, pid_i, alg_i
+                )
+                act = F.gelu(ffn_hidden, approximate="none")
+                ffn = torch.ops.g66.lt_linear(
+                    act, layer.ffn_out.weight, layer.ffn_out.bias, pid_o, alg_o
+                ).view(n2.shape)
             x = x + ffn
             if not no_pad:
                 x = x.masked_fill(~valid_token_mask[..., None], 0)

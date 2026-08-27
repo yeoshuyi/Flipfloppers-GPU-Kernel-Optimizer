@@ -1839,3 +1839,82 @@ change must be — which is what makes the timing delta trustworthy.
 extension, the probe and the job scripts are kept: they are reusable, and
 they turn "L2 persistence, 1.1x default / 1.5x+ tiny" in
 `docs/CATALOGUE.md` from an untested estimate into a measured **no**.
+
+### 33. G6.6 (cuBLASLt explicit algorithm + bias epilogue, TINY only) — shipped, 1.18-1.20x on top of the fp16-attention win
+
+**What was tried:** motivated by step 31's fresh profiler fact (FFN's TF32
+CUTLASS GEMM at ~47% of peak, ~26% occupancy on default shape), tested
+whether cuBLASLt's own algorithm search (same native TF32 tensor-core
+datapath PyTorch already uses — never Triton's emulation, the thing that
+broke G6.1/max-autotune) could beat PyTorch's default kernel choice.
+Built via a real C++ extension (`csrc/cublaslt_algo.cpp`), same build
+recipe as step 32's `csrc/l2_persist.cpp`.
+
+**The original hypothesis (default shape) was a clean negative, but a
+different real win fell out of testing it properly:** at the default
+shape (M=1024), the best of cuBLASLt's own heuristic-returned algorithm
+candidates beat PyTorch's pick by only 1.001x — PyTorch's default choice
+is already close to optimal there. A separate, larger apparent win
+(1.19x, traced to PyTorch's bias-add path costing 12.2us extra per GEMM
+regardless of algorithm) did not survive integration: it was an artifact
+of the isolated probe's own baseline (eager ops inside a raw CUDA graph
+still pay that penalty; `torch.compile`'s full-model lowering already
+avoids it), confirmed by comparing bit-identical output for zero measured
+gain once wired into the real model. **What survived, on its own
+evidence, is TINY (M=64): a real 1.32-1.49x on the GEMMs themselves**,
+from split-K algorithm variants cuBLASLt's default heuristic does not
+select at this small M — genuinely GPU-bound (cpu-issue 4.3us vs
+7.7-30us of kernel time, not a launch-overhead artifact).
+
+**Scoped deliberately to TINY only** (`_LT_MAX_TOKENS = 127`, CLAUDE.md's
+own regime boundary) rather than left open — the algorithm is chosen by
+a one-time eager timing calibration (never inside the compiled region,
+same rule as every weight-fold this session) with a **correct fallback**
+(plain `F.linear`) if the winning candidate doesn't actually beat it,
+satisfying CLAUDE.md's own validity test for a runtime-gated exception.
+Confining the gate to the one regime that measurably pays also confines
+the risk that a different cuBLAS build picks a different split-K variant
+at a larger shape and shifts `max_abs` there for no measured gain.
+
+**Independent verification (this session, not just the implementing
+agent's own report) caught two things worth recording:**
+
+1. **The same near-miss discipline that caught step 27's FP16-FFN failure
+   applies here too, and this time it held up.** The agent's own 5-trial
+   numbers showed `max_abs` moving from 0.000655 to 0.000721 (+10%, from
+   split-K's different reduction order) — above CLAUDE.md's 5e-4
+   "investigate" threshold, so it was re-checked with the same 40-trial
+   rigor that caught the FFN failure (`results/g6_6_tiny_rigor_run77.log`,
+   job 77, fresh model instantiation, independent of the agent's own
+   runs). **Zero failures across all 40 trials** (1.3M elements),
+   `max_abs` peaking at 0.00084 — 84% of budget, comfortable margin, a
+   materially different risk profile than the FFN case (which had real
+   failures at this same sample size). Passes on its own evidence, not
+   just a lucky smoke test.
+
+2. **A real methodological catch: absolute speedup numbers drift across
+   the session (~5-8%), independent of any code change — cluster
+   clock/thermal state, not noise from a bad measurement.** The official
+   sweep (`results/g6_6_official_sweep_run76.log`) showed default shape
+   at 2.097x, down from `run63`'s 2.238x recorded earlier this session —
+   alarming, since the code change should structurally not touch default
+   at all (`tok=1024 > _LT_MAX_TOKENS=127` means the whole cuBLASLt path
+   is skipped before it's ever built). Decisive test: stashed the diff,
+   re-ran default on the exact pre-change code under current conditions
+   (`results/g6_6_default_baseline_recheck_run80.log`) — **2.127x, matching
+   the "regressed" number, not run63's original 2.238x.** The shift is
+   environmental, confirmed by reproducing it on unmodified code, not
+   caused by this change. Re-measured tiny's own baseline the same way
+   (`results/g6_6_tiny_baseline_recheck_run81.log`): 6.133x, matching
+   run63's 6.140x closely (tiny's timing wasn't materially affected by
+   whatever drifted) — so the true G6.6 contribution is **6.133 -> 7.232-
+   7.245x, a genuine 1.18-1.20x**, cross-validated against a same-session
+   baseline rather than a stale cross-session number. **Lesson for any
+   future close call this session or later: re-measure a fresh baseline
+   under current conditions before trusting a delta against an old log,
+   especially when the delta is smaller than ~10%.**
+
+**Shipped.** `check_validity.py` passes. All 7 other shapes confirmed
+bit-identical in `max_abs` to `run63`/`run76` (the strongest evidence the
+gate touches only the tiny path). Archived: `tiny/fp16` elite updated to
+7.24x (from 6.14x), `applied` now includes `G6.6-cublaslt-algo-search`.

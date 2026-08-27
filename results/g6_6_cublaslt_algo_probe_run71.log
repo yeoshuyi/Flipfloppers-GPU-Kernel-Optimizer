@@ -1,0 +1,211 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+allow_tf32=True
+
+=== ffn_in   M=64 K=512 N=2048 bias=False ===
+  pytorch F.linear :      9.90 us    13.56 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]      9.81 us   13.68 TFLOPS  x1.009  maxdiff=0.000e+00  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+  [ 1]      9.57 us   14.03 TFLOPS  x1.035  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [ 2]      9.16 us   14.65 TFLOPS  x1.081  maxdiff=5.007e-06  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3]      8.16 us   16.46 TFLOPS  x1.214  maxdiff=3.099e-06  id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [ 4]      7.51 us   17.87 TFLOPS  x1.318  maxdiff=5.007e-06  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+  [ 5]      9.05 us   14.83 TFLOPS  x1.094  maxdiff=5.245e-06  id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 6]     10.31 us   13.02 TFLOPS  x0.960  maxdiff=5.245e-06  id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 7]     10.27 us   13.07 TFLOPS  x0.964  maxdiff=5.245e-06  id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+  BEST -> algo[4]  7.51 us  speedup vs pytorch = 1.3182  (WIN)  maxdiff=5.007e-06
+
+=== ffn_out  M=64 K=2048 N=512 bias=False ===
+  pytorch F.linear :     11.42 us    11.76 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     11.38 us   11.80 TFLOPS  x1.004  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+  [ 1]      7.66 us   17.52 TFLOPS  x1.490  maxdiff=7.629e-06  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 2]      9.15 us   14.67 TFLOPS  x1.248  maxdiff=7.629e-06  id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3]      7.82 us   17.17 TFLOPS  x1.460  maxdiff=6.676e-06  id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+  [ 4]      9.13 us   14.70 TFLOPS  x1.250  maxdiff=9.537e-06  id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 5]     10.43 us   12.87 TFLOPS  x1.095  maxdiff=9.537e-06  id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 6]     12.39 us   10.84 TFLOPS  x0.922  maxdiff=7.629e-06  id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 7]     30.35 us    4.42 TFLOPS  x0.376  maxdiff=2.384e-05  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+  BEST -> algo[1]  7.66 us  speedup vs pytorch = 1.4903  (WIN)  maxdiff=7.629e-06
+
+=== ffn_in   M=64 K=512 N=2048 bias=True ===
+  pytorch F.linear :     10.05 us    13.35 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     10.00 us   13.42 TFLOPS  x1.005  maxdiff=0.000e+00  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+  [ 1]      9.72 us   13.81 TFLOPS  x1.034  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+  [ 2]      9.32 us   14.40 TFLOPS  x1.078  maxdiff=5.007e-06  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3]      8.48 us   15.83 TFLOPS  x1.185  maxdiff=3.099e-06  id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+  [ 4]      7.65 us   17.55 TFLOPS  x1.314  maxdiff=5.007e-06  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+  [ 5]      9.19 us   14.60 TFLOPS  x1.094  maxdiff=5.245e-06  id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 6]     10.58 us   12.68 TFLOPS  x0.950  maxdiff=5.245e-06  id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 7]     10.43 us   12.87 TFLOPS  x0.964  maxdiff=5.245e-06  id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+  BEST -> algo[4]  7.65 us  speedup vs pytorch = 1.3139  (WIN)  maxdiff=5.007e-06
+
+=== ffn_out  M=64 K=2048 N=512 bias=True ===
+  pytorch F.linear :     11.77 us    11.41 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     11.68 us   11.49 TFLOPS  x1.007  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+  [ 1]      7.84 us   17.11 TFLOPS  x1.500  maxdiff=7.629e-06  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 2]      9.29 us   14.45 TFLOPS  x1.267  maxdiff=7.629e-06  id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 3]      8.00 us   16.78 TFLOPS  x1.471  maxdiff=6.676e-06  id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+  [ 4]      9.22 us   14.56 TFLOPS  x1.276  maxdiff=9.537e-06  id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 5]     10.49 us   12.79 TFLOPS  x1.121  maxdiff=9.537e-06  id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+  [ 6]     12.53 us   10.71 TFLOPS  x0.939  maxdiff=7.629e-06  id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  [ 7]     30.51 us    4.40 TFLOPS  x0.386  maxdiff=2.384e-05  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+  BEST -> algo[1]  7.84 us  speedup vs pytorch = 1.5001  (WIN)  maxdiff=7.629e-06
+
+=== ffn_in   M=1024 K=512 N=2048 bias=False ===
+  pytorch F.linear :     33.03 us    65.02 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     33.00 us   65.08 TFLOPS  x1.001  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]     33.45 us   64.19 TFLOPS  x0.987  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 2]     34.55 us   62.16 TFLOPS  x0.956  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 3]     39.35 us   54.58 TFLOPS  x0.839  maxdiff=3.934e-06  id=21 tile=23 stages=3 splitk=2 reduc=1 swizzle=0 ws=256 wave=1
+  [ 4]     35.06 us   61.25 TFLOPS  x0.942  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 5]     41.39 us   51.88 TFLOPS  x0.798  maxdiff=3.934e-06  id=21 tile=20 stages=9 splitk=2 reduc=1 swizzle=0 ws=512 wave=2
+  [ 6]     40.96 us   52.43 TFLOPS  x0.806  maxdiff=3.934e-06  id=21 tile=21 stages=4 splitk=2 reduc=1 swizzle=0 ws=512 wave=2
+  [ 7]     76.77 us   27.97 TFLOPS  x0.430  maxdiff=7.106e-04  id=0 tile=14 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  BEST -> algo[0]  33.00 us  speedup vs pytorch = 1.0009  (noise)  maxdiff=0.000e+00
+
+=== ffn_out  M=1024 K=2048 N=512 bias=False ===
+  pytorch F.linear :     32.37 us    66.33 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     32.34 us   66.40 TFLOPS  x1.001  maxdiff=0.000e+00  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]     35.52 us   60.46 TFLOPS  x0.911  maxdiff=1.931e-05  id=21 tile=17 stages=9 splitk=2 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 2]     37.69 us   56.97 TFLOPS  x0.859  maxdiff=2.694e-05  id=21 tile=21 stages=4 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=1
+  [ 3]     37.69 us   56.98 TFLOPS  x0.859  maxdiff=2.694e-05  id=21 tile=19 stages=4 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=1
+  [ 4]     35.89 us   59.84 TFLOPS  x0.902  maxdiff=1.931e-05  id=21 tile=18 stages=6 splitk=2 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 5]     38.86 us   55.27 TFLOPS  x0.833  maxdiff=2.694e-05  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=2
+  [ 6]     32.34 us   66.41 TFLOPS  x1.001  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.5
+  [ 7]     43.17 us   49.75 TFLOPS  x0.750  maxdiff=2.861e-05  id=21 tile=17 stages=9 splitk=6 reduc=1 swizzle=0 ws=256 wave=3
+  BEST -> algo[6]  32.34 us  speedup vs pytorch = 1.0011  (noise)  maxdiff=0.000e+00
+
+=== ffn_in   M=1024 K=512 N=2048 bias=True ===
+  pytorch F.linear :     35.53 us    60.45 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     33.27 us   64.55 TFLOPS  x1.068  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]     33.62 us   63.88 TFLOPS  x1.057  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 2]     34.94 us   61.46 TFLOPS  x1.017  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 3]     39.50 us   54.37 TFLOPS  x0.899  maxdiff=3.934e-06  id=21 tile=23 stages=3 splitk=2 reduc=1 swizzle=0 ws=256 wave=1
+  [ 4]     35.33 us   60.78 TFLOPS  x1.005  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 5]     41.36 us   51.92 TFLOPS  x0.859  maxdiff=3.934e-06  id=21 tile=20 stages=9 splitk=2 reduc=1 swizzle=0 ws=512 wave=2
+  [ 6]     41.08 us   52.28 TFLOPS  x0.865  maxdiff=3.934e-06  id=21 tile=21 stages=4 splitk=2 reduc=1 swizzle=0 ws=512 wave=2
+  [ 7]     77.57 us   27.68 TFLOPS  x0.458  maxdiff=7.106e-04  id=0 tile=14 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  BEST -> algo[0]  33.27 us  speedup vs pytorch = 1.0679  (WIN)  maxdiff=0.000e+00
+
+=== ffn_out  M=1024 K=2048 N=512 bias=True ===
+  pytorch F.linear :     44.62 us    48.13 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]     32.61 us   65.85 TFLOPS  x1.368  maxdiff=2.503e-05  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]     36.11 us   59.48 TFLOPS  x1.236  maxdiff=1.121e-05  id=21 tile=17 stages=9 splitk=2 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 2]     38.36 us   55.98 TFLOPS  x1.163  maxdiff=6.557e-06  id=21 tile=21 stages=4 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=1
+  [ 3]     38.22 us   56.19 TFLOPS  x1.168  maxdiff=6.557e-06  id=21 tile=19 stages=4 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=1
+  [ 4]     36.40 us   58.99 TFLOPS  x1.226  maxdiff=1.121e-05  id=21 tile=18 stages=6 splitk=2 reduc=2 swizzle=0 ws=4194304 wave=1
+  [ 5]     39.41 us   54.49 TFLOPS  x1.132  maxdiff=6.557e-06  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=8388608 wave=2
+  [ 6]     32.43 us   66.23 TFLOPS  x1.376  maxdiff=2.503e-05  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.5
+  [ 7]     43.13 us   49.79 TFLOPS  x1.034  maxdiff=7.868e-06  id=21 tile=17 stages=9 splitk=6 reduc=1 swizzle=0 ws=256 wave=3
+  BEST -> algo[6]  32.43 us  speedup vs pytorch = 1.3760  (WIN)  maxdiff=2.503e-05
+
+=== ffn_in   M=8192 K=512 N=2048 bias=False ===
+  pytorch F.linear :    251.55 us    68.30 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    249.66 us   68.81 TFLOPS  x1.008  maxdiff=0.000e+00  id=21 tile=24 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 1]    248.78 us   69.06 TFLOPS  x1.011  maxdiff=0.000e+00  id=21 tile=21 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 2]    252.85 us   67.94 TFLOPS  x0.995  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 3]    248.88 us   69.03 TFLOPS  x1.011  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 4]    244.48 us   70.27 TFLOPS  x1.029  maxdiff=0.000e+00  id=21 tile=20 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 5]    249.78 us   68.78 TFLOPS  x1.007  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 6]    501.38 us   34.27 TFLOPS  x0.502  maxdiff=8.697e-04  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=4
+  [ 7]    622.24 us   27.61 TFLOPS  x0.404  maxdiff=8.697e-04  id=0 tile=16 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  BEST -> algo[4]  244.48 us  speedup vs pytorch = 1.0289  (noise)  maxdiff=0.000e+00
+
+=== ffn_out  M=8192 K=2048 N=512 bias=False ===
+  pytorch F.linear :    228.70 us    75.12 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    220.68 us   77.85 TFLOPS  x1.036  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]    221.93 us   77.41 TFLOPS  x1.031  maxdiff=0.000e+00  id=21 tile=20 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 2]    223.30 us   76.94 TFLOPS  x1.024  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 3]    228.91 us   75.05 TFLOPS  x0.999  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 4]    244.70 us   70.21 TFLOPS  x0.935  maxdiff=2.670e-05  id=21 tile=20 stages=5 splitk=3 reduc=1 swizzle=0 ws=1024 wave=6
+  [ 5]    236.17 us   72.75 TFLOPS  x0.968  maxdiff=2.122e-05  id=21 tile=19 stages=4 splitk=2 reduc=1 swizzle=0 ws=1024 wave=4
+  [ 6]    257.11 us   66.82 TFLOPS  x0.890  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 7]    429.48 us   40.00 TFLOPS  x0.533  maxdiff=1.769e-03  id=0 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  BEST -> algo[0]  220.68 us  speedup vs pytorch = 1.0364  (noise)  maxdiff=0.000e+00
+
+=== ffn_in   M=8192 K=512 N=2048 bias=True ===
+  pytorch F.linear :    274.08 us    62.68 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    249.66 us   68.81 TFLOPS  x1.098  maxdiff=0.000e+00  id=21 tile=24 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 1]    250.33 us   68.63 TFLOPS  x1.095  maxdiff=0.000e+00  id=21 tile=21 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 2]    253.81 us   67.69 TFLOPS  x1.080  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 3]    245.22 us   70.06 TFLOPS  x1.118  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 4]    248.65 us   69.09 TFLOPS  x1.102  maxdiff=0.000e+00  id=21 tile=20 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 5]    249.86 us   68.76 TFLOPS  x1.097  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 6]    509.25 us   33.74 TFLOPS  x0.538  maxdiff=8.697e-04  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=4
+  [ 7]    633.04 us   27.14 TFLOPS  x0.433  maxdiff=8.697e-04  id=0 tile=16 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  BEST -> algo[3]  245.22 us  speedup vs pytorch = 1.1177  (WIN)  maxdiff=0.000e+00
+
+=== ffn_out  M=8192 K=2048 N=512 bias=True ===
+  pytorch F.linear :    229.81 us    74.76 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    220.99 us   77.74 TFLOPS  x1.040  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  [ 1]    222.38 us   77.26 TFLOPS  x1.033  maxdiff=0.000e+00  id=21 tile=20 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 2]    223.75 us   76.78 TFLOPS  x1.027  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=2
+  [ 3]    230.00 us   74.70 TFLOPS  x0.999  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 4]    245.03 us   70.11 TFLOPS  x0.938  maxdiff=2.718e-05  id=21 tile=20 stages=5 splitk=3 reduc=1 swizzle=0 ws=1024 wave=6
+  [ 5]    236.46 us   72.66 TFLOPS  x0.972  maxdiff=2.122e-05  id=21 tile=19 stages=4 splitk=2 reduc=1 swizzle=0 ws=1024 wave=4
+  [ 6]    257.17 us   66.80 TFLOPS  x0.894  maxdiff=0.000e+00  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 7]    425.66 us   40.36 TFLOPS  x0.540  maxdiff=1.769e-03  id=0 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=1
+  BEST -> algo[0]  220.99 us  speedup vs pytorch = 1.0399  (noise)  maxdiff=0.000e+00
+
+=== ffn_in   M=32768 K=512 N=2048 bias=False ===
+  pytorch F.linear :    967.40 us    71.03 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    940.98 us   73.03 TFLOPS  x1.028  maxdiff=0.000e+00  id=21 tile=24 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 1]    941.21 us   73.01 TFLOPS  x1.028  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 2]    948.90 us   72.42 TFLOPS  x1.019  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  [ 3]    956.99 us   71.81 TFLOPS  x1.011  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  [ 4]   1639.18 us   41.92 TFLOPS  x0.590  maxdiff=8.040e-04  id=0 tile=20 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=16
+  [ 5]   1907.81 us   36.02 TFLOPS  x0.507  maxdiff=8.040e-04  id=0 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 6]   2037.95 us   33.72 TFLOPS  x0.475  maxdiff=8.040e-04  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=16
+  [ 7]   2519.26 us   27.28 TFLOPS  x0.384  maxdiff=8.040e-04  id=0 tile=16 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  BEST -> algo[0]  940.98 us  speedup vs pytorch = 1.0281  (noise)  maxdiff=0.000e+00
+
+=== ffn_out  M=32768 K=2048 N=512 bias=False ===
+  pytorch F.linear :    873.86 us    78.64 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    870.97 us   78.90 TFLOPS  x1.003  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 1]    872.38 us   78.77 TFLOPS  x1.002  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 2]    881.32 us   77.97 TFLOPS  x0.992  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 3]    902.56 us   76.14 TFLOPS  x0.968  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 4]    960.77 us   71.53 TFLOPS  x0.910  maxdiff=2.480e-05  id=21 tile=20 stages=9 splitk=2 reduc=1 swizzle=0 ws=4096 wave=16
+  [ 5]   1166.75 us   58.90 TFLOPS  x0.749  maxdiff=3.386e-05  id=21 tile=19 stages=4 splitk=5 reduc=1 swizzle=0 ws=4096 wave=40
+  [ 6]   2058.85 us   33.38 TFLOPS  x0.424  maxdiff=1.549e-03  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=4
+  [ 7]   2524.39 us   27.22 TFLOPS  x0.346  maxdiff=1.549e-03  id=0 tile=14 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  BEST -> algo[0]  870.97 us  speedup vs pytorch = 1.0033  (noise)  maxdiff=0.000e+00
+
+=== ffn_in   M=32768 K=512 N=2048 bias=True ===
+  pytorch F.linear :    948.12 us    72.48 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    945.53 us   72.68 TFLOPS  x1.003  maxdiff=0.000e+00  id=21 tile=24 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 1]    947.63 us   72.52 TFLOPS  x1.001  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 2]    956.84 us   71.82 TFLOPS  x0.991  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  [ 3]    969.38 us   70.89 TFLOPS  x0.978  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  [ 4]   1644.25 us   41.79 TFLOPS  x0.577  maxdiff=8.040e-04  id=0 tile=20 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=16
+  [ 5]   1953.81 us   35.17 TFLOPS  x0.485  maxdiff=8.040e-04  id=0 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 6]   2080.57 us   33.03 TFLOPS  x0.456  maxdiff=8.040e-04  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=16
+  [ 7]   2570.50 us   26.73 TFLOPS  x0.369  maxdiff=8.040e-04  id=0 tile=16 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=32
+  BEST -> algo[0]  945.53 us  speedup vs pytorch = 1.0027  (noise)  maxdiff=0.000e+00
+
+=== ffn_out  M=32768 K=2048 N=512 bias=True ===
+  pytorch F.linear :    877.49 us    78.31 TFLOPS
+  heuristic returned 8 candidate(s)
+  [ 0]    871.31 us   78.87 TFLOPS  x1.007  maxdiff=0.000e+00  id=21 tile=23 stages=3 splitk=1 reduc=0 swizzle=0 ws=0 wave=4
+  [ 1]    872.22 us   78.79 TFLOPS  x1.006  maxdiff=0.000e+00  id=21 tile=20 stages=5 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 2]    882.25 us   77.89 TFLOPS  x0.995  maxdiff=0.000e+00  id=21 tile=19 stages=4 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  [ 3]    917.44 us   74.90 TFLOPS  x0.956  maxdiff=0.000e+00  id=21 tile=17 stages=9 splitk=1 reduc=0 swizzle=0 ws=0 wave=16
+  [ 4]    966.94 us   71.07 TFLOPS  x0.907  maxdiff=2.480e-05  id=21 tile=20 stages=9 splitk=2 reduc=1 swizzle=0 ws=4096 wave=16
+  [ 5]   1168.46 us   58.81 TFLOPS  x0.751  maxdiff=3.386e-05  id=21 tile=19 stages=4 splitk=5 reduc=1 swizzle=0 ws=4096 wave=40
+  [ 6]   2077.94 us   33.07 TFLOPS  x0.422  maxdiff=1.549e-03  id=0 tile=15 stages=0 splitk=1 reduc=0 swizzle=1 ws=0 wave=4
+  [ 7]   2549.19 us   26.96 TFLOPS  x0.344  maxdiff=1.549e-03  id=0 tile=14 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=8
+  BEST -> algo[0]  871.31 us  speedup vs pytorch = 1.0071  (noise)  maxdiff=0.000e+00
