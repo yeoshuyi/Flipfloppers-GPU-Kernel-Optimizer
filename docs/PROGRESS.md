@@ -2363,3 +2363,88 @@ specialisation — MEGAKERNEL.md G4.3's territory, priced against a 2% ceiling a
 one shape. The reusable asset is the verified fragment addressing in
 `csrc/g4_4_mma_micro.cu` and the accF16/accF32 A/B harness, which now gives
 this project a measured price for the accumulate tier: **x1.43-x1.54, not x2.**
+
+### 38. G4.5 (SASS-level instruction reordering on G4.4's cfg[11]) — **clean negative at Phase 0's toolchain gate. Ada encodes fine; CUDA 13.1's cubin format is the blocker.**
+
+**Why this was worth a probe.** Step 37 left the hand-written FP16-accumulate
+GEMM at **55.1%** of its own tier ceiling against cuBLASLt's **91.2%** of its
+(2x lower) tier, and diagnosed the gap as CUTLASS-grade kernel engineering —
+shared-memory-staged epilogues, warp specialisation. SASS-level reordering
+(CuAsmRL's idea: permute only memory instructions relative to their
+neighbours) is a **narrower and much cheaper lever** than that rewrite, so it
+was worth its own gate. The ceiling was never large: even a *perfect* kernel
+only buys step 37's 2.05% whole-model at large_batch, and x1.000 elsewhere.
+
+**Setup.** `csrc/g4_5_sass_cfg11.cu` explicitly instantiates cfg[11] alone
+(`{128,128,64,2,0,0}` — confirmed identical in `g4_4_mma_gemm.cu`'s `CFG(11,
+...)` and `kCfg[11]` in the `.cpp`, so the numbering has **not** shifted since
+step 37) and `nvcc -cubin -gencode=arch=compute_89,code=sm_89` emits a
+single-kernel cubin: **102 registers, 0 bytes spill**, consistent with step
+37's `-Xptxas -v`. `g4_4_mma_gemm.cu` gained one `#ifndef
+G4_4_NO_HOST_DISPATCH` guard around the host switch, so the single-kernel
+build does not drag in the other 25 instantiations. The guard is preprocessor
+only — the unguarded build still emits all 26 entries, verified — so no
+measured number is invalidated.
+
+**Finding 1 (the useful one): CuAssembler encodes Ada SASS correctly.** The
+tool ships no `DefaultInsAsmRepos.sm_89.txt` and has no alias for 89
+(`InsAsmReposAliasDict = {62:61, 72:75, 87:86}`), but `CuSMVersion` already
+knows sm_89 as 'Adalovelace' and routes it through the 7x/8x path. Building
+a repo from this cubin via the tool's own documented auto-probe
+(`updateReposWithCubin` → `repos.update(feeder)`) learned **50 instruction
+keys**, and `repos.verify()` — which re-encodes every learned instruction and
+compares against the original bytes — returned **True with zero error
+records**. That covers the instructions this kernel is actually made of:
+**HMMA 64, LDSM 32, LDGSTS 16, STG 64, LDG 8, LDGDEPBAR 2, DEPBAR 1**. The
+suspicion that `mma.sync`/`ldmatrix`/`cp.async` would be misencoded on an
+untested architecture is **not what happened**. Disassembly to `.cuasm`
+also succeeds (1468 lines, 31 distinct opcodes).
+
+**Finding 2 (the blocker): the `.cuasm` intermediate is defined by nvdisasm's
+output syntax, and nvdisasm 13.1 has diverged from what CuAsmParser accepts.**
+Three CUDA-version incompatibilities surfaced in order, each shimmed at the
+ELF-container level without touching a single encoding table:
+
+```
+1. e_flags layout   CUDA 11: sm in low byte.   CUDA 13: sm in bits 8-15.
+                    sm_80 -> 0x06005004  sm_86 -> 0x06005604  sm_89 -> 0x06005904
+                    CuAssembler reads sm = 4 -> "Invalid SM version 4!!!"
+2. e_version        now 1 -> pyelftools resolves it to 'EV_CURRENT' (a str);
+                    CuAssembler formats it with %d -> TypeError
+3. .note.nv.tkinfo  nvdisasm 13.1 PRETTY-PRINTS this SHT_NOTE section as
+                    `.tkinfo` + 5 x `.string "..."`. CuAsmParser has no
+                    `.tkinfo` directive, no `.string` directive, and no ELF
+                    note model at all -> "Unknown directive .tkinfo!!!"
+```
+
+1 and 2 were fixed. **3 is the wall.** The rendering is *lossy* — the note's
+namesz/descsz/type/padding never appear in the text — so the 0xa8-byte section
+cannot be reconstructed from the `.cuasm` at all, not merely "isn't parsed
+yet". Three bounded workarounds were tried and all failed:
+
+- retype the section `SHT_NOTE -> SHT_PROGBITS` so nvdisasm dumps raw bytes:
+  **no effect**, nvdisasm keys off the name/`SHF_NOTE_NV_TKINFO` flag, not
+  `sh_type`;
+- `objcopy --remove-section=.note.nv.tkinfo`: **`objcopy: Unable to recognise
+  the format of the input file`** — GNU binutils does not know `EM_CUDA`;
+- there is no nvcc/ptxas flag to suppress the note.
+
+Writing a note-section reconstructor plus handlers for the new directives (and
+for the two undocumented `EIATTR 0x4c02` / `0x5f03` records CUDA 13 adds, which
+CuAssembler warns "some offsets may not work properly" about — benign for a
+no-op round trip, a live hazard the moment instructions actually move) is the
+categorically bigger undertaking this probe was scoped to avoid. **Stopped.**
+
+**Nothing was measured on the GPU and no speedup is claimed.** The round trip
+never became a verified no-op, so per this file's own step-33 discipline there
+was nothing legitimate to time. Phases 1 and 2 were not entered.
+
+**What would reopen it.** A CUDA 11.x/12.0 `nvdisasm` alongside the 13.1
+toolkit (the `.cuasm` format is nvdisasm's, not the cubin's, so an older
+disassembler on the same cubin may round-trip unchanged), or a CuAssembler
+fork that has caught up to CUDA 12/13 cubins. Neither is worth building
+against a 2.05% ceiling at one shape. **The transferable asset is Finding 1**:
+sm_89 SASS *is* mechanically assemblable — `DefaultInsAsmRepos.sm_89.txt`
+regenerates from `probes/g4_5_sass_roundtrip.py` in seconds — so if the
+container's toolkit ever changes, only the container format stands in the way,
+not Ada.

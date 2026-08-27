@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .ext_build/
+# G4.5 SASS investigation scratch: a CuAssembler clone, pip --target installs,
+# and cubin/.cuasm build products. Third-party source plus regenerable
+# artefacts, not part of this repo. probes/g4_5_sass_roundtrip.py's header
+# documents how to recreate it.
+.sass/

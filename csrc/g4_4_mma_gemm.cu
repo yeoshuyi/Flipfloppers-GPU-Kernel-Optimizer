@@ -363,7 +363,16 @@ __global__ __launch_bounds__(256) void mma_gemm_kernel(
 
 // ---------------------------------------------------------------------------
 // Host-side dispatch.
+//
+// G4_4_NO_HOST_DISPATCH lets csrc/g4_5_sass_cfg11.cu include this file to get
+// the __global__ template alone (for a single-kernel `nvcc -cubin` build)
+// without the switch below force-instantiating all 26 configs. It is a
+// preprocessor guard only: when the macro is undefined -- i.e. for every
+// existing torch-extension build, including the one step 37 measured -- the
+// translation unit is byte-identical to what it was before, so no codegen can
+// have changed.
 // ---------------------------------------------------------------------------
+#ifndef G4_4_NO_HOST_DISPATCH
 struct CfgInfo {
   int BM, BN, BK, NSTAGE, SPLIT, ACCF32;
   size_t smem;
@@ -445,3 +454,4 @@ int mma_gemm_launch(int cfg, const void *In, const void *W, const void *bias,
 #undef CFG
 
 int mma_gemm_num_cfg() { return 26; }
+#endif  // G4_4_NO_HOST_DISPATCH
