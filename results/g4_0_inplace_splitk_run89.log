@@ -1,0 +1,236 @@
+############ g4_0_inplace_splitk.py ############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+USDT:2026-08-27 02:16:26 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:26 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:26 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:26 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:27 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:28 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:28 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:28 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:28 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:29 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:30 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:30 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:30 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:30 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:31 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:31 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:32 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:32 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:33 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:33 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:34 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:34 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:34 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:34 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:35 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:36 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:37 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:37 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:37 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:37 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:38 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:39 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:39 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:39 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:39 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:40 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:41 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:41 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:41 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:41 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:42 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:43 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:43 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:43 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:43 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:44 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:45 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:45 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:45 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:46 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:46 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:48 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:48 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:49 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:49 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:51 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:51 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:54 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:54 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+ext built ok
+
+================ ffn_in   M=64 N=2048 K=512 ================
+  mask=-1 default (shipped) : 8 candidates
+      [ 0]   9.358 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1]   9.024 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2]   8.200 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   7.249 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.676e-06 |-fp64|=1.500e-03  id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+      [ 4]   6.322 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+      [ 5]   7.821 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 6]   9.235 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 7]   9.064 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+  mask= 1 INPLACE only      : 8 candidates
+      [ 0]   9.410 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1]   9.036 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2]  14.007 us  1.00 kern (GEMM)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=17 stages=9 splitk=4 reduc=1 swizzle=0 ws=128 wave=1
+      [ 3]   8.881 us  1.00 kern (GEMM)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.500e-03  id=21 tile=15 stages=6 splitk=2 reduc=1 swizzle=0 ws=128 wave=0.25
+      [ 4]  10.437 us  1.00 kern (GEMM)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=4 reduc=1 swizzle=0 ws=128 wave=0.5
+      [ 5]  17.381 us  1.00 kern (GEMM)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=18 stages=6 splitk=8 reduc=1 swizzle=0 ws=64 wave=1
+      [ 6]  25.776 us  1.00 kern (GEMM)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=21 stages=4 splitk=8 reduc=1 swizzle=0 ws=32 wave=0.5
+      [ 7]  23.466 us  1.00 kern (GEMM)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=20 stages=4 splitk=8 reduc=1 swizzle=0 ws=64 wave=1
+
+  mask= 3 NONE+INPLACE      : 8 candidates
+      [ 0]   9.502 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1]   9.032 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2]   8.219 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   7.254 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.676e-06 |-fp64|=1.500e-03  id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+      [ 4]   6.322 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+      [ 5]   7.769 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 6]   9.253 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 7]   9.094 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+  mask= 7 all schemes       : 8 candidates
+      [ 0]   9.475 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1]   9.045 us  1.00 kern (GEMM)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2]   8.222 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   7.254 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.676e-06 |-fp64|=1.500e-03  id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+      [ 4]   6.319 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=9.060e-06 |-fp64|=1.501e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+      [ 5]   7.752 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 6]   9.224 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 7]   9.071 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=1.001e-05 |-fp64|=1.501e-03  id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+  --- best per mask, ffn_in  ---
+    default (shipped)  idx= 4   6.322 us  2.00 kernels  vs shipped 1.0000x  det=Y  |-fp64|=1.501e-03
+    INPLACE only       idx= 3   8.881 us  1.00 kernels  vs shipped 0.7119x  det=Y  |-fp64|=1.500e-03
+    NONE+INPLACE       idx= 4   6.322 us  2.00 kernels  vs shipped 1.0001x  det=Y  |-fp64|=1.501e-03
+    all schemes        idx= 4   6.319 us  2.00 kernels  vs shipped 1.0006x  det=Y  |-fp64|=1.501e-03
+
+  F.linear (PyTorch default):   9.434 us  1.00 kernels
+
+================ ffn_out  M=64 N=512 K=2048 ================
+  mask=-1 default (shipped) : 8 candidates
+      [ 0]  10.429 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.314e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+      [ 1]   6.768 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 2]   8.247 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   6.822 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.316e-03  id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+      [ 4]   7.900 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 5]   9.346 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 6]  11.414 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 7]  29.845 us  1.00 kern (GEMM)  det=Y  |-F.linear|=2.480e-05 |-fp64|=1.306e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+  mask= 1 INPLACE only      : 8 candidates
+      [ 0]  14.534 us  1.00 kern (GEMM)  det=Y  |-F.linear|=4.768e-07 |-fp64|=1.315e-03  id=21 tile=15 stages=6 splitk=4 reduc=1 swizzle=0 ws=32 wave=0.125
+      [ 1]  24.912 us  1.00 kern (GEMM)  det=Y  |-F.linear|=6.437e-06 |-fp64|=1.316e-03  id=21 tile=15 stages=12 splitk=16 reduc=1 swizzle=0 ws=32 wave=1
+      [ 2]  34.590 us  1.00 kern (GEMM)  det=Y  |-F.linear|=6.437e-06 |-fp64|=1.316e-03  id=21 tile=17 stages=9 splitk=16 reduc=1 swizzle=0 ws=32 wave=1
+      [ 3]  19.315 us  1.00 kern (GEMM)  det=Y  |-F.linear|=5.960e-06 |-fp64|=1.316e-03  id=21 tile=15 stages=6 splitk=12 reduc=1 swizzle=0 ws=32 wave=0.34375
+      [ 4]  52.318 us  1.00 kern (GEMM)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=18 stages=6 splitk=32 reduc=1 swizzle=0 ws=16 wave=1
+      [ 5]  84.331 us  1.00 kern (GEMM)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=21 stages=4 splitk=32 reduc=1 swizzle=0 ws=8 wave=0.5USDT:2026-08-27 02:16:56 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:56 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:57 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:57 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:58 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:58 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:58 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:58 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:16:59 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:00 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:00 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:00 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:00 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:02 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:03 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:04 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:04 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:04 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:04 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:06 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:06 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:17:06 76628:76628 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:17:06 76628:76628 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+      [ 6]  40.970 us  1.00 kern (GEMM)  det=Y  |-F.linear|=6.437e-06 |-fp64|=1.316e-03  id=21 tile=19 stages=4 splitk=16 reduc=1 swizzle=0 ws=32 wave=1
+      [ 7]  29.900 us  1.00 kern (GEMM)  det=Y  |-F.linear|=2.480e-05 |-fp64|=1.306e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+  mask= 3 NONE+INPLACE      : 8 candidates
+      [ 0]  10.439 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.314e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+      [ 1]   6.754 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 2]   8.246 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   6.818 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.316e-03  id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+      [ 4]   7.914 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 5]   9.328 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 6]  11.406 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 7]  29.862 us  1.00 kern (GEMM)  det=Y  |-F.linear|=2.480e-05 |-fp64|=1.306e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+  mask= 7 all schemes       : 8 candidates
+      [ 0]  10.414 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=0.000e+00 |-fp64|=1.314e-03  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+      [ 1]   6.744 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 2]   8.246 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3]   6.833 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.316e-03  id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+      [ 4]   7.893 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 5]   9.326 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=7.153e-06 |-fp64|=1.317e-03  id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 6]  11.399 us  2.00 kern (GEMM+REDUCE)  det=Y  |-F.linear|=6.199e-06 |-fp64|=1.317e-03  id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 7]  29.922 us  1.00 kern (GEMM)  det=Y  |-F.linear|=2.480e-05 |-fp64|=1.306e-03  id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+  --- best per mask, ffn_out ---
+    default (shipped)  idx= 1   6.768 us  2.00 kernels  vs shipped 1.0000x  det=Y  |-fp64|=1.317e-03
+    INPLACE only       idx= 0  14.534 us  1.00 kernels  vs shipped 0.4657x  det=Y  |-fp64|=1.315e-03
+    NONE+INPLACE       idx= 1   6.754 us  2.00 kernels  vs shipped 1.0021x  det=Y  |-fp64|=1.317e-03
+    all schemes        idx= 1   6.744 us  2.00 kernels  vs shipped 1.0036x  det=Y  |-fp64|=1.317e-03
+
+  F.linear (PyTorch default):  10.451 us  2.00 kernels
+
+

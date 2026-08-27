@@ -1,0 +1,54 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+USDT:2026-08-27 02:05:10 75333:75333 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:05:10 75333:75333 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:05:11 75333:75333 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:05:11 75333:75333 SyncActivityProfilerHandler.cpp:59] profiler_stop
+cublasLt ext available: True
+
+=== tiny (B=1 S=64 tok=64) ===
+  baseline wall   :   1.4290 ms
+  optimized wall  :   0.1966 ms   speedup 7.267x
+  kernels/forward :   62.0   summed 0.1977 ms (100.5% of wall)
+  GEMM/attn       :   42.0 launches  0.1654 ms (83.7%)
+  everything else :   20.0 launches  0.0323 ms (16.3%)  <- fusible bucket
+  full kernel census (count/fwd, us/fwd, us/launch, class):
+      6.00x    42.866us   7.144us/l [GEMM] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64, 128, 128, 4
+     12.00x    42.764us   3.564us/l [GEMM] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128
+      6.00x    29.387us   4.898us/l [GEMM] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(cu
+      6.00x    27.675us   4.612us/l [GEMM] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cu
+     12.00x    22.721us   1.893us/l [GEMM] void cublasLt::splitKreduce_kernel<32, 16, int, float, float, float, float, 
+      6.00x     7.341us   1.223us/l [ELEM] triton_poi_fused_gelu_lt_linear_2
+      1.00x     6.552us   6.552us/l [ELEM] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native
+      3.00x     4.338us   1.446us/l [ELEM] triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_4
+      3.00x     4.121us   1.374us/l [ELEM] triton_per_fused__to_copy_add_native_layer_norm_view_3
+      3.00x     4.002us   1.334us/l [ELEM] triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_1
+      1.00x     1.629us   1.629us/l [ELEM] triton_per_fused__to_copy_native_layer_norm_0
+      1.00x     1.438us   1.438us/l [ELEM] triton_per_fused__to_copy_add_native_layer_norm_view_7
+      1.00x     1.437us   1.437us/l [ELEM] triton_per_fused__to_copy_add_native_layer_norm_view_6
+      1.00x     1.417us   1.417us/l [ELEM] triton_per_fused__to_copy_add_native_layer_norm_view_5
+
+=== default (B=8 S=128 tok=1024) ===
+  baseline wall   :   1.7881 ms
+  optimized wall  :   0.6451 ms   speedup 2.772x
+  kernels/forward :   50.0   summed 0.6445 ms (99.9% of wall)
+  GEMM/attn       :   30.0 launches  0.5586 ms (86.7%)
+  everything else :   20.0 launches  0.0858 ms (13.3%)  <- fusible bucket
+  full kernel census (count/fwd, us/fwd, us/launch, class):
+      6.00x   195.335us  32.556us/l [GEMM] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_32x6_tn_align4>(cu
+      6.00x   194.345us  32.391us/l [GEMM] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x128_16x5_tn_align4>(
+      6.00x    87.911us  14.652us/l [GEMM] void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6
+      6.00x    41.492us   6.915us/l [GEMM] ampere_fp16_s16816gemm_fp16_64x64_ldg8_relu_f2f_stages_64x5_tn
+      6.00x    39.566us   6.594us/l [GEMM] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64, 128, 128, 4
+      6.00x    33.403us   5.567us/l [ELEM] triton_poi_fused_addmm_gelu_view_2
+      1.00x    11.501us  11.501us/l [ELEM] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native
+      2.00x     6.438us   3.219us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+      2.00x     6.021us   3.010us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+      2.00x     5.245us   2.622us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+      2.00x     4.953us   2.477us/l [ELEM] triton_per_fused__to_copy_add_native_layer_norm_view_1
+      1.00x     4.080us   4.080us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+      1.00x     4.075us   4.075us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+      1.00x     4.058us   4.058us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+      1.00x     3.848us   3.848us/l [ELEM] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_9
+      1.00x     2.210us   2.210us/l [ELEM] triton_per_fused__to_copy_native_layer_norm_0
+

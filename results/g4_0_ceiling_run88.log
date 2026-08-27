@@ -1,0 +1,38 @@
+############ g4_0_ceiling.py ############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+=== per-kernel marginal cost in a CUDA graph (re-measured) ===
+  K=  16 no-op kernels:    14.44 us ( 0.903 us/kernel)
+  K=  64 no-op kernels:    55.37 us ( 0.865 us/kernel)
+  K= 128 no-op kernels:   110.19 us ( 0.861 us/kernel)
+  K= 256 no-op kernels:   219.68 us ( 0.858 us/kernel)
+  least-squares marginal cost: 0.8553 us per extra kernel
+
+USDT:2026-08-27 02:14:25 76376:76376 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:14:25 76376:76376 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:14:25 76376:76376 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:14:25 76376:76376 SyncActivityProfilerHandler.cpp:59] profiler_stop
+=== shipped tiny forward (B=1 S=64) ===
+  baseline wall     :   1421.47 us
+  optimized wall    :    201.41 us  (7.058x)
+  GEMM/attn kernels :  42.0 launches    170.35 us
+  elementwise       :  20.0 launches     32.17 us (15.97% of wall)
+  summed / wall     : 100.55%   (GPU idle = -0.55%)
+
+=== GEMM/attention-only graph (perfect free fusion, upper bound) ===
+  ffn_in  algo idx=4  id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+  ffn_out algo idx=1  id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+  kernels in graph  :  42.0  (target 42)
+  summed kernel time:    166.04 us (target 170.35 us, 97.5% of it)
+  graph replay wall :    165.02 us
+
+=== THE GATE ===
+  A. GPU idle after CUDA graphs        : -0.55%   (gate: >15%)
+  B. perfect-free-fusion ceiling       :   36.39 us / 201.41 us = 18.07%   (gate: >15%)
+     -- strict OVER-estimate: counts the LayerNorm/GELU/residual
+        arithmetic itself as recoverable, which it is not.
+  C. pure launch-cost component        : 20 launches x 0.855 us =   17.11 us = 8.49%   (gate: >15%)
+     -- the honest reading of 'launch overhead': what remains if
+        the work is done anyway, just inside another kernel.
+

@@ -1998,3 +1998,160 @@ the thing being measured is smaller than the harness's dispatch floor, compare
 under CUDA-graph capture (or profiler kernel time) or the number is the
 harness's, not the kernel's. Cheap tell used here: if the two sides dispatch the
 same kernel name and produce bit-identical output, any "speedup" is measurement.
+
+### 35. G4.0 (two-kernel form) BUILT AND MEASURED at TINY — gate NOT met, closed at G4.0
+
+Step 20 closed G4.0 on a feasibility measurement rather than a build. Re-opened
+by request, on the correct objection: step 20 measured the **CPU-side** quantity
+(`wall − Σ kernel durations`), and a captured graph replay still pays real
+**GPU-side** kernel-boundary costs — SM drain/refill, pipeline restart — that
+sit *inside* each kernel's own CUPTI duration and are therefore invisible to a
+gap measurement. A genuinely fused kernel could win via that mechanism with zero
+measured idle. This step tests that mechanism directly.
+
+Everything below is at **TINY (B=1, S=64)**, on the **current shipped state**
+(post-G6.4b fp16 attention, post-G6.6 cuBLASLt FFN GEMMs), re-measured fresh
+this session — step 20's census predates both.
+
+**Fresh census** (`probes/g4_0_census.py`, job 86,
+`results/g4_0_census_run86.log`). 62 kernels/forward, 196.6 µs wall, 7.27x:
+
+| class | launches | µs | share |
+|---|---|---|---|
+| flash_fwd (SDPA) | 6 | 42.87 | 21.7% |
+| cutlass wmma f16 gemm (qkv, out_proj) | 12 | 42.76 | 21.6% |
+| s1688gemm TF32 (ffn_in, ffn_out) | 12 | 57.06 | 28.9% |
+| `cublasLt::splitKreduce_kernel` | 12 | 22.72 | 11.5% |
+| inductor LN/residual/cast fusions | 13 | 18.36 | 9.3% |
+| GELU | 6 | 7.34 | 3.7% |
+| cudagraph input `_foreach_copy_` | 1 | 4.41 | 2.2% |
+
+**Finding 1 — the elementwise side is already at G4.0's two-kernel form, and
+inductor got there first.** The 13 LayerNorm launches are exactly *two per
+layer* plus the entry LN and `final_norm`: one absorbing `residual-add + LN1`,
+one absorbing `fp16→fp32 cast + residual-add + LN2 + view`. They cannot be
+merged with each other (the QKV GEMM, SDPA and `out_proj` sit between them) and
+they cannot be merged into a GEMM (a LayerNorm is a full-row reduction over the
+GEMM's entire N dimension; no epilogue can express that). The SDPA output's
+`transpose(1,2).contiguous()` does not appear as a kernel at all — already
+folded. Per layer the attention block is **2 elementwise launches + 3
+unabsorbable launches** (qkv GEMM, flash, out_proj GEMM), which *is* MEGAKERNEL.md's
+"as few launches as the tooling can manage around the SDPA call it can't
+absorb". There was no Triton kernel left to write on that side: a Triton kernel
+cannot fuse across an opaque cuBLASLt/CUTLASS launch, and reimplementing those
+is closed by step 19 (0.180x) and step 34 (cuBLASLt already optimal at M=64).
+
+**Finding 2 — the FFN's GELU *can* be fused into the ffn_in GEMM's epilogue, it
+*is* worth 3.7%, and it is closed on NUMERICS** (`csrc/cublaslt_gelu.cpp`,
+`probes/g4_0_ffn_epilogue_probe.py`, job 87, `results/g4_0_phase1_probes_run87.log`).
+This is the one form of "fuse the cheap surrounding op without touching the
+GEMM's tiling" that is physically available. It works, and it is free:
+`CUBLASLT_EPILOGUE_GELU_BIAS` returns the **identical 8 candidates** as
+`CUBLASLT_EPILOGUE_BIAS`, split-K variants included, so step 33's shipped
+1.32-1.49x is not given up. Under CUDA-graph replay: gemm alone 6.267 µs,
+gemm + separate GELU 7.470 µs, **fused 6.273 µs — the GELU becomes free**,
+1.191x on that pair, 7.18 µs/forward = 3.65% at tiny.
+
+But cuBLASLt's GELU is the **tanh approximation**, not erf, and the model's is
+`F.gelu(approximate="none")`:
+
+```
+|fused − F.gelu(erf) |   = 4.742e-04        |fused − tanh(fp64)| = 5.48e-06
+|fused − erf   (fp64)|   = 4.742e-04        |erf(fp64) − tanh(fp64)| = 4.732e-04
+|F.gelu(erf) − erf(fp64)| = 3.48e-07   <- torch's own error, 1400x smaller
+```
+
+4.74e-04 of *systematic* error on the FFN hidden activation, per layer, six
+layers, into a residual stream whose `max_abs` already sits at 7.2e-04 of a
+1.0e-03 budget at tiny (`results/g6_6_official_sweep_run76.log`). Same class of
+finding as step 30: the approximation's accuracy claim does not survive being
+measured. Not integrated, and not worth a walk-down — 3.65% at one shape does
+not buy a doubling of `max_abs`.
+
+**Finding 3 — the decisive experiment. Deleting a real kernel boundary at tiny,
+with the tiling held fixed, is a 1.4-2.1x REGRESSION.**
+(`probes/g4_0_inplace_splitk.py`, job 89, `results/g4_0_inplace_splitk_run89.log`.)
+
+The `splitKreduce_kernel` launches — 12/forward, 22.72 µs, 11.5% of the tiny
+forward, the largest deletable launch group left — exist only because step 33's
+chosen algorithms use split-K with an out-of-place reduction (`reduc=2`), which
+writes partials to workspace and reduces them in a **second kernel**. cuBLASLt
+also offers `CUBLASLT_REDUCTION_SCHEME_INPLACE` (`reduc=1`): same algorithm ID,
+same tile, same split count, partials accumulated inside the GEMM kernel — **one
+launch instead of two**. Reached by adding `CUBLASLT_MATMUL_PREF_REDUCTION_SCHEME_MASK`
+to the probe extension. This is precisely G4.0's mechanism, isolated: kernel
+boundary removed, nothing else changed. Timed under CUDA-graph replay (step 34's
+rule), kernel counts from the profiler rather than assumed:
+
+| GEMM | best out-of-place (2 kernels) | best in-place (1 kernel) | ratio |
+|---|---|---|---|
+| ffn_in  M=64 N=2048 K=512 | **6.322 µs** (splitk=4) | 8.881 µs (splitk=2) | **0.712x** |
+| ffn_out M=64 N=512 K=2048 | **6.768 µs** (splitk=16) | 14.534 µs (splitk=4) | **0.466x** |
+
+Every in-place candidate is slower than its out-of-place twin, and the loss
+(2.6 µs and 7.8 µs) is 3-9x larger than the 0.855 µs launch it deletes. Accuracy
+is unaffected (`|−fp64|` 1.500e-03 vs 1.501e-03; all variants bit-reproducible
+run to run), so this is a pure speed negative. **The kernel boundary was not
+costing anything — removing it costs.** That is the GPU-side drain/refill
+hypothesis tested head-on at the exact shape and in the exact place where it
+should have been most favourable, and it comes back negative.
+
+**Phase 2 — MEGAKERNEL.md's gate, answered three ways**
+(`probes/g4_0_ceiling.py`, job 88, `results/g4_0_ceiling_run88.log`).
+Same-session baseline in the same job: tiny wall 201.41 µs, 7.058x, 62 kernels,
+Σ kernel = 100.55% of wall (**GPU idle −0.55%**, reproducing step 20's −0.7%).
+
+*Upper bound, measured not modelled.* Replaying **only** the 42 GEMM/attention
+kernels in one CUDA graph — same shapes, same dtypes, six distinct weight sets
+so the ~63 MB working set is real — costs **165.02 µs** (42 kernels traced,
+166.04 µs summed = 97.5% of the real forward's 170.35 µs GEMM time, i.e. a
+faithful reproduction). So a *perfect, free, zero-cost* fusion of every
+elementwise op is worth **36.4 µs = 18.07%** — and that number counts the
+LayerNorm/GELU/residual arithmetic itself as recoverable, which it is not; a
+megakernel still computes it, just in registers.
+
+*Per-kernel marginal cost, re-measured not cited:* 0.8553 µs (16/64/128/256
+no-op kernels in a graph; step 20 measured 0.8554 µs — reproduced to 4 decimal
+places).
+
+| gate reading | measured | vs >15% |
+|---|---|---|
+| A. GPU idle after CUDA Graphs (the doc's literal question) | **−0.55%** | NOT met |
+| B. perfect free fusion of all elementwise (strict over-estimate) | 18.07% | met, but not a real quantity |
+| C. pure launch cost, 20 × 0.855 µs (the honest "launch overhead") | **8.49%** | NOT met |
+| D. direct test: remove one real kernel boundary (finding 3) | **0.71x / 0.47x** | NOT met |
+
+**Decision: STOP at G4.0. Gate NOT met. Not proceeding to G4.1.** Reading B is
+the only one that clears 15%, and it clears it by pricing the LayerNorms as
+free; the two readings that measure what fusion actually recovers (A and C) are
+−0.55% and 8.49%, and the one direct experiment (D) shows a removed boundary
+costs 3-9x more than it saves. Escalating to a cooperative persistent kernel —
+`grid.sync()`, 99 KB shared budgets, warp specialisation — on the strength of a
+number that requires calling arithmetic "overhead" would be exactly the forcing
+MEGAKERNEL.md warns against. Its own words: *"G4.0 winning is a result, not a
+failure."*
+
+**Nothing shipped, nothing regressed.** `git diff HEAD -- benchmark.py
+csrc/cublaslt_algo.cpp` is empty — the shipped model and the shipped G6.6
+extension were never touched; all epilogue/reduction-scheme work lives in the
+separate probe file `csrc/cublaslt_gelu.cpp` (step 34's precedent).
+`tools/check_validity.py` passes. Fresh 8-shape sweep re-run as a same-session
+reference (`results/g4_0_reference_sweep_run90.log`).
+
+**One negative worth recording for a future pass:** the per-forward
+`multi_tensor_apply_kernel<..., Copy<float,float>>` (4.4 µs at tiny, 2.2%;
+11.5 µs at default) is inductor's cudagraph-trees copy of non-static graph
+inputs. The obvious hypothesis — that it copies the G0.2/G1.1/G6.4b folded
+weights, which CLAUDE.md invariant 4 forces to be plain attributes rather than
+Parameters, and which dynamo therefore does not treat as static addresses — was
+tested and **falsified**: `torch._dynamo.mark_static_address` on all 48 folded
+tensors left the kernel present (4.41 → 4.29 µs), the launch count unchanged
+(62 → 62) and the wall time unchanged (0.1943 → 0.1953 ms, 0.995x)
+(`probes/g4_0_launch_residue.py`, job 87). Whatever it copies, it is not those.
+
+**What would have to change for G4 to reopen:** a measured GPU-side
+kernel-boundary cost that is positive. Finding 3 measures it as *negative* at
+tiny — the only regime where the launch count is even a plausible bottleneck —
+using cuBLASLt's own in-place split-K, which changes nothing except the number
+of launches. That is a stronger closure than step 20's, because it is an
+experiment rather than an inference.

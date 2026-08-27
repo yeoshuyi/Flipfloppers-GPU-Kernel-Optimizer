@@ -1,0 +1,106 @@
+############ g4_0_ffn_epilogue_probe.py ############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+ext built ok
+
+=== Q1: candidate availability, ffn_in M=64 N=2048 K=512 ===
+  epi=1 BIAS (shipped G6.6)   : 8 candidates
+      [ 0] id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1] id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2] id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3] id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+      [ 4] id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+      [ 5] id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 6] id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 7] id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+  epi=2 GELU_BIAS             : 8 candidates
+      [ 0] id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.25
+      [ 1] id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.125
+      [ 2] id=21 tile=17 stages=9 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3] id=21 tile=15 stages=6 splitk=2 reduc=2 swizzle=0 ws=1048576 wave=0.25
+      [ 4] id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=2097152 wave=0.5
+      [ 5] id=21 tile=18 stages=6 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 6] id=21 tile=21 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 7] id=21 tile=20 stages=4 splitk=8 reduc=2 swizzle=0 ws=4194304 wave=1
+
+=== Q2: which GELU does CUBLASLT_EPILOGUE_GELU_BIAS compute? ===
+  best BIAS candidate      idx=4  7.770 us (eager)
+  best GELU_BIAS candidate idx=4  7.844 us (eager)
+  |fused - F.gelu(erf) |      = 4.742146e-04
+  |fused - F.gelu(tanh)|      = 5.483627e-06
+  |fused - erf   (fp64)|      = 4.741602e-04
+  |fused - tanh  (fp64)|      = 5.477088e-06
+  |F.gelu(erf) - erf  (fp64)| = 3.479812e-07  <- torch's own error
+  |erf(fp64) - tanh(fp64)|    = 4.732355e-04  <- the two forms differ by this much
+
+  pre-activation stats: absmax=4.5180 std=1.0049
+
+=== Q3: CUDA-graph timing, one ffn_in GEMM + its GELU ===
+  BIAS gemm alone            :    6.267 us
+  BIAS gemm + separate GELU  :    7.470 us   (GELU costs 1.203 us)
+  GELU_BIAS fused gemm       :    6.273 us
+  fused vs unfused           :   1.1909x  (saving 1.197 us per layer, x6 layers = 7.18 us/forward)
+
+=== ffn_out M=64 N=512 K=2048: candidate set (no GELU follows it) ===
+  BIAS: 8 candidates
+      [ 0] id=21 tile=15 stages=6 splitk=4 reduc=2 swizzle=0 ws=524288 wave=0.125
+      [ 1] id=21 tile=15 stages=12 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 2] id=21 tile=17 stages=9 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 3] id=21 tile=15 stages=6 splitk=12 reduc=2 swizzle=0 ws=1441792 wave=0.34375
+      [ 4] id=21 tile=18 stages=6 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=1
+      [ 5] id=21 tile=21 stages=4 splitk=32 reduc=2 swizzle=0 ws=4194304 wave=0.5
+      [ 6] id=21 tile=19 stages=4 splitk=16 reduc=2 swizzle=0 ws=2097152 wave=1
+      [ 7] id=21 tile=15 stages=6 splitk=1 reduc=0 swizzle=0 ws=0 wave=0.03125
+
+############ g4_0_launch_residue.py ############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+
+=== tiny (B=1 S=64) ===
+USDT:2026-08-27 02:11:15 76000:76000 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:11:15 76000:76000 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 02:11:16 76000:76000 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 02:11:16 76000:76000 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  SHIPPED -- full names of every non-GEMM kernel:
+       6.00x    7.256us  triton_poi_fused_gelu_lt_linear_2
+       1.00x    4.410us  void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float> >(at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float>)
+       3.00x    4.333us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_4
+       3.00x    4.048us  triton_per_fused__to_copy_add_native_layer_norm_view_3
+       3.00x    3.965us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_1
+       1.00x    1.629us  triton_per_fused__to_copy_native_layer_norm_0
+       1.00x    1.466us  triton_per_fused__to_copy_add_native_layer_norm_view_7
+       1.00x    1.398us  triton_per_fused__to_copy_add_native_layer_norm_view_5
+       1.00x    1.386us  triton_per_fused__to_copy_add_native_layer_norm_view_6
+  [shipped] wall 0.1943 ms | 62.0 kernels | 0.1953 ms summed
+       1.00x    4.410us  void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float> >(at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float>)
+       3.00x    4.333us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_4
+       3.00x    4.048us  triton_per_fused__to_copy_add_native_layer_norm_view_3
+       3.00x    3.965us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_1
+       1.00x    1.629us  triton_per_fused__to_copy_native_layer_norm_0
+       1.00x    1.466us  triton_per_fused__to_copy_add_native_layer_norm_view_7
+       1.00x    1.398us  triton_per_fused__to_copy_add_native_layer_norm_view_5
+       1.00x    1.386us  triton_per_fused__to_copy_add_native_layer_norm_view_6
+  marked 48 folded tensors as static addresses
+  [static ] wall 0.1953 ms | 62.0 kernels | 0.1952 ms summed
+       3.00x    4.357us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_4
+       1.00x    4.294us  void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float> >(at::native::(anonymous namespace)::TensorListMetadata<2>, at::native::(anonymous namespace)::UnaryOpFunctor<float, 2, 1, 1>, at::native::Copy<float, float>)
+       3.00x    4.080us  triton_per_fused__to_copy_add_lt_linear_native_layer_norm_view_1
+       3.00x    4.061us  triton_per_fused__to_copy_add_native_layer_norm_view_3
+       1.00x    1.621us  triton_per_fused__to_copy_native_layer_norm_0
+       1.00x    1.464us  triton_per_fused__to_copy_add_native_layer_norm_view_7
+       1.00x    1.440us  triton_per_fused__to_copy_add_native_layer_norm_view_6
+       1.00x    1.432us  triton_per_fused__to_copy_add_native_layer_norm_view_5
+  wall: 0.1943 -> 0.1953 ms  (0.9949x)
+  kernels/forward: 62.0 -> 62.0
+Traceback (most recent call last):
+  File "/work/probes/g4_0_launch_residue.py", line 201, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/probes/g4_0_launch_residue.py", line 193, in main
+    f"{(a - b).abs().max().item():.6e}")
+        ~~^~~
+RuntimeError: Error: accessing tensor output of CUDAGraphs that has been overwritten by a subsequent run. Stack trace: File "/work/benchmark.py", line 758, in _optimized_forward
+    x = self.final_norm(x)
+        ^^^^^^^^^^^^^^^^^^. To prevent overwriting, clone the tensor outside of torch.compile() or call torch.compiler.cudagraph_mark_step_begin() before each model invocation.
+
