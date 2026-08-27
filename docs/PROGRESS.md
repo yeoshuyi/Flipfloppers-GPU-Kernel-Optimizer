@@ -2486,15 +2486,23 @@ of the 24 single-instantiation TUs still built in under a second on average,
 12.6s total for round 1's 14 configs). Timed via CUDA-graph replay
 cross-checked against `torch.profiler` kernel time (job 101):
 
+All four rows are the PRIMARY judgment shape, qkv/large_batch
+(M=32768, K=512, N=1536), so the µs column is directly comparable:
+
 | | µs | TFLOPS | % of own tier |
 |---|---|---|---|
 | PyTorch cuBLASLt (`ampere_fp16_s16816gemm...`) | 342.53 | 150.47 | 91.1% (FP32-acc, 165.2 TF tier) |
 | step 37 hand-written cfg[11] | 283.29 | 181.93 | 55.1% (FP16-acc, 330.3 TF tier) |
 | **CUTLASS cfg[6], round 1** | **218.44** | **235.94** | **71.4%** |
-| **CUTLASS cfg[18], round 2 (swizzle sweep)** | **72.50** *(out_proj shape)* | **236.96** | **71.7%** |
+| **CUTLASS cfg[15], round 2 best** | **218.18** | **236.22** | **71.5%** |
 
-(Round 2 re-ran qkv/large_batch too and landed at 236.22 TF/71.5% — within
-noise of round 1's 235.94 TF; the search saturated, not a fluke reading.)
+Round 2 re-ran every round-1 config and reproduced them to 0.1-0.7%
+(cfg[6]: 218.44 → 218.63 µs), so the search saturated rather than drifted.
+cfg[15] is cfg[6] + `swizzle 8` and its 0.1pp "win" is inside noise — it
+measured 4.76% run-to-run spread against cfg[6]'s 0.67%, so **cfg[6] is the
+config carried forward**, not cfg[15]. The other shapes' bests, for the record:
+out_proj/large_batch cfg[18] 72.50 µs / 236.96 TF / 71.7%, and qkv/default
+cfg[2] 10.25 µs / 157.17 TF / 47.6%.
 Graph replay vs profiler agree to **0.8%**, inside step 34's 1-3%
 requirement. CUTLASS beats cuBLASLt by **1.57-1.60x** and the hand-written
 kernel by **1.30x** — a real, repeatable, well-measured win — but **71.4-
@@ -2502,11 +2510,19 @@ kernel by **1.30x** — a real, repeatable, well-measured win — but **71.4-
 reopening threshold.
 
 **The accumulate-tier A/B corroborates step 37 rather than contradicting
-it.** Four to six identical-tile twins (same `ThreadblockShape`/`WarpShape`/
-`Stages`, only `ElementAccumulator` changed) show FP16-accumulate worth
-**1.4-1.6x** inside CUTLASS — matching step 37's own hand-written-kernel
-measurement of 1.43-1.54x closely, from a second, independent implementation
-of the same underlying hardware mechanism. The best FP32-accumulate CUTLASS
+it.** Twelve identical-tile twin pairs (3 shapes x 4 tiles; same
+`ThreadblockShape`/`WarpShape`/`Stages`, only `ElementAccumulator` changed)
+show FP16-accumulate worth **x1.587-x2.027** inside CUTLASS — somewhat MORE
+than step 37's own hand-written-kernel measurement of x1.43-x1.54, from a
+second, independent implementation of the same hardware mechanism. The top of
+that range is NOT evidence the tier is worth 2x: every x1.92-x2.03 reading
+comes from the single cfg[1]/cfg[11] pair (TB128x128x64 stg2), whose *accF32*
+side is anomalously bad (97.4 TF, 59% of its own tier — the worst
+FP32-accumulate config measured), which inflates the ratio from the
+denominator. Excluding that one pair the range is **x1.59-x1.75**, bracketing
+step 37's number from just above. Checked rather than assumed, per the
+standing rule that an accumulate-tier ratio far from x1.43-x1.54 is a red
+flag. The best FP32-accumulate CUTLASS
 config reaches only 82.4% of *its* (lower) tier, 136.09 TFLOPS — CUTLASS
 cannot beat cuBLASLt inside cuBLAS's own tier either, consistent with every
 same-tier attempt this session (steps 34, 36).
@@ -2547,6 +2563,141 @@ adds warp-specialized pipelining to the Sm80/Sm89 (non-Hopper) code path —
 not available in the 2.x `device::Gemm` template used here — or accepting
 the ~72% ceiling and shipping anyway at a lower bar than this project's own
 `CLAUDE.md`/step-37 threshold, which would be a real, if smaller
-(g4.7%-scale), whole-model win at large_batch specifically. Not pursued
+(~4.7%-scale), whole-model win at large_batch specifically. Not pursued
 without explicit direction to lower the bar, since the 80% threshold was set
 deliberately, not arbitrarily.
+
+> **SUPERSEDED BY STEP 40.** That direction was subsequently given, Phase 2
+> ran, and the ~4.7% prize proved unpurchasable: the FP16-accumulate tier
+> fails the accuracy sweep at 6 of 8 shapes, and at every routing variant.
+> G4.6 is closed on **accuracy**, not on the 80%-of-tier speed bar. Do not
+> reopen this on speed grounds — see step 40 before spending any time here.
+
+### 40. G4.6 Phase 2 (bar lowered by explicit instruction) — **CLOSED PERMANENTLY on ACCURACY, not speed. All three routings fail the sweep.**
+
+**Why Phase 2 ran at all.** Step 39 stopped at Phase 1's 71.4-71.7%-of-tier
+against an 80% gate, and listed exactly one thing that would reopen it:
+"accepting the ~72% ceiling and shipping anyway at a lower bar... Not pursued
+without explicit direction to lower the bar." That direction was given
+explicitly ("i dont mind small gains for big work done, because we are pushing
+limits"), so Phase 2 was entered on the ~4.7%-at-one-shape prize step 39 had
+already priced. **The prize turned out to be unreachable for a reason that has
+nothing to do with speed.**
+
+**Phase 2a — the kernel is exactly right. This is not a correctness bug.**
+(`probes/g4_6_cutlass_phase2a.py`, job 103,
+`results/g4_6_phase2a_fp64_run103.log`.) Three tiers against an **fp64**
+ground truth — never cuBLAS, never the g4_4 hand-written kernel, both of which
+are themselves approximations of the thing being checked:
+
+* deterministic integer input (A,B ∈ {-1,0,1}, K=512, so every partial sum is
+  an integer with |sum| ≤ 512 and fp16 represents it exactly even *under fp16
+  accumulation*) → `max_abs = 0.000000e+00` for cfg[6], cfg[18] and cfg[12].
+* one-hot sweep at a deliberately non-tile-aligned 256x128x192 (which also
+  exercises CUTLASS's ragged-shape predication, something the hand-written
+  kernel never had) → **0 / 48 mismatches**.
+* cross-validation worth recording: CUTLASS's **FP32**-accumulate config
+  reproduces cuBLAS's `max_abs` to **all 7 printed digits** (9.713173e-04 at
+  qkv/large_batch, 9.698868e-04 at out_proj, 9.706020e-04 at qkv/default).
+  Two independent implementations agreeing bit-for-bit confirms the harness
+  and the layout mapping, so the FP16-accumulate deltas below are the
+  accumulate type and nothing else.
+
+**Phase 2a — and here is the price.** Same shapes, same harness, against the
+same fp64 reference, with the gate's own disjunctive criterion applied per
+element (`abs ≤ 1e-3 OR abs ≤ 1e-2·|ref|`):
+
+| shape | cuBLAS (fp32 acc) | CUTLASS (FP16 acc) | ratio | gate-failing elements, ONE GEMM |
+|---|---|---|---|---|
+| qkv large_batch | 9.713e-04 → 0 fail | **7.218e-03** | x7.43 | **100,933 / 50,331,648** |
+| out_proj large_batch | 9.699e-04 → 0 fail | **7.517e-03** | x7.75 | 33,761 / 16,777,216 |
+| qkv default | 9.706e-04 → 0 fail | **6.974e-03** | x7.18 | 3,164 / 1,572,864 |
+
+**Phase 2b — the full 8-shape sweep, judged by `benchmark.py`'s own
+`run_accuracy_tests`/`compare_outputs`, not a reimplementation.**
+(`probes/g4_6_cutlass_phase2b.py`, job 104,
+`results/g4_6_phase2b_accuracy_run104.log`.) No custom-op/`torch.compile`
+plumbing was written: monkeypatching `F.linear` and pre-seeding
+`_compiled_impl` with the uncompiled bound method gives the authoritative
+accuracy number for a fraction of the work, and **if accuracy fails the
+integration never needs writing**. A **control arm** (same patch installed,
+routing disabled) was run first and reproduces step 28's large_batch number to
+3e-7 — `max_abs = 0.000905842` vs step 28's `0.000905529` — so the eager
+harness is faithful and nothing below is an artefact of the measurement.
+
+```
+shape              control      CUTLASS both   verdict   failed elements
+tiny               0.000709  -> 0.00146866     FAIL        24 / 163,840
+default            0.000753  -> 0.00156015     FAIL        51 / 2,621,440
+long_seq           0.000790  -> 0.00131363     FAIL        27 / 20,971,520
+large_batch        0.000906  -> 0.00175625     FAIL     1,541 / 83,886,080
+default_padded     0.000783  -> 0.00156021     FAIL        72 / 2,621,440
+long_seq_padded       —      -> 0.00133014     FAIL        22 / 20,971,520
+default_causal     0.000995  -> 0.000994682    PASS         0   (0 CUTLASS calls)
+causal_padded      0.000995  -> 0.000994682    PASS         0   (0 CUTLASS calls)
+```
+
+**6 of 8 shapes fail.** The two that pass do so only because causal routes to
+`_compiled_causal`/`super().forward` before `_optimized_forward` and never
+reaches these GEMMs at all — the `[routing]` counters read literally
+`qkv->CUTLASS 0, out_proj->CUTLASS 0`, independently re-confirming step 37's
+claim about causal routing from a second direction.
+
+**Phase 2c — splitting the two GEMMs does not rescue it either.**
+(job 105, `results/g4_6_phase2c_split_routing_run105.log`.) `out_proj` feeds
+the fp32 residual stream directly while `qkv` feeds softmax, which
+renormalises, so the two were priced separately:
+
+| routing | shapes failed | large_batch max_abs |
+|---|---|---|
+| both | 6 / 6 non-causal | 0.00175625 (1,541 fail) |
+| **qkv only** | **2 / 6** (large_batch, default_padded) | 0.00120746 (**6** fail) |
+| out_proj only | 6 / 6 non-causal | 0.00152743 (363 fail) |
+
+`qkv`-only is much the closest — it *passes* tiny, default, long_seq and
+long_seq_padded, and misses at large_batch by **6 elements out of 83.9
+million**. But that is precisely the wrong 6 elements: **the only shape where
+G4.6 has any speed win is large_batch, and large_batch is exactly where
+`qkv`-only fails.** The regimes it passes in are the ones where the kernel is
+worth ~0% (default) or an outright regression (tiny). There is no subset of
+regimes that is both accurate and faster.
+
+**The arithmetic that made this inevitable, stated plainly.** FP16 *storage*
+alone already spends **90.6%** of the 1e-3 atol at large_batch (0.000906).
+FP16 *accumulation* is spent from the same budget, and at K=512 it costs
+x7.2-x7.8 at the GEMM. There was never 7x of headroom; there was 9.4%.
+Step 39's ~4.7% whole-model prize was real and correctly computed — it is
+simply not purchasable at this atol.
+
+**This closes G4.4 and G4.6 together, and retroactively validates step 37.**
+Step 37 deliberately did not run its Stages 1-2 ("large_batch already spends
+~90% of its 1e-3 atol budget on FP16 *storage* alone... FP16 accumulation
+would be spent on top of it to buy 2%"). That judgement is now measured, not
+predicted: the hand-written kernel's x1.207 was never shippable either, for
+the same reason, and the two independent implementations of the
+FP16-accumulate tier fail the same gate. **The FP16-accumulate tier is
+unaffordable for this model at K=512 against a 1e-3 atol, at every shape.**
+The tier is not a tuning problem or a kernel-quality problem — steps 37 and 39
+between them established the mechanism is real and worth x1.59-x1.75, and
+CUTLASS reached 71.5% of it. It is a precision-budget problem, and the budget
+was already spent in step 28.
+
+**Nothing shipped, nothing regressed.** `benchmark.py`,
+`csrc/g4_4_mma_gemm.{cu,cpp}` and `csrc/cublaslt_*.cpp` are untouched — Phase
+2 deliberately measured through a monkeypatch precisely so that a failing
+experiment could not leave residue in the shipped path. `tools/check_validity.py`
+passes. **No integration was ever written**, per Phase 2b's own gating.
+
+**What would reopen it — and why none of it is worth building.** Split-K with
+an fp32 reduction of fp16-accumulated partials (CLAUDE.md's "use
+split-precision before abandoning low precision") would shorten the
+accumulation chain from 512 to ~128 and cut the error by roughly √4 = 2x, to
+~3.6e-03 — still ~3.7x the cuBLAS baseline that already consumes 90.6% of the
+budget, while giving back speed to the extra reduction pass. A larger atol
+would change the answer, but the atol is the task's, not ours. **The
+transferable assets are real and survive the negative**: a CUTLASS build
+recipe that works on this CUDA 13.1 container (`probes/g4_6_gen_cfgs.py` +
+`csrc/g4_6_cutlass_gemm.cuh`, 24 configs, ~0.5 s/instantiation), and the
+now-measured fact that CUTLASS FP32-accumulate reproduces cuBLAS bit-for-bit —
+which makes it a drop-in **numerics-neutral** GEMM if a future optimisation
+ever needs a custom epilogue rather than a cheaper accumulate tier.

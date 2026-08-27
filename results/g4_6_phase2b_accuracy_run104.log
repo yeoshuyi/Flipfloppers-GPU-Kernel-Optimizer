@@ -1,0 +1,323 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+########## CONTROL (patch installed but disabled) ##########
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+MODE = control  (CUTLASS routing DISABLED)
+
+
+##########################################################################
+### SHAPE: tiny  {'batch_size': 1, 'seq_len': 64}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000647783 | max_rel=33.3189 | failed=0/32768
+trial 02/5: PASS | max_abs=0.000622645 | max_rel=36.1754 | failed=0/32768
+trial 03/5: PASS | max_abs=0.000659704 | max_rel=4.83856 | failed=0/32768
+trial 04/5: PASS | max_abs=0.000708863 | max_rel=30.3139 | failed=0/32768
+trial 05/5: PASS | max_abs=0.000626862 | max_rel=1.99132 | failed=0/32768
+summary: PASS | max_abs=0.000708863 | max_rel=36.1754 | failed=0/163840
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 310
+
+##########################################################################
+### SHAPE: default  {'batch_size': 8, 'seq_len': 128}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000736296 | max_rel=38.3661 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000672042 | max_rel=223.754 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000752568 | max_rel=84.3975 | failed=0/524288
+trial 04/5: PASS | max_abs=0.000693142 | max_rel=102.841 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000706255 | max_rel=133.514 | failed=0/524288
+summary: PASS | max_abs=0.000752568 | max_rel=223.754 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 300
+
+##########################################################################
+### SHAPE: long_seq  {'batch_size': 8, 'seq_len': 1024}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000778221 | max_rel=44524 | failed=0/4194304
+trial 02/5: PASS | max_abs=0.000790238 | max_rel=1226.6 | failed=0/4194304
+trial 03/5: PASS | max_abs=0.00073719 | max_rel=166.169 | failed=0/4194304
+trial 04/5: PASS | max_abs=0.000716925 | max_rel=158.538 | failed=0/4194304
+trial 05/5: PASS | max_abs=0.00073266 | max_rel=521.962 | failed=0/4194304
+summary: PASS | max_abs=0.000790238 | max_rel=44524 | failed=0/20971520
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 300
+
+##########################################################################
+### SHAPE: large_batch  {'batch_size': 256, 'seq_len': 128}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000828147 | max_rel=12141.5 | failed=0/16777216
+trial 02/5: PASS | max_abs=0.00080955 | max_rel=11019.5 | failed=0/16777216
+trial 03/5: PASS | max_abs=0.000814557 | max_rel=2849.59 | failed=0/16777216
+trial 04/5: PASS | max_abs=0.000845939 | max_rel=5698.78 | failed=0/16777216
+trial 05/5: PASS | max_abs=0.000905842 | max_rel=3688.98 | failed=0/16777216
+summary: PASS | max_abs=0.000905842 | max_rel=12141.5 | failed=0/83886080
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 300
+
+##########################################################################
+### SHAPE: default_padded  {'batch_size': 8, 'seq_len': 128, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000672996 | max_rel=12.5046 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000782907 | max_rel=76.0336 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000729829 | max_rel=116.488 | failed=0/524288
+trial 04/5: PASS | max_abs=0.000729322 | max_rel=198.303 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000698566 | max_rel=133.977 | failed=0/524288
+summary: PASS | max_abs=0.000782907 | max_rel=198.303 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 300
+
+##########################################################################
+### SHAPE: default_causal  {'batch_size': 8, 'seq_len': 128, 'causal': True}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000855505 | max_rel=10.003 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000901788 | max_rel=175.426 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000994682 | max_rel=52.9309 | failed=0/524288
+trial 04/5: PASS | max_abs=0.00083214 | max_rel=42.8951 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000850618 | max_rel=62.2444 | failed=0/524288
+summary: PASS | max_abs=0.000994682 | max_rel=175.426 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 360
+
+##########################################################################
+### SHAPE: causal_padded  {'batch_size': 8, 'seq_len': 128, 'causal': True, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000855505 | max_rel=10.003 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000901788 | max_rel=175.426 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000994682 | max_rel=52.9309 | failed=0/524288
+trial 04/5: PASS | max_abs=0.00083214 | max_rel=42.8951 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000850618 | max_rel=62.2444 | failed=0/524288
+summary: PASS | max_abs=0.000994682 | max_rel=175.426 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 360
+
+##########################################################################
+### SHAPE: long_seq_padded  {'batch_size': 8, 'seq_len': 1024, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000691056 | max_rel=1643.26 | failed=0/4194304
+trial 02/5: PASS | max_abs=0.000735283 | max_rel=339.9 | failed=0/4194304
+trial 03/5: PASS | max_abs=0.000795364 | max_rel=546.399 | failed=0/4194304
+trial 04/5: PASS | max_abs=0.000696421 | max_rel=182.043 | failed=0/4194304
+trial 05/5: PASS | max_abs=0.00071598 | max_rel=69.6751 | failed=0/4194304
+summary: PASS | max_abs=0.000795364 | max_rel=1643.26 | failed=0/20971520
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 300
+
+==========================================================================
+PHASE 2b SUMMARY  (mode=control)
+  tiny               PASS   (CUTLASS-routed GEMM calls: 0)
+  default            PASS   (CUTLASS-routed GEMM calls: 0)
+  long_seq           PASS   (CUTLASS-routed GEMM calls: 0)
+  large_batch        PASS   (CUTLASS-routed GEMM calls: 0)
+  default_padded     PASS   (CUTLASS-routed GEMM calls: 0)
+  default_causal     PASS   (CUTLASS-routed GEMM calls: 0)
+  causal_padded      PASS   (CUTLASS-routed GEMM calls: 0)
+  long_seq_padded    PASS   (CUTLASS-routed GEMM calls: 0)
+
+VERDICT: ALL SHAPES PASS
+control exit: 0
+
+########## CUTLASS FP16-ACCUMULATE ##########
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+MODE = cutlass  (CUTLASS routing ENABLED)
+
+
+##########################################################################
+### SHAPE: tiny  {'batch_size': 1, 'seq_len': 64}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00131623 | max_rel=36.7819 | failed=6/32768
+  worst_index=(0, 61, 61), baseline=0.011561562, optimized=0.010245335
+  failed output feature dims=[57, 61, 248, 296, 380, 476]
+trial 02/5: FAIL | max_abs=0.00146866 | max_rel=55.8804 | failed=6/32768
+  worst_index=(0, 3, 341), baseline=-1.3859154, optimized=-1.3844467
+  failed output feature dims=[82, 321, 341, 345, 362, 365]
+trial 03/5: FAIL | max_abs=0.00142929 | max_rel=13.2284 | failed=2/32768
+  worst_index=(0, 33, 419), baseline=0.42744258, optimized=0.42887187
+  failed output feature dims=[200, 436]
+trial 04/5: FAIL | max_abs=0.0013994 | max_rel=5.14835 | failed=2/32768
+  worst_index=(0, 50, 433), baseline=-1.5724413, optimized=-1.5710419
+  failed output feature dims=[101, 358]
+trial 05/5: FAIL | max_abs=0.00130454 | max_rel=34.3771 | failed=8/32768
+  worst_index=(0, 25, 452), baseline=-0.43725035, optimized=-0.43594581
+  failed output feature dims=[3, 6, 49, 129, 204, 432, 502]
+summary: FAIL | max_abs=0.00146866 | max_rel=55.8804 | failed=24/163840
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 250
+
+##########################################################################
+### SHAPE: default  {'batch_size': 8, 'seq_len': 128}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00132653 | max_rel=71.8057 | failed=10/524288
+  worst_index=(1, 73, 457), baseline=-0.22221957, optimized=-0.22089304
+  failed output feature dims=[55, 142, 144, 419, 433, 436, 473, 502]
+trial 02/5: FAIL | max_abs=0.00145131 | max_rel=69.3447 | failed=10/524288
+  worst_index=(1, 102, 203), baseline=0.63932461, optimized=0.63787329
+  failed output feature dims=[98, 103, 120, 162, 169, 195, 268, 351, 433, 451]
+trial 03/5: FAIL | max_abs=0.0014677 | max_rel=502.86 | failed=12/524288
+  worst_index=(4, 114, 57), baseline=-0.825818, optimized=-0.82728571
+  failed output feature dims=[92, 122, 140, 184, 203, 223, 299, 355, 442, 476, 503]
+trial 04/5: FAIL | max_abs=0.00156015 | max_rel=187.657 | failed=12/524288
+  worst_index=(6, 86, 349), baseline=0.8012262, optimized=0.79966605
+  failed output feature dims=[38, 57, 63, 103, 238, 255, 276, 308, 323, 349, 443]
+trial 05/5: FAIL | max_abs=0.00133908 | max_rel=161.785 | failed=7/524288
+  worst_index=(1, 66, 120), baseline=0.60171872, optimized=0.60037965
+  failed output feature dims=[50, 99, 110, 206, 215, 258, 382]
+summary: FAIL | max_abs=0.00156015 | max_rel=502.86 | failed=51/2621440
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 240
+
+##########################################################################
+### SHAPE: long_seq  {'batch_size': 8, 'seq_len': 1024}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00131363 | max_rel=20991.1 | failed=6/4194304
+  worst_index=(4, 250, 178), baseline=0.41201293, optimized=0.41332656
+  failed output feature dims=[158, 184, 226, 277, 435, 442]
+trial 02/5: FAIL | max_abs=0.00127482 | max_rel=2756.98 | failed=5/4194304
+  worst_index=(0, 641, 110), baseline=0.91214406, optimized=0.91341889
+  failed output feature dims=[98, 144, 184, 417, 452]
+trial 03/5: FAIL | max_abs=0.00123596 | max_rel=964.172 | failed=6/4194304
+  worst_index=(4, 157, 349), baseline=1.1276243, optimized=1.1263883
+  failed output feature dims=[90, 98, 184, 349, 442, 460]
+trial 04/5: FAIL | max_abs=0.00126785 | max_rel=174.794 | failed=3/4194304
+  worst_index=(5, 54, 36), baseline=0.4585585, optimized=0.45982635
+  failed output feature dims=[241, 442]
+trial 05/5: FAIL | max_abs=0.00125873 | max_rel=589.069 | failed=7/4194304
+  worst_index=(7, 64, 57), baseline=-0.52107877, optimized=-0.5223375
+  failed output feature dims=[23, 110, 120, 178, 187, 353, 442]
+summary: FAIL | max_abs=0.00131363 | max_rel=20991.1 | failed=27/20971520
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 240
+
+##########################################################################
+### SHAPE: large_batch  {'batch_size': 256, 'seq_len': 128}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.0016757 | max_rel=9295.6 | failed=307/16777216
+  worst_index=(193, 93, 324), baseline=0.30762526, optimized=0.30594957
+  failed output feature dims=[0, 3, 8, 9, 10, 22, 23, 27, 28, 36, 38, 39, 41, 45, 52, 55]...
+trial 02/5: FAIL | max_abs=0.00175625 | max_rel=7783.65 | failed=278/16777216
+  worst_index=(177, 9, 3), baseline=0.75597984, optimized=0.75422359
+  failed output feature dims=[0, 3, 4, 10, 11, 13, 15, 17, 18, 21, 23, 26, 27, 28, 30, 33]...
+trial 03/5: FAIL | max_abs=0.00163641 | max_rel=4068.11 | failed=325/16777216
+  worst_index=(198, 61, 93), baseline=0.020736659, optimized=0.022373067
+  failed output feature dims=[0, 1, 3, 4, 5, 9, 10, 18, 21, 23, 27, 28, 32, 33, 36, 39]...
+trial 04/5: FAIL | max_abs=0.00168552 | max_rel=12789.8 | failed=318/16777216
+  worst_index=(188, 109, 55), baseline=0.064512558, optimized=0.066198081
+  failed output feature dims=[0, 3, 4, 5, 10, 14, 16, 18, 21, 23, 33, 36, 39, 46, 50, 52]...
+trial 05/5: FAIL | max_abs=0.00162801 | max_rel=42157.7 | failed=313/16777216
+  worst_index=(56, 26, 349), baseline=0.16694516, optimized=0.16531715
+  failed output feature dims=[0, 2, 3, 8, 10, 14, 16, 21, 23, 30, 34, 35, 36, 39, 46, 48]...
+summary: FAIL | max_abs=0.00175625 | max_rel=42157.7 | failed=1541/83886080
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 240
+
+##########################################################################
+### SHAPE: default_padded  {'batch_size': 8, 'seq_len': 128, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00140562 | max_rel=27.0193 | failed=15/524288
+  worst_index=(1, 25, 187), baseline=-0.020889761, optimized=-0.022295382
+  failed output feature dims=[27, 76, 79, 90, 96, 110, 144, 149, 187, 236, 319, 332, 438, 455]
+trial 02/5: FAIL | max_abs=0.00151056 | max_rel=172.127 | failed=15/524288
+  worst_index=(4, 92, 111), baseline=0.27492011, optimized=0.27340955
+  failed output feature dims=[14, 49, 57, 84, 98, 118, 120, 169, 197, 208, 316, 373, 443, 448, 450]
+trial 03/5: FAIL | max_abs=0.00135946 | max_rel=146.109 | failed=9/524288
+  worst_index=(0, 24, 184), baseline=1.239143, optimized=1.2405025
+  failed output feature dims=[21, 84, 85, 115, 157, 289, 434, 442, 506]
+trial 04/5: FAIL | max_abs=0.00140154 | max_rel=350.778 | failed=18/524288
+  worst_index=(0, 99, 277), baseline=0.77602959, optimized=0.77462804
+  failed output feature dims=[36, 98, 115, 137, 161, 166, 187, 207, 229, 257, 290, 330, 332, 349, 413, 430]...
+trial 05/5: FAIL | max_abs=0.00156021 | max_rel=98.8714 | failed=15/524288
+  worst_index=(6, 10, 137), baseline=1.7241646, optimized=1.7257248
+  failed output feature dims=[2, 54, 70, 96, 120, 155, 184, 187, 203, 225, 257, 292, 365, 403, 435]
+summary: FAIL | max_abs=0.00156021 | max_rel=350.778 | failed=72/2621440
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 240
+
+##########################################################################
+### SHAPE: default_causal  {'batch_size': 8, 'seq_len': 128, 'causal': True}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000855505 | max_rel=10.003 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000901788 | max_rel=175.426 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000994682 | max_rel=52.9309 | failed=0/524288
+trial 04/5: PASS | max_abs=0.00083214 | max_rel=42.8951 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000850618 | max_rel=62.2444 | failed=0/524288
+summary: PASS | max_abs=0.000994682 | max_rel=175.426 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 360
+
+##########################################################################
+### SHAPE: causal_padded  {'batch_size': 8, 'seq_len': 128, 'causal': True, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: PASS | max_abs=0.000855505 | max_rel=10.003 | failed=0/524288
+trial 02/5: PASS | max_abs=0.000901788 | max_rel=175.426 | failed=0/524288
+trial 03/5: PASS | max_abs=0.000994682 | max_rel=52.9309 | failed=0/524288
+trial 04/5: PASS | max_abs=0.00083214 | max_rel=42.8951 | failed=0/524288
+trial 05/5: PASS | max_abs=0.000850618 | max_rel=62.2444 | failed=0/524288
+summary: PASS | max_abs=0.000994682 | max_rel=175.426 | failed=0/2621440
+[routing] qkv->CUTLASS 0, out_proj->CUTLASS 0, passthrough 360
+
+##########################################################################
+### SHAPE: long_seq_padded  {'batch_size': 8, 'seq_len': 1024, 'padding_ratio': 0.3}
+##########################################################################
+
+=== Accuracy check ===
+criterion: abs_error <= 0.001 OR relative_error <= 1.00%
+trial 01/5: FAIL | max_abs=0.00121796 | max_rel=2740.96 | failed=2/4194304
+  worst_index=(4, 707, 419), baseline=-0.28403139, optimized=-0.28524935
+  failed output feature dims=[98, 277]
+trial 02/5: FAIL | max_abs=0.00122428 | max_rel=271.477 | failed=9/4194304
+  worst_index=(5, 158, 158), baseline=0.85638553, optimized=0.85760981
+  failed output feature dims=[61, 98, 137, 144, 154, 249, 349, 419, 442]
+trial 03/5: FAIL | max_abs=0.00133014 | max_rel=769.524 | failed=2/4194304
+  worst_index=(3, 910, 349), baseline=-1.6170594, optimized=-1.6183895
+  failed output feature dims=[96, 349]
+trial 04/5: FAIL | max_abs=0.00131643 | max_rel=129.002 | failed=3/4194304
+  worst_index=(1, 90, 184), baseline=-1.8004333, optimized=-1.7991168
+  failed output feature dims=[82, 184, 442]
+trial 05/5: FAIL | max_abs=0.00125783 | max_rel=132.328 | failed=6/4194304
+  worst_index=(3, 88, 130), baseline=-0.0047383448, optimized=-0.0034805185
+  failed output feature dims=[120, 130, 163, 249, 349, 396]
+summary: FAIL | max_abs=0.00133014 | max_rel=2740.96 | failed=22/20971520
+[routing] qkv->CUTLASS 30, out_proj->CUTLASS 30, passthrough 240
+
+==========================================================================
+PHASE 2b SUMMARY  (mode=cutlass)
+  tiny               FAIL   (CUTLASS-routed GEMM calls: 60)
+  default            FAIL   (CUTLASS-routed GEMM calls: 60)
+  long_seq           FAIL   (CUTLASS-routed GEMM calls: 60)
+  large_batch        FAIL   (CUTLASS-routed GEMM calls: 60)
+  default_padded     FAIL   (CUTLASS-routed GEMM calls: 60)
+  default_causal     PASS   (CUTLASS-routed GEMM calls: 0)
+  causal_padded      PASS   (CUTLASS-routed GEMM calls: 0)
+  long_seq_padded    FAIL   (CUTLASS-routed GEMM calls: 60)
+
+VERDICT: ACCURACY FAILURE
+An accuracy failure means the benchmark is SKIPPED entirely and the score is 0 (CLAUDE.md invariant 2). G4.6 cannot ship in this form regardless of its measured 1.57x kernel speedup.
+cutlass exit: 1

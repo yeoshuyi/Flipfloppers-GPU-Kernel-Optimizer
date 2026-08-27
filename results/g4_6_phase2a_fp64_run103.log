@@ -1,0 +1,35 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+
+=== tier 1: deterministic integer input, exact expected answer ===
+  cfg[ 6] accF16 TB128x256x32 W64x64x32 stg4 swz1 smem=96KB max_abs vs fp64 = 0.000000e+00  EXACT
+  cfg[18] accF16 TB128x256x32 W64x64x32 stg2 swz1 smem=48KB max_abs vs fp64 = 0.000000e+00  EXACT
+  cfg[12] accF32 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB max_abs vs fp64 = 0.000000e+00  EXACT
+
+=== tier 2: one-hot sweep (any transposition is a hard fail) ===
+  one-hot mismatches: 0 / 48
+
+=== tier 3: random fp16 at the real shapes, vs fp64 ===
+    gate is DISJUNCTIVE per element: abs<=0.001 OR abs<=0.01*|ref|
+
+  qkv      large_batch  M=32768 K=512 N=1536   (|ref| max = 2.4807)
+    cuBLAS   F.linear  (fp16 store, fp32 acc) max_abs=9.713173e-04  gate-failing elements 0/50331648
+    CUTLASS  cfg[12] (fp16 store, fp32 acc) max_abs=9.713173e-04  gate-failing elements 0/50331648
+    CUTLASS  cfg[6] (fp16 store, FP16 acc) max_abs=7.217526e-03  gate-failing elements 100933/50331648
+    -> FP16 accumulate costs x7.43 in GEMM-level max_abs vs the cuBLAS call it would replace
+
+  out_proj large_batch  M=32768 K=512 N=512   (|ref| max = 2.4323)
+    cuBLAS   F.linear  (fp16 store, fp32 acc) max_abs=9.698868e-04  gate-failing elements 0/16777216
+    CUTLASS  cfg[12] (fp16 store, fp32 acc) max_abs=9.698868e-04  gate-failing elements 0/16777216
+    CUTLASS  cfg[18] (fp16 store, FP16 acc) max_abs=7.516623e-03  gate-failing elements 33761/16777216
+    -> FP16 accumulate costs x7.75 in GEMM-level max_abs vs the cuBLAS call it would replace
+
+  qkv      default      M=1024 K=512 N=1536   (|ref| max = 2.3316)
+    cuBLAS   F.linear  (fp16 store, fp32 acc) max_abs=9.706020e-04  gate-failing elements 0/1572864
+    CUTLASS  cfg[12] (fp16 store, fp32 acc) max_abs=9.706020e-04  gate-failing elements 0/1572864
+    CUTLASS  cfg[6] (fp16 store, FP16 acc) max_abs=6.973505e-03  gate-failing elements 3164/1572864
+    -> FP16 accumulate costs x7.18 in GEMM-level max_abs vs the cuBLAS call it would replace
+
+==============================================================================
+PHASE 2a KERNEL VERDICT: PASS -- CUTLASS computes the right answer (tiers 1-2 exact); tier 3 is the price, judged by the full sweep next
+phase2a exit: 0
