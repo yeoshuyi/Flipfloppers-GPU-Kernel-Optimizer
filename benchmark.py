@@ -263,6 +263,12 @@ class UserOptimizedTransformer(BaselineTransformer):
         self._mask_cache: dict = {}
         self._compiled_impl = None
         self._compiled_causal = None
+        # G6.4b: FP16 for attention only (FFN stays exact TF32 -- G6.4a
+        # closed that direction, PROGRESS.md step 27). Same accumulation-
+        # precision guard as G6.4a; harmless here even though SDPA's own
+        # flash/efficient kernels manage their own internal accumulation,
+        # not this flag's plain-matmul path.
+        torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
 
     @staticmethod
     def _build_qkv_fold(
@@ -314,6 +320,20 @@ class UserOptimizedTransformer(BaselineTransformer):
         attn._qkv_bias = b
 
     @staticmethod
+    def _build_attn_fp16_fold(attn: "BaselineSelfAttention", device: torch.device) -> None:
+        # G6.4b: FP16 copies of the QKV and out_proj weights, built from
+        # the already-folded FP32 _qkv_weight/_bias (norm1's affine + the
+        # scale fold stay intact) and the untouched out_proj.weight/bias.
+        # Same eager-only rule as every other weight cache this session.
+        w = getattr(attn, "_qkv_weight_fp16", None)
+        if w is not None and w.device == device:
+            return
+        attn._qkv_weight_fp16 = attn._qkv_weight.to(torch.float16)
+        attn._qkv_bias_fp16 = attn._qkv_bias.to(torch.float16)
+        attn._out_proj_weight_fp16 = attn.out_proj.weight.to(torch.float16)
+        attn._out_proj_bias_fp16 = attn.out_proj.bias.to(torch.float16)
+
+    @staticmethod
     def _build_ffn_in_fold(
         layer: "BaselineTransformerBlock", device: torch.device, dtype: torch.dtype,
     ) -> None:
@@ -330,6 +350,7 @@ class UserOptimizedTransformer(BaselineTransformer):
     def _ensure_folded_weights(self, device: torch.device, dtype: torch.dtype) -> None:
         for layer in self.layers:
             self._build_qkv_fold(layer.attention, layer.norm1, device, dtype)
+            self._build_attn_fp16_fold(layer.attention, device)
             self._build_ffn_in_fold(layer, device, dtype)
 
     @staticmethod
@@ -439,7 +460,13 @@ class UserOptimizedTransformer(BaselineTransformer):
             n1 = F.layer_norm(
                 x, layer.norm1.normalized_shape, eps=layer.norm1.eps
             )
-            qkv = F.linear(n1, attn._qkv_weight, attn._qkv_bias)
+            # G6.4b: QKV projection + SDPA + out_proj in FP16, FFN stays
+            # exact TF32 (G6.4a closed that direction). FP16 Q/K/V also
+            # unlocks SDPA's flash/memory-efficient backends, which FP32
+            # can't use at all (G0.1) -- a second, independent effect
+            # layered onto the precision change itself.
+            n1_fp16 = n1.to(torch.float16)
+            qkv = F.linear(n1_fp16, attn._qkv_weight_fp16, attn._qkv_bias_fp16)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
@@ -460,7 +487,10 @@ class UserOptimizedTransformer(BaselineTransformer):
                 .contiguous()
                 .view(x.shape[0], x.shape[1], attn.d_model)
             )
-            attn_out = attn.out_proj(context)
+            attn_out_fp16 = F.linear(
+                context, attn._out_proj_weight_fp16, attn._out_proj_bias_fp16
+            )
+            attn_out = attn_out_fp16.to(torch.float32)
             if not no_pad:
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
             x = x + attn_out
