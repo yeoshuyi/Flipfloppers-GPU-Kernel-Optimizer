@@ -1724,3 +1724,46 @@ the project's own artifact trail).
 Closes Tier 3's cheap item. Remaining: G1.6 + G2.3 (L2 persistence via a
 real C++ extension) — the one item left in the plan, and the highest-
 effort one, now that the build toolchain is confirmed working.
+
+### 31. Fresh profiler pass (post-G6.4b) — no hidden win in "other layers"
+
+User asked to look beyond `docs/CATALOGUE.md` into other pipeline layers
+(LayerNorm, softmax, masking, residual adds) for non-catalogued wins.
+Per `docs/AGENTS.md`'s own profiler-subagent design, ran a fresh `ncu`
+pass (haiku subagent, JSON-only facts, raw CSV never touched this
+context) on the CURRENT shipped state — steps 15/34/35/43's profiles all
+predate G6.4b's FP16 attention, so a fresh look was warranted rather than
+reasoning from stale data.
+
+**Default shape:** the same TF32 CUTLASS GEMM (`cutlass_80_tensorop_
+s1688gemm_128x64_16x6_tn_align4` — the FFN's `ffn_in`/`ffn_out`) dominates,
+at only **~47% of true TF32 peak (82.6 TFLOPS) with ~26% occupancy**. Real
+inefficiency, but no safe lever identified: the only way tried to search
+alternate GEMM kernels (`torch.compile(mode="max-autotune")`) already
+failed on accuracy (step 25, Triton-vs-cuBLAS kernel heterogeneity); a
+custom cuBLASLt algorithm-search extension restricted to native (non-
+Triton) candidates is a real possibility but speculative and substantial
+new engineering with uncertain payoff — not pursued given the L2-
+persistence work already in flight is a more concrete, better-scoped bet
+for this session's remaining effort.
+
+**Long_seq shape: the top hot kernel (`softmax_warp_forward`, FP32) is
+almost certainly the frozen baseline's, not ours — a false lead, caught
+before acting on it.** `benchmark.py`'s own `BaselineSelfAttention.forward`
+computes `torch.softmax(scores.float(), dim=-1)` as a standalone kernel;
+`UserOptimizedTransformer`'s FP16 attention path (G6.4b) dispatches to
+SDPA's flash/memory-efficient backends, which fuse softmax internally
+with no separately-visible kernel (this is *why* G6.4b's FP16 change
+unlocked those backends in the first place, per G0.1's original finding).
+`profile.sbatch` profiles the whole `benchmark.py` invocation, which runs
+both baseline and optimized forward passes together for the accuracy
+comparison — it can't be attributed to our own code without more
+kernel-launch-site filtering than this pass did.
+
+**Conclusion: no hidden win found in LayerNorm/softmax/masking/residual
+layers under real measurement** — the GEMMs (already this session's
+central focus) remain the dominant cost in the optimized path; the
+"other layers" the user asked about don't show up as hot kernels once
+attribution to baseline vs. optimized is accounted for. Not a wasted
+check — a verified negative, consistent with this session's practice of
+citing a specific profiler fact for every claim rather than assuming.
