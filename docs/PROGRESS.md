@@ -2448,3 +2448,105 @@ sm_89 SASS *is* mechanically assemblable — `DefaultInsAsmRepos.sm_89.txt`
 regenerates from `probes/g4_5_sass_roundtrip.py` in seconds — so if the
 container's toolkit ever changes, only the container format stands in the way,
 not Ada.
+
+### 39. G4.6 (CUTLASS FP16-accumulate GEMM, routing around G4.5's wall) — Phase 0 clean, Phase 1 gate NOT met at 71.4-71.7% of tier (need 80%)
+
+**Why this was the right next move after G4.5.** Step 38 closed on a toolchain
+format problem specific to CuAssembler's *binary* ELF parser, not on Ada
+support. CUTLASS sidesteps that whole class of risk by construction — it is
+header-only C++ compiled fresh by `nvcc` for every build, never parsing a
+pre-built cubin's container format at all. Motivating fact from step 34: the
+kernel cuBLASLt already picks for these exact shapes is itself named
+`cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8` — an
+older `wmma`-based, FP32-accumulate-only CUTLASS instantiation. This
+investigation is precisely scoped: hand-instantiate a newer, `mma.sync`-based,
+FP16-accumulate CUTLASS template for the same shapes.
+
+**Phase 0 — PASS, cheaply, no toolchain wall at all.** CUTLASS v4.7.1 cloned
+to `.cutlass/` (gitignored, mirrors the `.sass/` pattern). The plan's own
+guessed starting example (`examples/18_ampere_fp16_tensorop_gemm`) **does not
+exist** in v4.7.1 — example 18 is `18_ampere_fp64_tensorop_affine2_gemm` in
+this release; the plan flagged this exact number as "moderate confidence,
+confirm in Phase 0" for exactly this reason. Closest live match used instead:
+`examples/12_gemm_bias_relu` (`half_t` operands, `device::Gemm`, a real bias
+epilogue). Gate 0a: compiles in **5.2s**, zero edits to CUTLASS internals,
+224 registers, 0 spill. Gate 0b: exact-integer input gives `max_abs =
+0.000000e+00`, random fp16 input `1.98e-05`. **No CUDA-13.1 toolchain
+incompatibility surfaced anywhere** — confirming the core thesis: a
+header-only template library compiled fresh has none of a binary-parsing
+tool's exposure to container-format drift.
+
+**Phase 1 — real numbers, searched twice, the gate is genuinely narrowly
+missed, not a shallow attempt.** `csrc/g4_6_cutlass_gemm.cuh` parameterizes
+one CUTLASS `device::Gemm` instantiation per translation unit (24 configs
+across two search rounds, `csrc/g4_6_cutlass_cfg00-23.cu`) — deliberately not
+a 26-way switch like the hand-written kernel's, since CUTLASS template-
+instantiation cost doesn't scale the way PTX-kernel multiplexing does (each
+of the 24 single-instantiation TUs still built in under a second on average,
+12.6s total for round 1's 14 configs). Timed via CUDA-graph replay
+cross-checked against `torch.profiler` kernel time (job 101):
+
+| | µs | TFLOPS | % of own tier |
+|---|---|---|---|
+| PyTorch cuBLASLt (`ampere_fp16_s16816gemm...`) | 342.53 | 150.47 | 91.1% (FP32-acc, 165.2 TF tier) |
+| step 37 hand-written cfg[11] | 283.29 | 181.93 | 55.1% (FP16-acc, 330.3 TF tier) |
+| **CUTLASS cfg[6], round 1** | **218.44** | **235.94** | **71.4%** |
+| **CUTLASS cfg[18], round 2 (swizzle sweep)** | **72.50** *(out_proj shape)* | **236.96** | **71.7%** |
+
+(Round 2 re-ran qkv/large_batch too and landed at 236.22 TF/71.5% — within
+noise of round 1's 235.94 TF; the search saturated, not a fluke reading.)
+Graph replay vs profiler agree to **0.8%**, inside step 34's 1-3%
+requirement. CUTLASS beats cuBLASLt by **1.57-1.60x** and the hand-written
+kernel by **1.30x** — a real, repeatable, well-measured win — but **71.4-
+71.7% is short of the 80% (264.2 TF) kill gate** step 37 itself set as the
+reopening threshold.
+
+**The accumulate-tier A/B corroborates step 37 rather than contradicting
+it.** Four to six identical-tile twins (same `ThreadblockShape`/`WarpShape`/
+`Stages`, only `ElementAccumulator` changed) show FP16-accumulate worth
+**1.4-1.6x** inside CUTLASS — matching step 37's own hand-written-kernel
+measurement of 1.43-1.54x closely, from a second, independent implementation
+of the same underlying hardware mechanism. The best FP32-accumulate CUTLASS
+config reaches only 82.4% of *its* (lower) tier, 136.09 TFLOPS — CUTLASS
+cannot beat cuBLASLt inside cuBLAS's own tier either, consistent with every
+same-tier attempt this session (steps 34, 36).
+
+**Why 71-72% and not 80%+, diagnosed not just measured.** Step 37's own
+achievable-bandwidth measurement (a plain fp16 output copy at 921 GB/s,
+`docs/PROGRESS.md` step 37) sets the ceiling this kernel is actually up
+against: at 218 µs, this kernel is already running ~622 GB/s of compulsory
+traffic. Reaching 264 TFLOPS (80% of tier) at this problem's arithmetic
+intensity would require running close to that 921 GB/s ceiling *and*
+sustaining high `mma` issue efficiency simultaneously — both at once, not
+either alone. The swizzle sweep (round 2, `swz1/4/8`) moved the result by
+under 0.5 percentage points, confirming the search has saturated on this
+axis; the remaining gap is architectural (a proper multi-stage pipeline with
+warp-specialized load/compute/store roles per `docs/MEGAKERNEL.md` G4.3, which
+CUTLASS's 2.x `device::Gemm` template does not implement — that machinery is
+what CUTLASS 3.x's Hopper-first warp-specialized schedules exist for, and
+Ada can't use them).
+
+**Whole-model arithmetic, same method as step 37:** 6×(218.44+73.63) =
+1.752 ms vs cuBLASLt's 6×(342.0+115.3) = 2.744 ms of a 21.263 ms forward at
+large_batch → **~4.7%** — real, above the ~1-2% sweep noise floor observed
+all session, but below `CLAUDE.md`'s own "don't trust a delta under 10%
+without a fresh baseline" line, and below the 80%-of-tier bar set specifically
+so a real dependency (a vendored template library, longer builds) wouldn't be
+taken on for a marginal number. **Phase 2 (fp64 correctness, full-sweep
+integration) was correctly not entered** — Phase 1's own gate wasn't cleared.
+
+**Nothing shipped, nothing regressed.** `git diff HEAD -- benchmark.py
+csrc/g4_4_mma_gemm.cu csrc/g4_4_mma_gemm.cpp` is empty; `tools/check_validity.py`
+passes. The hand-written `mma.sync` kernel (step 37) remains the best verified
+asset for this GEMM pair — CUTLASS's real, measured, but insufficient 1.30x
+improvement over it doesn't change that verdict, per the plan's own explicit
+instruction to keep step 37's kernel regardless of CUTLASS's outcome.
+
+**What would reopen it.** A CUTLASS 3.x or future-release configuration that
+adds warp-specialized pipelining to the Sm80/Sm89 (non-Hopper) code path —
+not available in the 2.x `device::Gemm` template used here — or accepting
+the ~72% ceiling and shipping anyway at a lower bar than this project's own
+`CLAUDE.md`/step-37 threshold, which would be a real, if smaller
+(g4.7%-scale), whole-model win at large_batch specifically. Not pursued
+without explicit direction to lower the bar, since the 80% threshold was set
+deliberately, not arbitrarily.

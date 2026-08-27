@@ -1,0 +1,116 @@
+// G4.6 Phase 1 -- CUTLASS TensorOp FP16 GEMM at the project's real attention
+// GEMM shapes, in the FP16-ACCUMULATE and FP32-ACCUMULATE tiers.
+//
+// This header holds the template; each configuration is instantiated in its
+// OWN translation unit (csrc/g4_6_cutlass_cfg*.cu) via G46_DEFINE, because
+// CUTLASS template-instantiation cost does not multiplex the way the
+// hand-written PTX kernel's 26-way host switch does (step 37 /
+// csrc/g4_4_mma_gemm.cu).  One instantiation per TU keeps ninja parallel and
+// keeps a single bad config from failing the whole build.
+//
+// LAYOUT -- exactly what F.linear / torch.addmm(bias, x, W.t()) computes:
+//     A = x  row-major    [M,K]  lda = K
+//     B = W  column-major [K,N]  ldb = K   (i.e. W is [N,K] row-major)
+//     C = bias, row-major [1,N] broadcast over M via ldc = 0
+//     D = out row-major   [M,N]  ldd = N
+// That is the "tn" configuration, the same one cuBLASLt's own shipped kernel
+// for these shapes uses (`..._f16_s161616gemm_f16_32x32_128x2_tn_align8`,
+// step 34).
+#pragma once
+
+#include <cuda_runtime.h>
+
+#include "cutlass/cutlass.h"
+#include "cutlass/version.h"
+#include "cutlass/numeric_types.h"
+#include "cutlass/gemm/device/gemm.h"
+#include "cutlass/epilogue/thread/linear_combination.h"
+
+// SWIZ is GemmIdentityThreadblockSwizzle's log-free tile-remap width (1 = the
+// CUTLASS example default). Raising it changes threadblock rasterisation order
+// and therefore L2 reuse; it is the one lever in this template that is neither
+// a tile size nor a pipeline depth.
+template <typename Acc, int BM, int BN, int BK, int WM, int WN, int WK,
+          int STAGES, int SWIZ = 1>
+struct G46Gemm {
+  using ElementA = cutlass::half_t;
+  using ElementB = cutlass::half_t;
+  using ElementOut = cutlass::half_t;
+  using ElementAcc = Acc;
+  using ElementCompute = Acc;
+
+  // Plain bias-add: NoBetaScaling gives D = alpha * accum + C, and C is the
+  // bias vector broadcast with stride 0.  CUTLASS's own built-in epilogue --
+  // no Epilogue Visitor Tree authoring.
+  using Epilogue = cutlass::epilogue::thread::LinearCombination<
+      ElementOut, 128 / cutlass::sizeof_bits<ElementOut>::value, ElementAcc,
+      ElementCompute, cutlass::epilogue::thread::ScaleType::NoBetaScaling>;
+
+  using Gemm = cutlass::gemm::device::Gemm<
+      ElementA, cutlass::layout::RowMajor,
+      ElementB, cutlass::layout::ColumnMajor,
+      ElementOut, cutlass::layout::RowMajor,
+      ElementAcc,
+      cutlass::arch::OpClassTensorOp,
+      cutlass::arch::Sm80,                       // newest arch tag CUTLASS
+                                                 // offers for Ada TensorOp
+      cutlass::gemm::GemmShape<BM, BN, BK>,
+      cutlass::gemm::GemmShape<WM, WN, WK>,
+      cutlass::gemm::GemmShape<16, 8, 16>,       // mma.sync.m16n8k16
+      Epilogue,
+      cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<SWIZ>,
+      STAGES>;
+
+  // Returns 0 on success; -1000 if the caller's workspace is too small
+  // (*need is then set); otherwise -(int)cutlass::Status.
+  static int launch(const void *A, const void *B, const void *bias, void *D,
+                    int M, int N, int K, void *ws, size_t ws_bytes,
+                    cudaStream_t stream, size_t *need, int *smem_bytes) {
+    if (smem_bytes) {
+      *smem_bytes = (int)sizeof(typename Gemm::GemmKernel::SharedStorage);
+    }
+    cutlass::gemm::GemmCoord problem_size(M, N, K);
+
+    cutlass::TensorRef<ElementA const, cutlass::layout::RowMajor> ref_a(
+        static_cast<ElementA const *>(A), cutlass::layout::RowMajor(K));
+    cutlass::TensorRef<ElementB const, cutlass::layout::ColumnMajor> ref_b(
+        static_cast<ElementB const *>(B), cutlass::layout::ColumnMajor(K));
+    cutlass::TensorRef<ElementOut const, cutlass::layout::RowMajor> ref_c(
+        static_cast<ElementOut const *>(bias), cutlass::layout::RowMajor(0));
+    cutlass::TensorRef<ElementOut, cutlass::layout::RowMajor> ref_d(
+        static_cast<ElementOut *>(D), cutlass::layout::RowMajor(N));
+
+    typename Gemm::Arguments args{problem_size,
+                                  ref_a,
+                                  ref_b,
+                                  ref_c,
+                                  ref_d,
+                                  {ElementCompute(1)},
+                                  1 /* split_k_slices */};
+
+    size_t n = Gemm::get_workspace_size(args);
+    if (need) *need = n;
+    // Query-only mode: A == nullptr means "just report smem / workspace",
+    // never launch (launching on null pointers is an illegal access).
+    if (A == nullptr) return 0;
+    if (n > ws_bytes) return -1000;
+
+    Gemm op;
+    cutlass::Status st = op.can_implement(args);
+    if (st != cutlass::Status::kSuccess) return -(int)st;
+    st = op.initialize(args, ws, stream);
+    if (st != cutlass::Status::kSuccess) return -(int)st;
+    st = op(stream);
+    if (st != cutlass::Status::kSuccess) return -(int)st;
+    return 0;
+  }
+};
+
+#define G46_DEFINE(IDX, ACC, BM, BN, BK, WM, WN, WK, STG, SWZ)               \
+  int g46_launch_##IDX(const void *A, const void *B, const void *bias,       \
+                       void *D, int M, int N, int K, void *ws,               \
+                       size_t ws_bytes, cudaStream_t stream, size_t *need,   \
+                       int *smem_bytes) {                                    \
+    return G46Gemm<ACC, BM, BN, BK, WM, WN, WK, STG, SWZ>::launch(           \
+        A, B, bias, D, M, N, K, ws, ws_bytes, stream, need, smem_bytes);     \
+  }

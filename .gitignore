@@ -6,3 +6,8 @@ __pycache__/
 # artefacts, not part of this repo. probes/g4_5_sass_roundtrip.py's header
 # documents how to recreate it.
 .sass/
+# G4.6 CUTLASS investigation scratch: a shallow NVIDIA/CUTLASS clone (v4.7.1,
+# header-only use -- include/ and tools/util/include/ only, no Profiler and no
+# cutlass_library build). Third-party source, not part of this repo.
+# probes/g4_6_cutlass_stage0.py's header documents how to recreate it.
+.cutlass/
