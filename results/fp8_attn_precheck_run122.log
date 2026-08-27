@@ -1,0 +1,41 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+Comparing post-softmax attention-probability max_abs error vs FP32 reference, naive-FP8 vs block+incoherent-FP8, across regimes.
+
+=== default (B=8,S=128,causal=False) ===
+  naive FP8            max_abs=3.803903e-02
+  block+incoherent FP8 max_abs=3.980368e-02
+  error reduction ratio = 0.96x
+
+=== default_causal (B=8,S=128,causal=True) ===
+  naive FP8            max_abs=4.942888e-02
+  block+incoherent FP8 max_abs=4.939610e-02
+  error reduction ratio = 1.00x
+
+=== long_seq (B=8,S=1024,causal=False) ===
+  naive FP8            max_abs=1.711342e-02
+  block+incoherent FP8 max_abs=3.153726e-02
+  error reduction ratio = 0.54x
+
+=== long_seq_causal (B=8,S=1024,causal=True) ===
+  naive FP8            max_abs=4.711103e-02
+  block+incoherent FP8 max_abs=4.790407e-02
+  error reduction ratio = 0.98x
+
+=== large_batch (B=256,S=128,causal=False) ===
+  naive FP8            max_abs=4.976076e-02
+  block+incoherent FP8 max_abs=4.425754e-02
+  error reduction ratio = 1.12x
+
+=== large_batch_causal (B=256,S=128,causal=True) ===
+  naive FP8            max_abs=6.245297e-02
+  block+incoherent FP8 max_abs=6.529471e-02
+  error reduction ratio = 0.96x
+
+=== summary ===
+default              naive=3.8039e-02  block_incoherent=3.9804e-02  ratio=0.96x
+default_causal       naive=4.9429e-02  block_incoherent=4.9396e-02  ratio=1.00x
+long_seq             naive=1.7113e-02  block_incoherent=3.1537e-02  ratio=0.54x
+long_seq_causal      naive=4.7111e-02  block_incoherent=4.7904e-02  ratio=0.98x
+large_batch          naive=4.9761e-02  block_incoherent=4.4258e-02  ratio=1.12x
+large_batch_causal   naive=6.2453e-02  block_incoherent=6.5295e-02  ratio=0.96x

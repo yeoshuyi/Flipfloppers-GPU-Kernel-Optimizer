@@ -1,0 +1,72 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130
+/usr/local/lib/python3.12/dist-packages/torch/_inductor/compile_fx.py:321: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+budget atol=0.002 rtol=0.02; 8 accuracy trials per row
+
+========================================================================================================
+=== SHAPE large_batch_causal  B=256 S=128 causal=True  tok=32768
+variant                                         max_abs   budget  verdict   speedup  vs before
+--------------------------------------------------------------------------------------------------------
+none  (F.linear both, the BEFORE state)      0.00188708   0.0020     PASS    2.654x     +0.00%
+cfg26 both        (the FAILING state)        0.00643128   0.0020     FAIL    2.786x     +4.97%
+cfg26 qkv only    (out_proj F.linear)        0.00443554   0.0020     FAIL    2.747x     +3.50%
+cfg26 out only    (qkv F.linear)             0.00562525   0.0020     FAIL    2.695x     +1.54%
+W0827 14:05:12.252000 144088 torch/_dynamo/convert_frame.py:1994] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0827 14:05:12.252000 144088 torch/_dynamo/convert_frame.py:1994] [0/8]    function: '_optimized_forward_causal' (/work/benchmark.py:892)
+W0827 14:05:12.252000 144088 torch/_dynamo/convert_frame.py:1994] [0/8]    last reason: 0/7: tensor 'x' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+W0827 14:05:12.252000 144088 torch/_dynamo/convert_frame.py:1994] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0827 14:05:12.252000 144088 torch/_dynamo/convert_frame.py:1994] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+split256 both     (cfg50)                    0.00480253   0.0020     FAIL    2.113x    -20.38%
+split128 both     (cfg49)                    0.00356054   0.0020     FAIL    2.109x    -20.54%
+split64  both     (cfg48)                    0.00301373   0.0020     FAIL    2.115x    -20.31%
+split64  qkv only                            0.00237805   0.0020     FAIL    2.089x    -21.29%
+cfg26 qkv + split64 out                      0.00464085   0.0020     FAIL    2.122x    -20.05%
+
+========================================================================================================
+=== SHAPE long_seq_causal     B=8 S=1024 causal=True  tok=8192
+variant                                         max_abs   budget  verdict   speedup  vs before
+--------------------------------------------------------------------------------------------------------
+none  (F.linear both, the BEFORE state)      0.00159127   0.0020     PASS    5.149x     +0.00%
+cfg26 both        (the FAILING state)        0.00513899   0.0020     FAIL    5.402x     +4.91%
+cfg26 qkv only    (out_proj F.linear)        0.00363362   0.0020     FAIL    5.320x     +3.32%
+cfg26 out only    (qkv F.linear)             0.00433505   0.0020     FAIL    5.235x     +1.67%
+split256 both     (cfg50)                    0.00374776   0.0020     FAIL    5.372x     +4.33%
+split128 both     (cfg49)                    0.00296581   0.0020     FAIL    5.351x     +3.92%
+split64  both     (cfg48)                    0.00270379   0.0020     FAIL    5.375x     +4.39%
+split64  qkv only                            0.00202769   0.0020     PASS    5.288x     +2.70%
+cfg26 qkv + split64 out                      0.00402927   0.0020     FAIL    5.354x     +3.98%
+
+========================================================================================================
+=== SHAPE large_batch         B=256 S=128 causal=False  tok=32768
+variant                                         max_abs   budget  verdict   speedup  vs before
+--------------------------------------------------------------------------------------------------------
+none  (F.linear both, the BEFORE state)      0.00124919   0.0020     PASS    2.492x     +0.00%
+cfg26 both        (the FAILING state)        0.00189322   0.0020     PASS    2.609x     +4.70%
+cfg26 qkv only    (out_proj F.linear)        0.00152980   0.0020     PASS    2.572x     +3.21%
+cfg26 out only    (qkv F.linear)             0.00166166   0.0020     PASS    2.527x     +1.40%
+W0827 14:07:10.235000 144088 torch/_dynamo/convert_frame.py:1994] [1/8] torch._dynamo hit config.recompile_limit (8)
+W0827 14:07:10.235000 144088 torch/_dynamo/convert_frame.py:1994] [1/8]    function: '_optimized_forward' (/work/benchmark.py:1001)
+W0827 14:07:10.235000 144088 torch/_dynamo/convert_frame.py:1994] [1/8]    last reason: 1/7: tensor 'x' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+W0827 14:07:10.235000 144088 torch/_dynamo/convert_frame.py:1994] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0827 14:07:10.235000 144088 torch/_dynamo/convert_frame.py:1994] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+split256 both     (cfg50)                    0.00153899   0.0020     PASS    1.984x    -20.39%
+split128 both     (cfg49)                    0.00142586   0.0020     PASS    1.982x    -20.47%
+split64  both     (cfg48)                    0.00124574   0.0020     PASS    1.984x    -20.39%
+split64  qkv only                            0.00122869   0.0020     PASS    1.963x    -21.23%
+cfg26 qkv + split64 out                      0.00141229   0.0020     PASS    1.988x    -20.22%
+
+========================================================================================================
+=== SHAPE long_seq            B=8 S=1024 causal=False  tok=8192
+variant                                         max_abs   budget  verdict   speedup  vs before
+--------------------------------------------------------------------------------------------------------
+none  (F.linear both, the BEFORE state)      0.00111246   0.0020     PASS    4.076x     +0.00%
+cfg26 both        (the FAILING state)        0.00157726   0.0020     PASS    4.237x     +3.95%
+cfg26 qkv only    (out_proj F.linear)        0.00111985   0.0020     PASS    4.184x     +2.65%
+cfg26 out only    (qkv F.linear)             0.00162387   0.0020     PASS    4.142x     +1.62%
+split256 both     (cfg50)                    0.00128369   0.0020     PASS    4.212x     +3.34%
+split128 both     (cfg49)                    0.00115509   0.0020     PASS    4.219x     +3.51%
+split64  both     (cfg48)                    0.00118599   0.0020     PASS    4.215x     +3.41%
+split64  qkv only                            0.00117758   0.0020     PASS    4.160x     +2.06%
+cfg26 qkv + split64 out                      0.00115496   0.0020     PASS    4.229x     +3.75%
+

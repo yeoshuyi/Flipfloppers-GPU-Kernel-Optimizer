@@ -1,0 +1,324 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+NVIDIA GeForce RTX 4090 | torch 2.13.0+cu130 | cuda 13.0
+ninja: no work to do.
+ninja: no work to do.
+
+warpspec configs:
+  [ 0] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi         smem=64KB
+  [ 1] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=64KB
+  [ 2] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=96KB
+  [ 3] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    stgEpi         smem=64KB
+  [ 4] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi  regdb  smem=64KB
+  [ 5] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi  regdb  smem=64KB
+  [ 6] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi        smem=64KB
+  [ 7] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi        smem=64KB
+  [ 8] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB
+  [ 9] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=96KB
+  [10] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=64KB
+  [11] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=96KB
+  [12] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB
+  [13] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=96KB
+  [14] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB
+  [15] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB
+  [16] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=64KB
+  [17] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=96KB
+  [18] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB
+  [19] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB
+  [20] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB
+  [21] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB
+  [22] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld0 extra0 | thr64 plain    smemEpi regdb  smem=96KB
+  [23] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB
+  [24] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB split256
+  [25] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB split256
+  [26] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b
+  [27] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB stcs
+  [28] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB swz8
+  [29] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs
+  [30] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs swz8
+  [31] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8
+  [32] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b
+  [33] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs
+  [34] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8
+  [35] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8
+  [36] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs
+  [37] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8
+  [38] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs
+  [39] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs
+  [40] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs
+  [41] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs
+  [42] BM64 BN128 BK64 stg3 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=72KB ldm4b stcs
+  [43] BM64 BN128 BK64 stg4 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs
+  [44] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs
+  [45] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi regdb  smem=64KB ldm4b stcs
+  [46] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split256
+  [47] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split256
+
+====================================================================================================
+=== qkv      large_batch  M=32768 K=512 N=1536   PRIMARY/JUDGED
+    51.54 GFLOP, >= 135.8 MB compulsory HBM traffic; tier ceilings FP32-acc 165.2 TF / FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of [M,N]): 218.563 us = 921 GB/s -> compulsory-traffic floor 147.42 us (349.6 TF hard ceiling)
+    (pytorch repeatability: 342.012 / 342.188 us, spread 0.05%)
+
+    pytorch F.linear(addmm)   342.012 us   150.70 TF  =  91.2% of the FP32-acc tier    [THE FLOOR TO BEAT, gate = x1.3]
+    step-37 g4_4 cfg[11]      276.726 us   186.25 TF  x1.236  (56.4% of its tier)   [THE INCUMBENT]
+
+    cfg[ 0] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi         smem=64KB   277.595 us  185.67 TF  x1.232 vs torch  x0.997 vs step37  (56.2% tier)
+    cfg[ 1] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=64KB   283.399 us  181.86 TF  x1.207 vs torch  x0.976 vs step37  (55.1% tier)
+    cfg[ 2] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=96KB   281.617 us  183.01 TF  x1.214 vs torch  x0.983 vs step37  (55.4% tier)
+    cfg[ 3] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    stgEpi         smem=64KB   269.670 us  191.12 TF  x1.268 vs torch  x1.026 vs step37  (57.9% tier)
+    cfg[ 4] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi  regdb  smem=64KB   279.747 us  184.24 TF  x1.223 vs torch  x0.989 vs step37  (55.8% tier)
+    cfg[ 5] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi  regdb  smem=64KB   290.540 us  177.39 TF  x1.177 vs torch  x0.952 vs step37  (53.7% tier)
+    cfg[ 6] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi        smem=64KB   263.455 us  195.63 TF  x1.298 vs torch  x1.050 vs step37  (59.2% tier)
+    cfg[ 7] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi        smem=64KB   262.809 us  196.11 TF  x1.301 vs torch  x1.053 vs step37  (59.4% tier)
+    cfg[ 8] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB   257.812 us  199.91 TF  x1.327 vs torch  x1.073 vs step37  (60.5% tier)
+    cfg[ 9] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=96KB   255.311 us  201.87 TF  x1.340 vs torch  x1.084 vs step37  (61.1% tier)
+    cfg[10] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=64KB   263.495 us  195.60 TF  x1.298 vs torch  x1.050 vs step37  (59.2% tier)
+    cfg[11] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=96KB   246.180 us  209.36 TF  x1.389 vs torch  x1.124 vs step37  (63.4% tier)
+    cfg[12] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB   270.858 us  190.28 TF  x1.263 vs torch  x1.022 vs step37  (57.6% tier)
+    cfg[13] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=96KB   251.441 us  204.98 TF  x1.360 vs torch  x1.101 vs step37  (62.1% tier)
+    cfg[14] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB   253.092 us  203.64 TF  x1.351 vs torch  x1.093 vs step37  (61.7% tier)
+    cfg[15] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB   245.555 us  209.89 TF  x1.393 vs torch  x1.127 vs step37  (63.5% tier)
+    cfg[16] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=64KB   265.591 us  194.06 TF  x1.288 vs torch  x1.042 vs step37  (58.8% tier)
+    cfg[17] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=96KB   246.546 us  209.05 TF  x1.387 vs torch  x1.122 vs step37  (63.3% tier)
+    cfg[18] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB   243.937 us  211.28 TF  x1.402 vs torch  x1.134 vs step37  (64.0% tier)
+    cfg[19] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB   238.335 us  216.25 TF  x1.435 vs torch  x1.161 vs step37  (65.5% tier)
+    cfg[20] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB   250.102 us  206.07 TF  x1.367 vs torch  x1.106 vs step37  (62.4% tier)
+    cfg[21] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB   245.934 us  209.57 TF  x1.391 vs torch  x1.125 vs step37  (63.4% tier)
+    cfg[22] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld0 extra0 | thr64 plain    smemEpi regdb  smem=96KB   496.835 us  103.74 TF  x0.688 vs torch  x0.557 vs step37  (31.4% tier)
+    cfg[23] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB   432.712 us  119.11 TF  x0.790 vs torch  x0.640 vs step37  (36.1% tier)
+    cfg[24] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB split256   307.486 us  167.62 TF  x1.112 vs torch  x0.900 vs step37  (50.7% tier)
+    cfg[25] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB split256   277.719 us  185.58 TF  x1.232 vs torch  x0.996 vs step37  (56.2% tier)
+    cfg[26] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b   250.469 us  205.77 TF  x1.365 vs torch  x1.105 vs step37  (62.3% tier)
+    cfg[27] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB stcs   236.380 us  218.04 TF  x1.447 vs torch  x1.171 vs step37  (66.0% tier)
+    cfg[28] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB swz8   242.749 us  212.32 TF  x1.409 vs torch  x1.140 vs step37  (64.3% tier)
+    cfg[29] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs   246.139 us  209.39 TF  x1.390 vs torch  x1.124 vs step37  (63.4% tier)
+    cfg[30] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs swz8   247.347 us  208.37 TF  x1.383 vs torch  x1.119 vs step37  (63.1% tier)
+    cfg[31] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8   254.577 us  202.45 TF  x1.343 vs torch  x1.087 vs step37  (61.3% tier)
+    cfg[32] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b   239.575 us  215.13 TF  x1.428 vs torch  x1.155 vs step37  (65.1% tier)
+    cfg[33] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs   235.981 us  218.41 TF  x1.449 vs torch  x1.173 vs step37  (66.1% tier)
+    cfg[34] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8   236.790 us  217.66 TF  x1.444 vs torch  x1.169 vs step37  (65.9% tier)
+    cfg[35] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8   240.341 us  214.44 TF  x1.423 vs torch  x1.151 vs step37  (64.9% tier)
+    cfg[36] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs   242.872 us  212.21 TF  x1.408 vs torch  x1.139 vs step37  (64.2% tier)
+    cfg[37] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8   235.786 us  218.59 TF  x1.451 vs torch  x1.174 vs step37  (66.2% tier)
+    cfg[38] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs   249.344 us  206.70 TF  x1.372 vs torch  x1.110 vs step37  (62.6% tier)
+    cfg[39] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs   239.196 us  215.47 TF  x1.430 vs torch  x1.157 vs step37  (65.2% tier)
+    cfg[40] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs   240.620 us  214.20 TF  x1.421 vs torch  x1.150 vs step37  (64.8% tier)
+    cfg[41] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs   253.108 us  203.63 TF  x1.351 vs torch  x1.093 vs step37  (61.6% tier)
+    cfg[42] BM64 BN128 BK64 stg3 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=72KB ldm4b stcs   419.922 us  122.74 TF  x0.814 vs torch  x0.659 vs step37  (37.2% tier)
+    cfg[43] BM64 BN128 BK64 stg4 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs   430.744 us  119.65 TF  x0.794 vs torch  x0.642 vs step37  (36.2% tier)
+    cfg[44] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs   248.440 us  207.45 TF  x1.377 vs torch  x1.114 vs step37  (62.8% tier)
+    cfg[45] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi regdb  smem=64KB ldm4b stcs   241.971 us  213.00 TF  x1.413 vs torch  x1.144 vs step37  (64.5% tier)
+    cfg[46] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split256   250.059 us  206.11 TF  x1.368 vs torch  x1.107 vs step37  (62.4% tier)
+    cfg[47] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split256   241.005 us  213.85 TF  x1.419 vs torch  x1.148 vs step37  (64.7% tier)
+USDT:2026-08-27 13:45:59 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:45:59 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 13:45:59 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:45:59 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+    BEST warpspec cfg[37]  235.786 us  218.59 TF  x1.451 vs pytorch, x1.174 vs step 37, 66.2% of the FP16-acc tier
+    REPEATABILITY of the best cfg: 235.786 / 240.241 us -> x1.451 / x1.424
+    [prof] pytorch   344.750 us  ['ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn']
+    [prof] warpspec  237.293 us  ['void ws_gemm_kernel<256, 128, 64, 2, 4, 2, 0, 0, 1, 1, 0, 1, 1, 8>']
+    [prof] ratio x1.453  (graph x1.451, agree to 0.2%)
+
+    --- LEVER ISOLATION (each row changes ONE thing vs the row it cites) ---
+      fat 64x64 consumer warp tile (2x4 -> 2x2)                cfg[ 0]  277.595 us -> cfg[ 1]  283.399 us   x0.980
+        ... at 3 stages instead of 2                           cfg[ 1]  283.399 us -> cfg[ 2]  281.617 us   x1.006
+        ... 1x4 warp grid instead (32x32 tile)                 cfg[ 0]  277.595 us -> cfg[ 3]  269.670 us   x1.029
+      register double-buffered fragments, 2x4 grid             cfg[ 0]  277.595 us -> cfg[ 4]  279.747 us   x0.992
+      register double-buffered fragments, 2x2 grid             cfg[ 1]  283.399 us -> cfg[ 5]  290.540 us   x0.975
+      smem-staged 128-bit epilogue, 2x4 grid                   cfg[ 0]  277.595 us -> cfg[ 6]  263.455 us   x1.054
+      smem-staged 128-bit epilogue, 2x2 grid                   cfg[ 1]  283.399 us -> cfg[ 7]  262.809 us   x1.078
+      all three levers stacked (no warp spec)                  cfg[ 0]  277.595 us -> cfg[ 8]  257.812 us   x1.077
+      WARP SPEC on top of all three (+2 idle roles)            cfg[ 8]  257.812 us -> cfg[10]  263.495 us   x0.978
+      WARP SPEC on top of all three (NEXTRA=0)                 cfg[ 8]  257.812 us -> cfg[12]  270.858 us   x0.952
+        cost of the 2 idle Storer/Controller warps             cfg[12]  270.858 us -> cfg[10]  263.495 us   x1.028
+        3 loader warps instead of 2                            cfg[12]  270.858 us -> cfg[14]  253.092 us   x1.070
+        warp spec WITHOUT regdb                                cfg[ 6]  263.455 us -> cfg[16]  265.591 us   x0.992
+      bigger tile, 8 warps at 64x64: 256x128                   cfg[ 8]  257.812 us -> cfg[18]  243.937 us   x1.057
+      bigger tile, 8 warps at 64x64: 128x256                   cfg[ 8]  257.812 us -> cfg[19]  238.335 us   x1.082
+      4 pipeline stages (128x64 tile)                          cfg[ 8]  257.812 us -> cfg[22]  496.835 us   x0.519
+      SPLIT=256 numerics carry on the best plain cfg           cfg[ 8]  257.812 us -> cfg[24]  307.486 us   x0.838
+
+    >>> GATE (x1.3): MET (x1.451 on cfg[37]; step 37 was x1.236)
+
+====================================================================================================
+=== qkv      default      M=1024 K=512 N=1536   PRIMARY/JUDGED
+    1.61 GFLOP, >= 5.8 MB compulsory HBM traffic; tier ceilings FP32-acc 165.2 TF / FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of [M,N]): 2.544 us = 2473 GB/s -> compulsory-traffic floor 2.33 us (690.5 TF hard ceiling)
+    (pytorch repeatability: 14.450 / 14.424 us, spread 0.18%)
+
+    pytorch F.linear(addmm)    14.450 us   111.46 TF  =  67.5% of the FP32-acc tier    [THE FLOOR TO BEAT, gate = x1.3]
+    step-37 g4_4 cfg[11]       14.644 us   109.98 TF  x0.987  (33.3% of its tier)   [THE INCUMBENT]
+
+    cfg[ 0] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi         smem=64KB    14.664 us  109.84 TF  x0.985 vs torch  x0.999 vs step37  (33.3% tier)
+    cfg[ 1] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=64KB    15.517 us  103.80 TF  x0.931 vs torch  x0.944 vs step37  (31.4% tier)
+    cfg[ 2] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=96KB    15.596 us  103.27 TF  x0.927 vs torch  x0.939 vs step37  (31.3% tier)
+    cfg[ 3] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    stgEpi         smem=64KB    14.565 us  110.58 TF  x0.992 vs torch  x1.005 vs step37  (33.5% tier)
+    cfg[ 4] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi  regdb  smem=64KB    14.668 us  109.81 TF  x0.985 vs torch  x0.998 vs step37  (33.2% tier)
+    cfg[ 5] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi  regdb  smem=64KB    15.515 us  103.81 TF  x0.931 vs torch  x0.944 vs step37  (31.4% tier)
+    cfg[ 6] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi        smem=64KB    11.116 us  144.89 TF  x1.300 vs torch  x1.317 vs step37  (43.9% tier)
+    cfg[ 7] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi        smem=64KB    11.131 us  144.69 TF  x1.298 vs torch  x1.316 vs step37  (43.8% tier)
+    cfg[ 8] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB    11.089 us  145.25 TF  x1.303 vs torch  x1.321 vs step37  (44.0% tier)
+    cfg[ 9] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=96KB    11.200 us  143.80 TF  x1.290 vs torch  x1.307 vs step37  (43.5% tier)
+    cfg[10] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=64KB    11.064 us  145.57 TF  x1.306 vs torch  x1.324 vs step37  (44.1% tier)
+    cfg[11] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=96KB    11.025 us  146.08 TF  x1.311 vs torch  x1.328 vs step37  (44.2% tier)
+    cfg[12] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB    11.192 us  143.90 TF  x1.291 vs torch  x1.308 vs step37  (43.6% tier)
+    cfg[13] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=96KB    11.062 us  145.60 TF  x1.306 vs torch  x1.324 vs step37  (44.1% tier)
+    cfg[14] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB    10.758 us  149.71 TF  x1.343 vs torch  x1.361 vs step37  (45.3% tier)
+    cfg[15] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB    10.842 us  148.55 TF  x1.333 vs torch  x1.351 vs step37  (45.0% tier)
+    cfg[16] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=64KB    11.190 us  143.94 TF  x1.291 vs torch  x1.309 vs step37  (43.6% tier)
+    cfg[17] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=96KB    11.061 us  145.61 TF  x1.306 vs torch  x1.324 vs step37  (44.1% tier)
+    cfg[18] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB    19.263 us   83.61 TF  x0.750 vs torch  x0.760 vs step37  (25.3% tier)
+    cfg[19] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB    19.348 us   83.24 TF  x0.747 vs torch  x0.757 vs step37  (25.2% tier)
+    cfg[20] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB    19.724 us   81.66 TF  x0.733 vs torch  x0.742 vs step37  (24.7% tier)
+    cfg[21] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB    19.600 us   82.17 TF  x0.737 vs torch  x0.747 vs step37  (24.9% tier)
+    cfg[22] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld0 extra0 | thr64 plain    smemEpi regdb  smem=96KB    21.300 us   75.62 TF  x0.678 vs torch  x0.688 vs step37  (22.9% tier)
+    cfg[23] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB    18.691 us   86.17 TF  x0.773 vs torch  x0.784 vs step37  (26.1% tier)
+    cfg[24] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB split256    13.378 us  120.39 TF  x1.080 vs torch  x1.095 vs step37  (36.4% tier)
+    cfg[25] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB split256    12.013 us  134.08 TF  x1.203 vs torch  x1.219 vs step37  (40.6% tier)
+    cfg[26] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b    10.745 us  149.89 TF  x1.345 vs torch  x1.363 vs step37  (45.4% tier)
+    cfg[27] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB stcs    10.763 us  149.65 TF  x1.343 vs torch  x1.361 vs step37  (45.3% tier)
+    cfg[28] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB swz8    10.786 us  149.32 TF  x1.340 vs torch  x1.358 vs step37  (45.2% tier)
+    cfg[29] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    10.745 us  149.89 TF  x1.345 vs torch  x1.363 vs step37  (45.4% tier)
+    cfg[30] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs swz8    10.767 us  149.58 TF  x1.342 vs torch  x1.360 vs step37  (45.3% tier)
+    cfg[31] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8    11.041 us  145.87 TF  x1.309 vs torch  x1.326 vs step37  (44.2% tier)
+    cfg[32] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b    19.269 us   83.59 TF  x0.750 vs torch  x0.760 vs step37  (25.3% tier)
+    cfg[33] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs    19.269 us   83.58 TF  x0.750 vs torch  x0.760 vs step37  (25.3% tier)
+    cfg[34] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8    19.308 us   83.42 TF  x0.748 vs torch  x0.758 vs step37  (25.3% tier)
+    cfg[35] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8    19.661 us   81.92 TF  x0.735 vs torch  x0.745 vs step37  (24.8% tier)
+    cfg[36] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs    19.254 us   83.65 TF  x0.751 vs torch  x0.761 vs step37  (25.3% tier)
+    cfg[37] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8    19.274 us   83.56 TF  x0.750 vs torch  x0.760 vs step37  (25.3% tier)
+    cfg[38] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs    11.131 us  144.69 TF  x1.298 vs torch  x1.316 vs step37  (43.8% tier)
+    cfg[39] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    10.781 us  149.39 TF  x1.340 vs torch  x1.358 vs step37  (45.2% tier)
+    cfg[40] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    10.963 us  146.92 TF  x1.318 vs torch  x1.336 vs step37  (44.5% tier)
+    cfg[41] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs    11.252 us  143.14 TF  x1.284 vs torch  x1.301 vs step37  (43.3% tier)
+    cfg[42] BM64 BN128 BK64 stg3 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=72KB ldm4b stcs    18.402 us   87.52 TF  x0.785 vs torch  x0.796 vs step37  (26.5% tier)
+    cfg[43] BM64 BN128 BK64 stg4 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs    18.561 us   86.77 TF  x0.779 vs torch  x0.789 vs step37  (26.3% tier)
+    cfg[44] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs    11.215 us  143.62 TF  x1.289 vs torch  x1.306 vs step37  (43.5% tier)
+    cfg[45] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi regdb  smem=64KB ldm4b stcs    11.112 us  144.94 TF  x1.300 vs torch  x1.318 vs step37  (43.9% tier)
+    cfg[46] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split256    11.401 us  141.27 TF  x1.267 vs torch  x1.284 vs step37  (42.8% tier)
+    cfg[47] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split256    19.663 us   81.91 TF  x0.735 vs torch  x0.745 vs step37  (24.8% tier)
+USDT:2026-08-27 13:46:37 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:46:37 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 13:46:37 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:46:37 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+    BEST warpspec cfg[29]  10.745 us  149.89 TF  x1.345 vs pytorch, x1.363 vs step 37, 45.4% of the FP16-acc tier
+    REPEATABILITY of the best cfg: 10.745 / 10.748 us -> x1.345 / x1.342
+    [prof] pytorch    14.629 us  ['void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x6']
+    [prof] warpspec   11.249 us  ['void ws_gemm_kernel<128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0, 1, 1, 0>']
+    [prof] ratio x1.301  (graph x1.345, agree to 3.3%)
+
+    --- LEVER ISOLATION (each row changes ONE thing vs the row it cites) ---
+      fat 64x64 consumer warp tile (2x4 -> 2x2)                cfg[ 0]   14.664 us -> cfg[ 1]   15.517 us   x0.945
+        ... at 3 stages instead of 2                           cfg[ 1]   15.517 us -> cfg[ 2]   15.596 us   x0.995
+        ... 1x4 warp grid instead (32x32 tile)                 cfg[ 0]   14.664 us -> cfg[ 3]   14.565 us   x1.007
+      register double-buffered fragments, 2x4 grid             cfg[ 0]   14.664 us -> cfg[ 4]   14.668 us   x1.000
+      register double-buffered fragments, 2x2 grid             cfg[ 1]   15.517 us -> cfg[ 5]   15.515 us   x1.000
+      smem-staged 128-bit epilogue, 2x4 grid                   cfg[ 0]   14.664 us -> cfg[ 6]   11.116 us   x1.319
+      smem-staged 128-bit epilogue, 2x2 grid                   cfg[ 1]   15.517 us -> cfg[ 7]   11.131 us   x1.394
+      all three levers stacked (no warp spec)                  cfg[ 0]   14.664 us -> cfg[ 8]   11.089 us   x1.322
+      WARP SPEC on top of all three (+2 idle roles)            cfg[ 8]   11.089 us -> cfg[10]   11.064 us   x1.002
+      WARP SPEC on top of all three (NEXTRA=0)                 cfg[ 8]   11.089 us -> cfg[12]   11.192 us   x0.991
+        cost of the 2 idle Storer/Controller warps             cfg[12]   11.192 us -> cfg[10]   11.064 us   x1.012
+        3 loader warps instead of 2                            cfg[12]   11.192 us -> cfg[14]   10.758 us   x1.040
+        warp spec WITHOUT regdb                                cfg[ 6]   11.116 us -> cfg[16]   11.190 us   x0.993
+      bigger tile, 8 warps at 64x64: 256x128                   cfg[ 8]   11.089 us -> cfg[18]   19.263 us   x0.576
+      bigger tile, 8 warps at 64x64: 128x256                   cfg[ 8]   11.089 us -> cfg[19]   19.348 us   x0.573
+      4 pipeline stages (128x64 tile)                          cfg[ 8]   11.089 us -> cfg[22]   21.300 us   x0.521
+      SPLIT=256 numerics carry on the best plain cfg           cfg[ 8]   11.089 us -> cfg[24]   13.378 us   x0.829
+
+    >>> GATE (x1.3): MET (x1.345 on cfg[29]; step 37 was x0.987)
+
+====================================================================================================
+=== out_proj large_batch  M=32768 K=512 N=512   reported, not judged
+    17.18 GFLOP, >= 67.6 MB compulsory HBM traffic; tier ceilings FP32-acc 165.2 TF / FP16-acc 330.3 TF
+    achievable HBM (fp16 copy of [M,N]): 17.684 us = 3795 GB/s -> compulsory-traffic floor 17.82 us (964.0 TF hard ceiling)
+    (pytorch repeatability: 115.427 / 115.441 us, spread 0.01%)
+
+    pytorch F.linear(addmm)   115.427 us   148.84 TF  =  90.1% of the FP32-acc tier    [THE FLOOR TO BEAT, gate = x1.3]
+    step-37 g4_4 cfg[11]      101.915 us   168.57 TF  x1.133  (51.0% of its tier)   [THE INCUMBENT]
+
+    cfg[ 0] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi         smem=64KB   101.997 us  168.44 TF  x1.132 vs torch  x0.999 vs step37  (51.0% tier)
+    cfg[ 1] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=64KB   106.508 us  161.30 TF  x1.084 vs torch  x0.957 vs step37  (48.8% tier)
+    cfg[ 2] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi         smem=96KB   104.771 us  163.98 TF  x1.102 vs torch  x0.973 vs step37  (49.6% tier)
+    cfg[ 3] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    stgEpi         smem=64KB    96.462 us  178.10 TF  x1.197 vs torch  x1.057 vs step37  (53.9% tier)
+    cfg[ 4] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    stgEpi  regdb  smem=64KB   102.027 us  168.39 TF  x1.131 vs torch  x0.999 vs step37  (51.0% tier)
+    cfg[ 5] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    stgEpi  regdb  smem=64KB   106.472 us  161.36 TF  x1.084 vs torch  x0.957 vs step37  (48.9% tier)
+    cfg[ 6] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi        smem=64KB    81.236 us  211.48 TF  x1.421 vs torch  x1.255 vs step37  (64.0% tier)
+    cfg[ 7] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi        smem=64KB    82.996 us  207.00 TF  x1.391 vs torch  x1.228 vs step37  (62.7% tier)
+    cfg[ 8] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB    82.626 us  207.92 TF  x1.397 vs torch  x1.233 vs step37  (62.9% tier)
+    cfg[ 9] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=96KB    86.384 us  198.88 TF  x1.336 vs torch  x1.180 vs step37  (60.2% tier)
+    cfg[10] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=64KB    80.391 us  213.70 TF  x1.436 vs torch  x1.268 vs step37  (64.7% tier)
+    cfg[11] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra2 | thr256 WARPSPEC smemEpi regdb  smem=96KB    82.660 us  207.84 TF  x1.396 vs torch  x1.233 vs step37  (62.9% tier)
+    cfg[12] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB    81.862 us  209.86 TF  x1.410 vs torch  x1.245 vs step37  (63.5% tier)
+    cfg[13] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=96KB    83.477 us  205.80 TF  x1.383 vs torch  x1.221 vs step37  (62.3% tier)
+    cfg[14] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB    78.664 us  218.40 TF  x1.467 vs torch  x1.296 vs step37  (66.1% tier)
+    cfg[15] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB    82.741 us  207.63 TF  x1.395 vs torch  x1.232 vs step37  (62.9% tier)
+    cfg[16] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=64KB    81.605 us  210.52 TF  x1.414 vs torch  x1.249 vs step37  (63.7% tier)
+    cfg[17] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi        smem=96KB    83.258 us  206.35 TF  x1.386 vs torch  x1.224 vs step37  (62.5% tier)
+    cfg[18] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB    81.172 us  211.65 TF  x1.422 vs torch  x1.256 vs step37  (64.1% tier)
+    cfg[19] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB    80.955 us  212.22 TF  x1.426 vs torch  x1.259 vs step37  (64.2% tier)
+    cfg[20] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB    84.083 us  204.32 TF  x1.373 vs torch  x1.212 vs step37  (61.9% tier)
+    cfg[21] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB    83.264 us  206.33 TF  x1.386 vs torch  x1.224 vs step37  (62.5% tier)
+    cfg[22] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld0 extra0 | thr64 plain    smemEpi regdb  smem=96KB   168.762 us  101.80 TF  x0.684 vs torch  x0.604 vs step37  (30.8% tier)
+    cfg[23] BM128 BN64 BK64 stg4 | cons 2x1 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB   147.597 us  116.40 TF  x0.782 vs torch  x0.690 vs step37  (35.2% tier)
+    cfg[24] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB split256   100.738 us  170.54 TF  x1.146 vs torch  x1.012 vs step37  (51.6% tier)
+    cfg[25] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld2 extra0 | thr192 WARPSPEC smemEpi regdb  smem=64KB split256    88.589 us  193.93 TF  x1.303 vs torch  x1.150 vs step37  (58.7% tier)
+    cfg[26] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b    77.966 us  220.35 TF  x1.480 vs torch  x1.307 vs step37  (66.7% tier)
+    cfg[27] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB stcs    78.504 us  218.84 TF  x1.470 vs torch  x1.298 vs step37  (66.3% tier)
+    cfg[28] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB swz8    78.225 us  219.62 TF  x1.476 vs torch  x1.303 vs step37  (66.5% tier)
+    cfg[29] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    78.018 us  220.20 TF  x1.479 vs torch  x1.306 vs step37  (66.7% tier)
+    cfg[30] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs swz8    78.225 us  219.62 TF  x1.476 vs torch  x1.303 vs step37  (66.5% tier)
+    cfg[31] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8    83.217 us  206.45 TF  x1.387 vs torch  x1.225 vs step37  (62.5% tier)
+    cfg[32] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b    80.377 us  213.74 TF  x1.436 vs torch  x1.268 vs step37  (64.7% tier)
+    cfg[33] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs    80.417 us  213.63 TF  x1.435 vs torch  x1.267 vs step37  (64.7% tier)
+    cfg[34] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8    80.903 us  212.35 TF  x1.427 vs torch  x1.260 vs step37  (64.3% tier)
+    cfg[35] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld2 extra0 | thr320 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs swz8    82.870 us  207.31 TF  x1.393 vs torch  x1.230 vs step37  (62.8% tier)
+    cfg[36] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs    80.997 us  212.10 TF  x1.425 vs torch  x1.258 vs step37  (64.2% tier)
+    cfg[37] BM256 BN128 BK64 stg2 | cons 4x2 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8    80.700 us  212.89 TF  x1.430 vs torch  x1.263 vs step37  (64.5% tier)
+    cfg[38] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs    82.484 us  208.28 TF  x1.399 vs torch  x1.236 vs step37  (63.1% tier)
+    cfg[39] BM128 BN128 BK64 stg2 | cons 1x4 (wtile 128x32) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    78.217 us  219.64 TF  x1.476 vs torch  x1.303 vs step37  (66.5% tier)
+    cfg[40] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs    79.814 us  215.25 TF  x1.446 vs torch  x1.277 vs step37  (65.2% tier)
+    cfg[41] BM128 BN128 BK64 stg3 | cons 2x2 (wtile 64x64) ld8 extra0 | thr384 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs    85.125 us  201.82 TF  x1.356 vs torch  x1.197 vs step37  (61.1% tier)
+    cfg[42] BM64 BN128 BK64 stg3 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=72KB ldm4b stcs   142.383 us  120.66 TF  x0.811 vs torch  x0.716 vs step37  (36.5% tier)
+    cfg[43] BM64 BN128 BK64 stg4 | cons 1x2 (wtile 64x64) ld2 extra0 | thr128 WARPSPEC smemEpi regdb  smem=96KB ldm4b stcs   147.262 us  116.66 TF  x0.784 vs torch  x0.692 vs step37  (35.3% tier)
+    cfg[44] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld0 extra0 | thr128 plain    smemEpi regdb  smem=64KB ldm4b stcs    83.478 us  205.80 TF  x1.383 vs torch  x1.221 vs step37  (62.3% tier)
+    cfg[45] BM128 BN128 BK64 stg2 | cons 2x4 (wtile 64x32) ld0 extra0 | thr256 plain    smemEpi regdb  smem=64KB ldm4b stcs    80.845 us  212.50 TF  x1.428 vs torch  x1.261 vs step37  (64.3% tier)
+    cfg[46] BM128 BN128 BK64 stg2 | cons 2x2 (wtile 64x64) ld4 extra0 | thr256 WARPSPEC smemEpi regdb  smem=64KB ldm4b stcs split256    82.929 us  207.16 TF  x1.392 vs torch  x1.229 vs step37  (62.7% tier)
+    cfg[47] BM128 BN256 BK64 stg2 | cons 2x4 (wtile 64x64) ld0 extra0 | thr256 plain    smemEpi regdb  smem=96KB ldm4b stcs swz8 split256    82.522 us  208.19 TF  x1.399 vs torch  x1.235 vs step37  (63.0% tier)
+USDT:2026-08-27 13:46:40 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:46:40 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-27 13:46:40 140442:140442 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-27 13:46:40 140442:140442 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+    BEST warpspec cfg[26]  77.966 us  220.35 TF  x1.480 vs pytorch, x1.307 vs step 37, 66.7% of the FP16-acc tier
+    REPEATABILITY of the best cfg: 77.966 / 77.988 us -> x1.480 / x1.480
+    [prof] pytorch   117.444 us  ['ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn']
+    [prof] warpspec   81.466 us  ['void ws_gemm_kernel<128, 128, 64, 2, 2, 2, 4, 0, 1, 1, 0, 1, 0, 0>']
+    [prof] ratio x1.442  (graph x1.480, agree to 2.6%)
+
+    --- LEVER ISOLATION (each row changes ONE thing vs the row it cites) ---
+      fat 64x64 consumer warp tile (2x4 -> 2x2)                cfg[ 0]  101.997 us -> cfg[ 1]  106.508 us   x0.958
+        ... at 3 stages instead of 2                           cfg[ 1]  106.508 us -> cfg[ 2]  104.771 us   x1.017
+        ... 1x4 warp grid instead (32x32 tile)                 cfg[ 0]  101.997 us -> cfg[ 3]   96.462 us   x1.057
+      register double-buffered fragments, 2x4 grid             cfg[ 0]  101.997 us -> cfg[ 4]  102.027 us   x1.000
+      register double-buffered fragments, 2x2 grid             cfg[ 1]  106.508 us -> cfg[ 5]  106.472 us   x1.000
+      smem-staged 128-bit epilogue, 2x4 grid                   cfg[ 0]  101.997 us -> cfg[ 6]   81.236 us   x1.256
+      smem-staged 128-bit epilogue, 2x2 grid                   cfg[ 1]  106.508 us -> cfg[ 7]   82.996 us   x1.283
+      all three levers stacked (no warp spec)                  cfg[ 0]  101.997 us -> cfg[ 8]   82.626 us   x1.234
+      WARP SPEC on top of all three (+2 idle roles)            cfg[ 8]   82.626 us -> cfg[10]   80.391 us   x1.028
+      WARP SPEC on top of all three (NEXTRA=0)                 cfg[ 8]   82.626 us -> cfg[12]   81.862 us   x1.009
+        cost of the 2 idle Storer/Controller warps             cfg[12]   81.862 us -> cfg[10]   80.391 us   x1.018
+        3 loader warps instead of 2                            cfg[12]   81.862 us -> cfg[14]   78.664 us   x1.041
+        warp spec WITHOUT regdb                                cfg[ 6]   81.236 us -> cfg[16]   81.605 us   x0.995
+      bigger tile, 8 warps at 64x64: 256x128                   cfg[ 8]   82.626 us -> cfg[18]   81.172 us   x1.018
+      bigger tile, 8 warps at 64x64: 128x256                   cfg[ 8]   82.626 us -> cfg[19]   80.955 us   x1.021
+      4 pipeline stages (128x64 tile)                          cfg[ 8]   82.626 us -> cfg[22]  168.762 us   x0.490
+      SPLIT=256 numerics carry on the best plain cfg           cfg[ 8]   82.626 us -> cfg[24]  100.738 us   x0.820
+
+====================================================================================================
+VERDICT
+  qkv      large_batch  best cfg[37]  x1.451  gate x1.3 MET
+  qkv      default      best cfg[29]  x1.345  gate x1.3 MET

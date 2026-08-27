@@ -169,127 +169,6 @@ def _lt_register_op() -> bool:
     return _LT_OP_READY
 
 
-# ---------------------------------------------------------------------------
-# G4.3 -- warp-specialised hand-written mma.sync FP16-ACCUMULATE GEMM for the
-# attention projections (QKV and out_proj).
-#
-# GeForce Ada runs FP32-accumulate tensor-core math at HALF the FP16-accumulate
-# rate, and cuBLAS/cuBLASLt can never offer FP16 accumulation on this arch, so
-# this is the one lever that is not competing with cuBLAS inside the same
-# accumulate tier. docs/PROGRESS.md step 37 built the kernel (G4.4) and closed
-# it at 55.1% of the FP16-accumulate tier ceiling -- x1.207 against a x1.3 gate.
-# Step 41 (this one) added MEGAKERNEL.md G4.3's warp specialisation plus a
-# CUTLASS-grade shared-memory-staged 128-bit epilogue, reaching 65.5-66.2% of
-# the tier and x1.42-x1.55 at every shape with M >= 8192.
-#
-# GATED, WITH F.linear AS THE FALLBACK. The kernel LOSES below M = 8192 (x0.35
-# to x1.03; measured, results/g4_3_warpspec_modelshapes_run127.log), so the
-# gate is a hard token-count floor, decided eagerly by _ensure_ws_plan() and
-# read as a compile-time constant inside the traced region -- never a runtime
-# branch inside the CUDA-graph-captured body.
-_WS_EXT = None
-_WS_EXT_TRIED = False
-_WS_OP_READY = False
-# cfg 26 = BM128 BN128 BK64 stg2 | 4 Consumer warps (2x2, 64x64 warp tile)
-#          + 4 Loader warps | smem-staged 128-bit epilogue | register
-#          double-buffered fragments | ldmatrix.x4 B fragments | 64 KB smem.
-# Chosen as the single static generalist: within 0-4% of the per-shape best at
-# every M >= 8192 shape measured, and the only finalist that needs just 64 KB
-# (so it fits every d_model) and does not mark the output evict-first (the
-# output is re-read immediately by SDPA in the real model, unlike in the
-# microbenchmark). See docs/PROGRESS.md step 41.
-# _WS_CFG is a (qkv, out_proj) pair: the two projections are priced separately
-# because their errors reach the output differently -- out_proj's lands
-# straight in the residual `x = x + attn_out`, qkv's goes through SDPA's
-# softmax first. Either entry may be None to leave that GEMM on F.linear.
-#
-# cfg 48 = cfg 26 + SPLIT 64, i.e. the FP32 accumulate carry MEGAKERNEL.md
-# G4.4 mandates, at its finest chunk (one carry per k-tile). NOT optional:
-# without it, non-causal large_batch lands at max_abs 0.00189 against a 0.002
-# budget -- passing, but at 95% of it, which CLAUDE.md's "track the trend"
-# rule says to treat as a warning. With it, max_abs is 0.00125, i.e.
-# indistinguishable from the 0.00125 the F.linear path already produces, and
-# the carry costs ~0.5% of model time (measured,
-# results/g4_3_numerical_rescue_run129.log).
-_WS_CFG = (48, 48)
-_WS_MIN_TOKENS = 8192
-
-
-def _ws_ext():
-    """Build/load the G4.3 warp-spec GEMM extension once. None = unavailable."""
-    global _WS_EXT, _WS_EXT_TRIED
-    if _WS_EXT_TRIED:
-        return _WS_EXT
-    _WS_EXT_TRIED = True
-    here = os.path.dirname(os.path.abspath(__file__))
-    cpp = os.path.join(here, "csrc", "g4_4_warpspec_gemm.cpp")
-    cu = os.path.join(here, "csrc", "g4_4_warpspec_gemm.cu")
-    if not (os.path.exists(cpp) and os.path.exists(cu)) or \
-            not torch.cuda.is_available():
-        return None
-    try:
-        from torch.utils.cpp_extension import load
-        build_dir = os.environ.get(
-            "TORCH_EXT_BUILD_DIR", os.path.join(here, ".ext_build"))
-        os.makedirs(build_dir, exist_ok=True)
-        os.environ.setdefault("TMPDIR", build_dir)
-        _WS_EXT = load(name="g4_3_warpspec", sources=[cpp, cu],
-                       build_directory=build_dir, with_cuda=True,
-                       extra_cuda_cflags=[
-                           "-gencode=arch=compute_89,code=sm_89",
-                           "-diag-suppress", "179"],
-                       verbose=False)
-    except Exception:                                        # noqa: BLE001
-        _WS_EXT = None
-    return _WS_EXT
-
-
-def _ws_split(cfg: int) -> int:
-    """SPLIT (FP32-carry) chunk size of a cfg id, 1 = no carry.
-
-    A pure function over a literal, deliberately not a module-level dict:
-    nothing here is mutable state and nothing can cache an output. Kept in
-    step with the WS_CFG_LIST table in csrc/g4_4_warpspec_gemm.cu.
-    """
-    return {24: 256, 25: 256, 46: 256, 47: 256,
-            48: 64, 49: 128, 50: 256}.get(cfg, 1)
-
-
-def _ws_register_op() -> bool:
-    """Wrap the kernel in a torch.library custom op.
-
-    Same reason as G6.6's g66::lt_linear: the call site is inside
-    torch.compile(mode="reduce-overhead"), where a bare pybind11 call would
-    graph-break and cost more than the GEMM saves.
-    """
-    global _WS_OP_READY
-    if _WS_OP_READY:
-        return True
-    ext = _ws_ext()
-    if ext is None:
-        return False
-    try:
-        @torch.library.custom_op("g43::ws_linear", mutates_args=())
-        def ws_linear(inp: torch.Tensor, w: torch.Tensor, bias: torch.Tensor,
-                      cfg: int) -> torch.Tensor:
-            try:
-                return ext.ws_linear(cfg, inp, w, bias)
-            except Exception:                                # noqa: BLE001
-                # The C++ side rejects any shape the tile does not divide
-                # rather than computing the wrong thing; fall back to the
-                # exact op this replaces instead of aborting the run.
-                return F.linear(inp, w, bias)
-
-        @ws_linear.register_fake
-        def _(inp, w, bias, cfg):
-            return inp.new_empty((inp.shape[0], w.shape[0]))
-
-        _WS_OP_READY = True
-    except Exception:                                        # noqa: BLE001
-        _WS_OP_READY = False
-    return _WS_OP_READY
-
-
 @dataclass(frozen=True)
 class TransformerConfig:
     batch_size: int
@@ -532,11 +411,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         # an output, and never a data_ptr.
         self._lt_plan: dict = {}
         self._lt_cur = None
-        # G4.3: token-count -> warp-spec GEMM cfg id, or None to keep
-        # F.linear. Keyed on a SHAPE (never an input, an output, or a
-        # data_ptr), decided eagerly by _ensure_ws_plan().
-        self._ws_plan: dict = {}
-        self._ws_cur = None
         # G6.4b: FP16 for attention only (FFN stays exact TF32 -- G6.4a
         # closed that direction, PROGRESS.md step 27). Same accumulation-
         # precision guard as G6.4a; harmless here even though SDPA's own
@@ -703,60 +577,6 @@ class UserOptimizedTransformer(BaselineTransformer):
             chosen.append((pid, best[0]))
         return (chosen[0][0], chosen[0][1], chosen[1][0], chosen[1][1])
 
-    def _ensure_ws_plan(self, tok: int, device: torch.device) -> None:
-        """Decide, eagerly, whether the G4.3 kernel takes the attention GEMMs.
-
-        Sets self._ws_cur, read as a compile-time constant by the traced
-        regions below. Every condition here is a property of the SHAPE and the
-        frozen weights, so the answer is the same for every call at that shape
-        and the answer is never the output.
-
-        The token floor is measured, not guessed: at M < 8192 the kernel loses
-        to cuBLASLt at every shape tried (x0.35 at M=128, x0.71 at M=1024
-        out_proj, x1.03 at M=2048), and at M >= 8192 it wins at every shape
-        tried (x1.09 to x1.55) -- see docs/PROGRESS.md step 41 and
-        results/g4_3_warpspec_modelshapes_run127.log.
-        """
-        d = self.config.d_model
-        # CAUSAL IS EXCLUDED, and not for want of trying. The causal path
-        # (G6.4bc, FP16 attention) already sits at 91-95% of the 0.002 atol
-        # budget BEFORE this kernel exists -- max_abs 0.00175 at
-        # large_batch_causal, which CLAUDE.md itself flags as "the tightest
-        # margin of the four". FP16 ACCUMULATION on top of that overruns it,
-        # and every rescue in MEGAKERNEL.md G4.4's toolbox was measured
-        # against it: SPLIT 256 -> 0.00480, SPLIT 128 -> 0.00356, SPLIT 64
-        # -> 0.00301, SPLIT 64 on qkv alone -> 0.00238. All FAIL; the best of
-        # them still needs another 1.2x and the ladder has no rungs left
-        # (a chunk below BK=64 is FP32 accumulation, which is the half-rate
-        # tier this whole kernel exists to escape). See
-        # results/g4_3_numerical_rescue_run129.log and docs/PROGRESS.md
-        # step 41. Non-causal has the headroom; causal does not.
-        # Tile divisibility (BM=128, BN=128, BK=64): the C++ side rejects a
-        # shape it cannot tile, but checking here keeps the fallback on the
-        # cheap path instead of relying on an exception per call.
-        if (self.config.causal or device.type != "cuda"
-                or tok < _WS_MIN_TOKENS or tok % 128 != 0
-                or d % 128 != 0):
-            self._ws_cur = None
-            return
-        key = (tok, d)
-        if key in self._ws_plan:
-            self._ws_cur = self._ws_plan[key]
-            return
-        cfg = None
-        if _ws_register_op():
-            cq, co = _WS_CFG
-            # A SPLIT (FP32-carry) config additionally needs K % SPLIT == 0;
-            # the C++ side rejects it otherwise, and falling back per call is
-            # more expensive than deciding here.
-            if cq is not None and d % _ws_split(cq):
-                cq = None
-            if co is not None and d % _ws_split(co):
-                co = None
-            cfg = None if (cq is None and co is None) else (cq, co)
-        self._ws_plan[key] = cfg
-        self._ws_cur = cfg
-
     def _ensure_lt_plan(self, tok: int, device: torch.device,
                         dtype: torch.dtype) -> None:
         # Sets self._lt_cur, read as a compile-time constant by the traced
@@ -886,8 +706,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         # shape's two FFN GEMMs (or leaves F.linear in place). Reads the folded
         # weights above, so it has to come after them.
         self._ensure_lt_plan(x.shape[0] * x.shape[1], x.device, x.dtype)
-        # G4.3: same eager-only rule -- see _ensure_ws_plan's docstring.
-        self._ensure_ws_plan(x.shape[0] * x.shape[1], x.device)
 
         # G2.4: torch.compile(mode="reduce-overhead") -- CUDA graphs, to
         # remove the remaining per-kernel launch overhead in the TINY
@@ -931,14 +749,6 @@ class UserOptimizedTransformer(BaselineTransformer):
             # replaces; FP16 doesn't).
             n1 = F.layer_norm(x, layer.norm1.normalized_shape, eps=layer.norm1.eps)
             n1_fp16 = n1.to(torch.float16)
-            # G4.3 IS DELIBERATELY ABSENT HERE. The warp-specialised
-            # FP16-ACCUMULATE GEMM wired into _optimized_forward below is not
-            # wired into the causal path: this path's max_abs is already at
-            # 91-95% of the 0.002 budget on FP16 STORAGE alone, and FP16
-            # ACCUMULATION on top of it overruns the budget at every rescue
-            # setting measured. See _ensure_ws_plan's docstring,
-            # results/g4_3_numerical_rescue_run129.log, and docs/PROGRESS.md
-            # step 41. This line is byte-identical to what it was before.
             qkv = F.linear(n1_fp16, attn._qkv_weight_fp16, attn._qkv_bias_fp16)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
@@ -1010,9 +820,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         # Chosen eagerly in forward(); dynamo bakes it in as a guard, so this
         # is a specialisation dimension, never a per-call branch.
         lt = self._lt_cur
-        # G4.3: same rule -- constant for the whole traced region, chosen
-        # eagerly in forward(). None = keep F.linear for QKV/out_proj.
-        ws_q, ws_o = self._ws_cur if self._ws_cur is not None else (None, None)
         for layer in self.layers:
             attn = layer.attention
             # G1.1: norm1's affine is folded into _qkv_weight/_qkv_bias
@@ -1032,21 +839,7 @@ class UserOptimizedTransformer(BaselineTransformer):
             # can't use at all (G0.1) -- a second, independent effect
             # layered onto the precision change itself.
             n1_fp16 = n1.to(torch.float16)
-            # G4.3: hand-written warp-specialised mma.sync FP16-ACCUMULATE
-            # GEMM (csrc/g4_4_warpspec_gemm.cu, cfg 26) in place of
-            # cuBLASLt's FP32-accumulate one. ws is a compile-time constant
-            # here -- _ensure_ws_plan ran eagerly -- so this is a trace-time
-            # branch, not a runtime one inside the captured graph. n1_fp16 is
-            # contiguous (it is a .to() of layer_norm's own output), so both
-            # reshapes are views.
-            if ws_q is None:
-                qkv = F.linear(n1_fp16, attn._qkv_weight_fp16,
-                               attn._qkv_bias_fp16)
-            else:
-                qkv = torch.ops.g43.ws_linear(
-                    n1_fp16.reshape(-1, n1_fp16.shape[-1]),
-                    attn._qkv_weight_fp16, attn._qkv_bias_fp16, ws_q
-                ).view(n1_fp16.shape[0], n1_fp16.shape[1], -1)
+            qkv = F.linear(n1_fp16, attn._qkv_weight_fp16, attn._qkv_bias_fp16)
             q, k, v = qkv.split(attn.d_model, dim=-1)
             q = self._split_heads_view(q, attn.num_heads, attn.head_dim)
             k = self._split_heads_view(k, attn.num_heads, attn.head_dim)
@@ -1067,19 +860,9 @@ class UserOptimizedTransformer(BaselineTransformer):
                 .contiguous()
                 .view(x.shape[0], x.shape[1], attn.d_model)
             )
-            # G4.3: same substitution for out_proj. `context` is the output
-            # of .contiguous().view(...) directly above, so the reshape is a
-            # view.
-            if ws_o is None:
-                attn_out_fp16 = F.linear(
-                    context, attn._out_proj_weight_fp16,
-                    attn._out_proj_bias_fp16
-                )
-            else:
-                attn_out_fp16 = torch.ops.g43.ws_linear(
-                    context.reshape(-1, context.shape[-1]),
-                    attn._out_proj_weight_fp16, attn._out_proj_bias_fp16, ws_o
-                ).view(context.shape)
+            attn_out_fp16 = F.linear(
+                context, attn._out_proj_weight_fp16, attn._out_proj_bias_fp16
+            )
             attn_out = attn_out_fp16.to(torch.float32)
             if not no_pad:
                 attn_out = attn_out.masked_fill(~valid_token_mask[..., None], 0)
