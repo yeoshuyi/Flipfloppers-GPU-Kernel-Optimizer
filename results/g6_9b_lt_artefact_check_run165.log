@@ -1,0 +1,42 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+USDT:2026-08-28 01:18:42 184372:184372 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 01:18:42 184372:184372 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 01:18:42 184372:184372 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 01:18:42 184372:184372 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 01:18:43 184372:184372 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 01:18:43 184372:184372 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 01:18:43 184372:184372 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 01:18:43 184372:184372 SyncActivityProfilerHandler.cpp:59] profiler_stop
+torch=2.13.0+cu130 cuda=13.0 gpu=NVIDIA GeForce RTX 4090
+preferred_blas_library: _BlasBackend.Cublas
+
+==== qkv  M8192 N384 K128  (fp16, BIAS) ====
+  cuBLASLt: 8 candidates; idx0=14.61us  best=idx5 11.55us  (+21.0%)
+  idx0  algo: id=30 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=1.5
+  best  algo: id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=3
+  A F.linear(x,w,b)         12.38 us
+  B cuBLASLt run(idx0)      14.52 us
+  C cuBLASLt run(best)      11.56 us
+  D torch.addmm             12.36 us
+  max|C - A| = 0.000e+00
+  F.linear dispatches:
+        11.89us x1.00  ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+  cuBLASLt run(best) dispatches:
+        11.50us x1.00  void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_t
+  VERDICT: F.linear ~= idx0 (slow); best is real -> Phase 3
+
+==== qkv  M8192 N3072 K1024  (fp16, BIAS) ====
+  cuBLASLt: 6 candidates; idx0=336.02us  best=idx1 325.98us  (+3.0%)
+  idx0  algo: id=6 tile=18 stages=0 splitk=1 reduc=0 swizzle=0 ws=0 wave=6
+  best  algo: id=5 tile=20 stages=7 splitk=1 reduc=0 swizzle=1 ws=0 wave=6
+  A F.linear(x,w,b)        325.89 us
+  B cuBLASLt run(idx0)     335.62 us
+  C cuBLASLt run(best)     325.87 us
+  D torch.addmm            325.88 us
+  max|C - A| = 0.000e+00
+  F.linear dispatches:
+       325.70us x1.00  ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+  cuBLASLt run(best) dispatches:
+       325.66us x1.00  ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+  VERDICT: F.linear already at/below best -> idx0 is a STRAWMAN -> no opportunity
+
