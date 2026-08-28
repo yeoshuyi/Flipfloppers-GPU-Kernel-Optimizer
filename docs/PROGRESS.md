@@ -3495,3 +3495,73 @@ causal path is unchanged from step 42. What could still move it: a
 CUTLASS-3.x-grade fused megakernel (large, uncertain), or a scoring/target
 change (non-causal regimes, a different shape family) — a direction decision
 for the project owner.
+
+---
+
+### 50. G6.9 — offline cuBLASLt algorithm selection for the 14 official causal shapes: **reject as marginal**
+
+Owner-specified 4-phase investigation. Does baking a static
+signature→cuBLASLt-algorithm lookup into the timed forward improve end-to-end
+latency for any of the 14 official shapes? (G6.6 did this for the historical
+tiny non-causal FFN; extend only where the latest shapes create new GEMM
+signatures.)
+
+**Phase 1 — inventory** (`probes/g6_9_lt_official_sweep.py` header). G4.7c is
+inert on every official shape (max ffn_dim 1024 < 2048), so the causal
+forward issues per layer: `qkv` (M=tok, N=3d, K=d) fp16·BIAS,
+`out_proj`≡`ffn_in` (M, N=d, K=d) fp16·BIAS, `ffn_out` (M, N=d, K=ffn=d)
+TF32·BIAS. Row-major, TRANSA=T/TRANSB=N, sm_89, CUDA 13.0. `d == ffn` for all
+14 shapes; heads don't change GEMM shapes. Unique (M, d) over shapes 1–13
+(shape 14 OOMs the baseline — no end-to-end path): d128 M∈{128, 512, 2048,
+8192, 16384, 65536, 1.28M}; d32 M=8192; d1024 M=8192. **⇒ 9 (M,d) × 3 = 27
+unique signatures.** No *exact* match to G6.6 (d512/K512) / G6.7 (d512 attn) /
+G6.8 (d512 ffn_in) — those give patterns only (large-M → negligible; fp16
+attention → default optimal).
+
+**Phase 2 — isolated search** (`probes/g6_9_lt_official_sweep.py`, job 164,
+`results/g6_9_lt_official_sweep_run164.log`). For every signature, up to 32
+`cublasLtMatmulAlgoGetHeuristic` candidates, `time_algo` each, idx k vs idx 0
+through the **same** `cublasLtMatmul run()` path (no cross-harness compare).
+fp16 at `reduction_mask=2` (policy: `allow_fp16_reduced_precision_reduction =
+False`); mask 7 informational. Best-improvement = min over 3 repeats.
+
+Result: **25 of 27 signatures < 2%** (every small-M signature — shapes
+2/3/4/12 — is **+0.00 %**: G6.6's small-M split-K win does *not* reproduce at
+K=128). Two cleared the bar: `qkv (8192, 384, 128)` **+21.3 %** and
+`qkv (8192, 3072, 1024)` +2.9 % (both vs idx 0).
+
+**Phase 2 step 5 — artefact rejection** (`probes/g6_9b_lt_artefact_check.py`,
+job 165, `results/g6_9b_lt_artefact_check_run165.log`). Timed the shipped
+`F.linear` against `run(idx0)` and `run(best)` on the same tensors, + kernel
+identity:
+
+| signature | F.linear | cuBLASLt idx0 | cuBLASLt best | kernels |
+|---|---|---|---|---|
+| qkv d1024 | 325.9 µs | 335.6 µs | 325.9 µs | F.linear ≡ best: **identical** `ampere_s1688gemm_128x128` |
+| qkv d128 | 12.38 µs (`ampere_s16816gemm_128x64`, 11.89 µs kernel) | 14.52 µs | 11.56 µs (`cutlass_80 f16 s16816gemm 64x64_32x6`, 11.50 µs kernel) | different |
+
+- **d1024: pure artefact.** `F.linear` already runs the same kernel as
+  cuBLASLt-best; idx 0 is a strawman the model never dispatches. No opportunity.
+- **d128: real but tiny.** The genuine improvement vs the *shipped* baseline is
+  ~3 % kernel time (11.89 → 11.50 µs), **not** the 21 % vs idx 0. Output
+  bit-identical (`max|best − F.linear| = 0`). Over 4 layers ≈ 1.6 µs on a
+  ~209 µs (compiled) forward — a **~0.75 % whole-model ceiling** on shapes
+  1/9/10/11, and only with zero integration overhead.
+
+**Phase 3 — end-to-end** (`probes/g6_9c_lt_e2e.py`, job 166,
+`results/g6_9c_lt_e2e_run166.log`). Static algo captured once outside timing;
+matched BEFORE/AFTER on `_optimized_forward_causal` (row 1) with `qkv` routed
+to `run(best)`. **AFTER was −12.5 % (501.95 → 564.70 µs)**, output
+bit-identical. The per-call cost of leaving the fused `F.linear` dispatch for
+a separate `cublasLtMatmul` invocation (+ reshape) swamps the ~0.4 µs kernel
+saving — the same failure mode as G6.6c (causal cuBLASLt, reverted for a
+causal-tiny regression, step 33 note) and T3 (cudagraph-safe fused custom op,
+exactly 0 % whole-model, step 48).
+
+**VERDICT: reject as marginal.** The only uncovered signature with a real
+isolated improvement (`qkv` M8192/d128, ~3 % kernel time) has a ~0.75 %
+whole-model ceiling on 4 of 14 shapes and does not survive integration. The
+other 26 show no admissible improvement (the 21 % / 2.9 % figures were
+strawman artefacts against an idx 0 the shipped `F.linear` never uses). No
+accuracy concern (bit-identical throughout). **benchmark.py is untouched.**
+Probes and logs kept; no search machinery added anywhere.

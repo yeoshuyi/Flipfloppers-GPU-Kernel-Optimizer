@@ -1,0 +1,8 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+qkv (M8192,N384,K128) fp16: 8 algos; idx0 14.64us, best idx5 11.45us (+21.8% vs idx0)
+  best algo: id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=3
+
+  full _optimized_forward_causal (row 1), eager:
+    BEFORE (stock F.linear qkv) :   501.95 us   max|.-fp64| 1.462e-03
+    AFTER  (cuBLASLt-best qkv)  :   564.70 us   max|.-fp64| 1.462e-03
+    delta                       : -12.50%   max|after-before| 0.000e+00
