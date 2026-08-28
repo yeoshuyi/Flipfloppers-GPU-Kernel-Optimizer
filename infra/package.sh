@@ -48,7 +48,7 @@ git archive --format=tar.gz --prefix=techjam2/ -o "$OUT" HEAD
 echo "package.sh: wrote $OUT"
 echo "  $(du -h "$OUT" | cut -f1)   $(tar tzf "$OUT" | wc -l) entries"
 sha256sum "$OUT"
-echo "--- top level ---"
-tar tzf "$OUT" | sed 's#^techjam2/##' | awk -F/ 'NF<=2' | sort -u
+echo "--- directories + root files ---"
+tar tzf "$OUT" | sed 's#^techjam2/##' | grep -E '/$|^[^/]+$' | sort -u
 echo
 echo "verify with:  bash infra/verify_submission.sh $OUT"
