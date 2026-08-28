@@ -32,6 +32,6 @@ apptainer exec --nv --cleanenv \
 
       echo
       echo "===== torch cpp_extension build + gate 0b ====="
-      python3 /work/probes/g4_6_cutlass_stage0.py
+      python3 /work/experiments/g4_6_cutlass_stage0.py
       echo "probe exit: $?"
     '

@@ -11,4 +11,4 @@ set -euo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g5_5_k3_real_gemm_count.py
+    python3 /work/experiments/g5_5_k3_real_gemm_count.py

@@ -13,10 +13,10 @@ apptainer exec --nv --cleanenv \
     /scratch/kernel.sif \
     bash -c '
       echo "########## CONTROL (patch installed but disabled) ##########"
-      python3 /work/probes/g6_4a_v2_fp16_ffnin_newbudget.py --mode control
+      python3 /work/experiments/g6_4a_v2_fp16_ffnin_newbudget.py --mode control
       echo "control exit: $?"
       echo
       echo "########## ffn_in FP16, new budget atol=0.002 rtol=0.02, 40 trials ##########"
-      python3 /work/probes/g6_4a_v2_fp16_ffnin_newbudget.py --mode fp16
+      python3 /work/experiments/g6_4a_v2_fp16_ffnin_newbudget.py --mode fp16
       echo "fp16 exit: $?"
     '

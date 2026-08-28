@@ -19,7 +19,7 @@ apptainer exec --nv --cleanenv \
       mkdir -p "$TMPDIR"
 
       echo "########## PHASE 0 (gate) ##########"
-      python3 /work/probes/g4_6_cutlass_stage0.py
+      python3 /work/experiments/g4_6_cutlass_stage0.py
       P0=$?
       echo "phase0 exit: $P0"
       if [ "$P0" -ne 0 ]; then
@@ -29,6 +29,6 @@ apptainer exec --nv --cleanenv \
 
       echo
       echo "########## PHASE 1 (raw throughput at the real shapes) ##########"
-      python3 /work/probes/g4_6_cutlass_phase1.py
+      python3 /work/experiments/g4_6_cutlass_phase1.py
       echo "phase1 exit: $?"
     '

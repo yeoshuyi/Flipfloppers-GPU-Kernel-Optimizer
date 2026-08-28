@@ -11,4 +11,4 @@ set -euo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g2_4b_causal_compile_probe.py
+    python3 /work/experiments/g2_4b_causal_compile_probe.py

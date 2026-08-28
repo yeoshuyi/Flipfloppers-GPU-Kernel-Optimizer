@@ -10,4 +10,4 @@ mkdir -p /scratch/work/.ext_build
 export TMPDIR=/work/.ext_build
 export TORCH_EXT_BUILD_DIR=/work/.ext_build
 apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-    python3 /work/probes/g5_6_mega_speed.py
+    python3 /work/experiments/g5_6_mega_speed.py

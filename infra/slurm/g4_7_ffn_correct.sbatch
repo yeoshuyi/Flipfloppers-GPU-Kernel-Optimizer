@@ -22,5 +22,5 @@ apptainer exec --nv --cleanenv \
       export TMPDIR=/work/.ext_build
       export TORCH_EXT_BUILD_DIR=/work/.ext_build
       mkdir -p "$TMPDIR"
-      python3 /work/probes/g4_7_ffn_gelu_correctness.py
+      python3 /work/experiments/g4_7_ffn_gelu_correctness.py
     '

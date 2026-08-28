@@ -12,4 +12,4 @@ export TMPDIR=/work/.ext_build
 export TORCH_EXT_BUILD_DIR=/work/.ext_build
 
 apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-    python3 /work/probes/g5_1_d1024_gemm_sweep.py
+    python3 /work/experiments/g5_1_d1024_gemm_sweep.py

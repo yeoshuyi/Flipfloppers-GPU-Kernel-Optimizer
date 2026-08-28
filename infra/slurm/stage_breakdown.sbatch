@@ -6,4 +6,4 @@
 #SBATCH --time=00:15:00
 #SBATCH --output=/scratch/techjam2/runs/%j.out
 apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-    python3 /work/probes/stage_breakdown.py
+    python3 /work/experiments/stage_breakdown.py

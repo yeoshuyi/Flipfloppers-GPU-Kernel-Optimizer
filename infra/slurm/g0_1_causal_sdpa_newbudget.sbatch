@@ -11,4 +11,4 @@ set -uo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g0_1_causal_sdpa_newbudget.py --backend all
+    python3 /work/experiments/g0_1_causal_sdpa_newbudget.py --backend all

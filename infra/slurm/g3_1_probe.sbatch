@@ -11,4 +11,4 @@ set -euo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g3_1_fused_ffn_test.py
+    python3 /work/experiments/g3_1_fused_ffn_test.py

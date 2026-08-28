@@ -11,4 +11,4 @@ set -euo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g5_1_debug_isolate.py
+    python3 /work/experiments/g5_1_debug_isolate.py

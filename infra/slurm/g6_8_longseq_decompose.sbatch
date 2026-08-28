@@ -17,5 +17,5 @@ apptainer exec --nv --cleanenv \
       export TMPDIR=/work/.ext_build
       export TORCH_EXT_BUILD_DIR=/work/.ext_build
       mkdir -p "$TMPDIR"
-      python3 /work/probes/g6_8_longseq_decompose.py
+      python3 /work/experiments/g6_8_longseq_decompose.py
     ' || true

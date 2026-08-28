@@ -11,4 +11,4 @@ set -euo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/g6_5_int8_ffn_precheck.py
+    python3 /work/experiments/g6_5_int8_ffn_precheck.py

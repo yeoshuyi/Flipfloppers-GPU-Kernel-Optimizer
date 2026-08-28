@@ -11,4 +11,4 @@ set -uo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/probes/fp8_attn_precheck.py --trials 20
+    python3 /work/experiments/fp8_attn_precheck.py --trials 20

@@ -17,14 +17,14 @@ apptainer exec --nv --cleanenv \
       export TORCH_EXT_BUILD_DIR=/work/.ext_build
       mkdir -p "$TMPDIR"
       echo "########## CONTROL (patch installed but disabled), route=both ##########"
-      python3 /work/probes/g4_6_cutlass_phase2b_newbudget.py --mode control --route both
+      python3 /work/experiments/g4_6_cutlass_phase2b_newbudget.py --mode control --route both
       echo "control exit: $?"
       echo
       echo "########## CUTLASS FP16-ACCUMULATE, route=both, new budget atol=0.002 rtol=0.02, 40 trials ##########"
-      python3 /work/probes/g4_6_cutlass_phase2b_newbudget.py --mode cutlass --route both
+      python3 /work/experiments/g4_6_cutlass_phase2b_newbudget.py --mode cutlass --route both
       echo "cutlass(both) exit: $?"
       echo
       echo "########## CUTLASS FP16-ACCUMULATE, route=qkv (closest near-miss at old budget) ##########"
-      python3 /work/probes/g4_6_cutlass_phase2b_newbudget.py --mode cutlass --route qkv
+      python3 /work/experiments/g4_6_cutlass_phase2b_newbudget.py --mode cutlass --route qkv
       echo "cutlass(qkv) exit: $?"
     '
