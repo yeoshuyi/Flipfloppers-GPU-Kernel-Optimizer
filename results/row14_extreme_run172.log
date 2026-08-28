@@ -1,0 +1,51 @@
+############## RUN 1: standard (baseline accuracy-check + both timed) ##############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+[W828 02:47:31.206453885 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+[W828 02:47:31.206647478 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+=== Configuration ===
+TransformerConfig(batch_size=32, seq_len=100000, d_model=1024, num_heads=16, ffn_dim=1024, num_layers=2, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1853, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1817, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1489, in run_accuracy_tests
+    x, valid_mask = generate_random_case(
+                    ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1359, in generate_random_case
+    x = x * input_scale
+        ~~^~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 12.21 GiB. GPU 0 has a total capacity of 23.52 GiB of which 10.82 GiB is free. Including non-PyTorch memory, this process has 12.69 GiB memory in use. Of the allocated memory 12.30 GiB is allocated by PyTorch, and 5.83 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+
+############## RUN 2: --benchmark-on-failure (time whatever can run) ##############
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+[W828 02:47:34.425337252 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+[W828 02:47:34.425532107 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+=== Configuration ===
+TransformerConfig(batch_size=32, seq_len=100000, d_model=1024, num_heads=16, ffn_dim=1024, num_layers=2, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+Traceback (most recent call last):
+  File "/work/benchmark.py", line 1853, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/benchmark.py", line 1817, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1489, in run_accuracy_tests
+    x, valid_mask = generate_random_case(
+                    ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/benchmark.py", line 1359, in generate_random_case
+    x = x * input_scale
+        ~~^~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 12.21 GiB. GPU 0 has a total capacity of 23.52 GiB of which 10.82 GiB is free. Including non-PyTorch memory, this process has 12.69 GiB memory in use. Of the allocated memory 12.30 GiB is allocated by PyTorch, and 5.83 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

@@ -1,75 +1,67 @@
-# RESUME — live cursor
+# RESUME — repo restructure for competition submission
 
-Plan: `~/.claude/plans/crispy-cooking-pine.md`. No git remote — local commits ARE the deliverable.
-Doc while acting; commit per unit. `tools/verify_baseline.py` + `tools/sync_entrypoint.py --check` before commits.
+Plan: `~/.claude/plans/crispy-cooking-pine.md` (REWRITTEN for this task).
+No git remote — restructure + commit on `master`, produce `dist/techjam2_<ver>.tar.gz`.
+Mode: **auto** — work through phases without stopping; commit each phase.
 
 ---
 
-## NOW
+## HARD CONSTRAINT
 
-- **Iteration 9 — G6.9 (offline cuBLASLt algo-selection): CLOSED, verdict `reject as marginal`.**
-  PROGRESS step 50, commit `9b05d91`. benchmark.py UNCHANGED (step-42 / run142 state).
-- **Step 51 (no code):** formal Pareto-frontier analysis delivered on user request —
-  `docs/PARETO_FRONTIER_ANALYSIS.md` + artifact `f28d951c-f5b6-4165-b0b5-9304be667997`.
-  Commit `2eeb964`. Establishes: 165.2 TFLOP/s is the accuracy-legal peak; row-6
-  elementwise is at the BW roofline (23.6 GB predicted vs 22.7 measured); residual
-  gaps are Ada-bound (no TMA/wgmma → no megakernel). Reinforces "loop has converged".
-- **DONE — final scorecard delivered** (`docs/FINAL_SCORECARD.md`, PROGRESS step 52).
-  Before/after: job 168 `results/official_causal_sweep_run168.log` (Σ 383.4→60.8 ms,
-  6.3×, geomean 7.7×, all PASS). Per-stage + roofline: job 171
-  `results/final_scorecard_run171.log` (`probes/final_scorecard.py`). Probe went
-  167→169→170→171 (recompile-limit / UnboundLocalError / addmm-misbucket, each fixed).
-  benchmark.py UNCHANGED. Nothing in flight.
+FROZEN LOCATIONS — never move / never split: `benchmark.py`,
+`torch_transformer_benchmark.py`, `csrc/`, `tools/`, `archive/`.
+Moving `benchmark.py` or `csrc/` = **silent** kernel disengagement
+(`_lt_ext()`/`_ws_ext()` return `None` under `os.path.exists` guards).
+The judges' path (`torch_transformer_benchmark.py` + `./csrc` at root) is untouched
+by this restructure — only internal dev tooling paths move.
 
-### G6.9 outcome (for reference)
-- Phase 1: 27 unique GEMM signatures (9 (M,d) × {qkv, proj, ffn_out}). G4.7c inert on all 14 shapes.
-- Phase 2 (run164): 25/27 < 2%. Small-M sigs +0.00% (G6.6's K=512 split-K win does NOT reproduce at K=128).
-  Only qkv M8192 d128 (+21% vs idx0) and qkv M8192 d1024 (+2.9%) cleared.
-- Phase 2 step 5 (run165): d1024 = pure strawman (F.linear ≡ cuBLASLt-best, identical `ampere_s1688gemm_128x128`).
-  d128 = real but ~3% KERNEL time only (11.89→11.50us), bit-identical, ~0.75% whole-model ceiling on shapes 1/9/10/11.
-- Phase 3 (run166): routing qkv → cuBLASLt-best made the row-1 eager forward **−12.5%** (501.95→564.70us),
-  output bit-identical. Per-call dispatch overhead swamps the 0.4us kernel saving. Same failure mode as
-  G6.6c (reverted) and T3 (0% whole-model). → reject as marginal.
+## TARGET LAYOUT
 
-## Candidate queue (iteration 10+; all prior levers negative for the official matrix)
+`jobs/`→`infra/slurm/` · `kernel.def`→`infra/apptainer/` · `probes/`→`experiments/`
+· `results/*.log`→`results/logs/` · `results/{json,csv,patch}`→`results/artifacts/`
+· `DOCUMENTATION.md`→`docs/`. Keep `RESUME.md`, `README.md`(new), `SUBMISSION.md`,
+`CLAUDE.md` at root. New: `README.md`, `Makefile`, `run_eval.sh`, `docs/ARCHITECTURE.md`,
+`csrc/README.md`, `experiments/README.md`, `archive/README.md`, `infra/*.sh`.
+No `src/`, no `agent_logs/` (resolved in README + docs/ARCHITECTURE.md).
 
-Steps 43–50 exhausted: SDPA/recompile (44), d1024 warp-spec (45), T3 fused ffn_in+GELU 0% (46-48),
-G5.MEGA megakernel x0.74 parity (49), G6.9 cuBLASLt algo-selection reject-marginal (50).
+## EXECUTION CHECKLIST  (tick as done; commit per phase)
 
-Remaining un-run queue items from the plan:
-1. **G4.5 — gated softmax max-subtraction skip.** Scores at ~0.125× post scale-fold; fp32 exp2 overflow
-   needs ~30σ. Gate on `input_scale` + shape, keep max-subtracting fallback. Saves one score-matrix read
-   pass — biggest on rows 13/6/8. Precision-neutral when gate holds. **NOT yet built.**
-2. **Fused `ffn_out` for memory-bound d128 rows (6, 13)** — only if a profile shows the `[tok,128]` hidden
-   round-trip is exposed. G5.MEGA already showed a per-seq megakernel is parity, but a narrower
-   ffn_in→GELU→ffn_out→+residual (no attention) was NOT isolated. Marginal expected value.
-3. Flash-decode-style split for the huge-token rows (6). Research-grade, unbuilt.
+- [ ] **P1** `git add jobs/row14_extreme.sbatch results/row14_extreme_run172.log` → commit "chore: track row-14 receipts"
+- [ ] **P2** `git mv kernel.def infra/apptainer/kernel.def`; fix `docs/SETUP.md:93` → commit
+- [ ] **P3** split `results/`: `*.log`→`results/logs/`, `{*.json,*.csv,*.patch}`→`results/artifacts/`;
+      fix `jobs/final_scorecard.sbatch:18` + `jobs/row14_extreme.sbatch:38` cp targets → commit
+- [ ] **P4** `git mv jobs infra/slurm`; fix `tools/slurm.py:6` (`jobs/bench.sbatch`→`infra/slurm/bench.sbatch`) → commit
+- [ ] **P5** `git mv probes experiments && rm -rf probes`;
+      `sed -i 's#/work/probes/#/work/experiments/#g'` across the 61 `infra/slurm/*.sbatch`;
+      fix `experiments/phase0.sbatch` self-path; harden the 2 hardcoded `/work/csrc/cublaslt_gelu.cpp` probes;
+      GATE: `grep -rl '/work/probes/' infra/slurm/` empty → commit
+- [ ] **P6** `git mv DOCUMENTATION.md docs/DOCUMENTATION.md`; grep-fix refs → commit  (RESUME.md stays at root)
+- [ ] **P7** new files: `README.md`, `Makefile`, `run_eval.sh`(+x), `infra/apptainer/build.sh`,
+      `infra/run_container.sh`, `infra/package.sh`, `infra/verify_submission.sh`,
+      `csrc/README.md`, `experiments/README.md`, `archive/README.md`, `docs/ARCHITECTURE.md`;
+      `.gitignore` += `/dist/ *.tar.gz .claude/settings.local.json *.ncu-rep *.nsys-rep *.cubin *.o *.so .pytest_cache/ .venv/ .DS_Store` → commit
+- [ ] **P8** doc-tree rewrites: `docs/MANIFEST.md` tree §, `docs/SETUP.md` §8/§3/§5,
+      `CLAUDE.md` LOOP step 5 + jobs/ refs, `docs/README.md` Files+Loop blocks;
+      layout-change note in `README.md` + `docs/MANIFEST.md`. NO mass rewrite of PROGRESS/DOCUMENTATION/SUBMISSION → commit
+- [ ] **P9** CUDA doc headers: `csrc/g4_4_mma_gemm.cu` (full), `csrc/g5_mega_causal.cu` (expand),
+      `csrc/g4_6_cutlass_gemm.cuh` (add), `csrc/g4_4_warpspec_gemm.cu` (reg/occupancy subsection) → commit
+- [ ] **P10** VERIFY (see plan Verification §) — `verify_baseline.py`, `sync_entrypoint.py --check`,
+      `check_validity.py`, `grep -rl '/work/probes/' infra/slurm/` empty, kernels-found apptainer check,
+      2-row spot-check vs `results/logs/official_causal_sweep_run168.log`
+- [ ] **P11** `make package` → `dist/techjam2_<ver>.tar.gz`; `bash infra/verify_submission.sh dist/*.tar.gz`
 
-Honest state: the shipped causal path is at/near the hardware limit on every official shape. G4.5 is the
-last catalogue lever with a credible precision-neutral payoff. If it also lands ≤0%, the loop has
-converged — document convergence and stop.
+## RESUME NOTES
 
-## benchmark.py state
+- Each `git mv` + its ref-fixes = ONE commit; `master` never broken.
+- P5 sed list = the 61 files in the Plan-agent report (any `infra/slurm/*.sbatch` with `/work/probes/`).
+- Verification `verify_baseline.py` needs `~/torch_transformer_benchmark.py` — present in THIS env.
+- On resume: `git log --oneline -12` shows which P-commits landed; continue from the first unticked box.
+- Pre-restructure numbers to preserve: row1 4.96×, row13 31.76×, Σ 383.4→60.8 ms (docs/FINAL_SCORECARD.md).
 
-UNCHANGED from step-42 (run142). Shipped causal path = G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c
-(d512-only, inert on official matrix). `_ensure_ffn_plan` gate == commit `09dee91`.
+## Prior work (frozen, pre-restructure)
 
-## Loop history (commits, newest first)
-
-- `9b05d91` iter9 G6.9 cuBLASLt algo-selection — reject as marginal (step 50)
-- `8d4dd0a`/`e452811`/`072ac1b`/`c09236b`/`0a3ed42` iter9 G6.9 Phases 1-3 probes + runs
-- `2cfd00a` iter8 G5.MEGA v3 CUTLASS-grade — x0.74 parity, not shipped (step 49)
-- `17154de` iter6/T3b (48) · `4989375` iter5 (47) · `dd6a4ba` T2 (45) · `b69c810` T1 (44)
-- `84ed40a` iter1 profile (43) · `12a68d4` doc refresh · `92bf628` G4.7 ship (step 42)
-
-## Cold-resume facts
-
-- cuBLASLt harnesses: `csrc/cublaslt_algo_fp16.cpp` (fp16/COMPUTE_32F; 7th arg `reduction_mask`) and
-  `csrc/cublaslt_algo.cpp` (fp32/COMPUTE_32F_FAST_TF32; 6 args, no mask). Methods: `create_problem`,
-  `num_algos`, `algo_info`, `run`/`lt_linear`, `time_algo`, `time_algo2`.
-- Official rows: 1-5,9-12 d128/ffn128; 6 d128 tok1.28M; 7 d32/ffn32; 8 d1024/ffn1024; 13 d128 tok65536;
-  14 d1024 (OOM baseline — no e2e). tok = B·S. Heads don't change GEMM signatures.
-- Budget: atol 0.002 / rtol 0.02 disjunctive, `failed==0`.
-- Docs current through PROGRESS step 50.
-- Probes: `probes/g6_9_lt_official_sweep.py` (run164), `probes/g6_9b_lt_artefact_check.py` (run165),
-  `probes/g6_9c_lt_e2e.py` (run166). Logs in `results/`.
+Optimization loop CONVERGED at PROGRESS step 52. Shipped causal stack unchanged since
+step 42 (run142): G0.1c/G1.1c/G6.4a_v2c/G0.2c/G6.4bc + G4.7c (d512-only, inert on the
+official 14-row matrix). G6.9 (cuBLASLt algo-selection) rejected-as-marginal (step 50).
+Final scorecard + Pareto analysis delivered (steps 51-52). `benchmark.py` must stay at
+step-42 state — this task does not touch it.
