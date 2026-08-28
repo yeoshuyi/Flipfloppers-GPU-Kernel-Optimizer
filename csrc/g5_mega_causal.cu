@@ -195,9 +195,10 @@ __global__ __launch_bounds__(256) void mega_kernel(
   const int c0 = hf * 64;            // this thread's residual column base
 
   extern __shared__ __half smem[];
-  __half *sA = smem;
-  __half *sB = sA + SEQ * D;
-  __half *sC = sB + SEQ * D;
+  __half *sA = smem;                     // [SEQ][D] fp16
+  __half *sC = sA + SEQ * D;             // [SEQ][D] fp16  (adjacent to sA)
+  __half *sB = sC + SEQ * D;             // [SEQ][D] fp16
+  float *sO = (float *)sA;               // [SEQ][D] fp32  == sA ++ sC  (ffn_out result)
 
   float xr[64];
   const float *xin_row = xin + (size_t)b * SEQ * D + tok * D + c0;
@@ -290,13 +291,15 @@ __global__ __launch_bounds__(256) void mega_kernel(
       sB[r * D + n] = __float2half(v + __half2float(FIB[n]));   // ffn_hidden_fp16
     });
     __syncthreads();
-    // ffn_out (tf32), GELU(erf) applied inside gemm_ffn_out on the fp16 hidden
+    // ffn_out (tf32), GELU(erf) applied inside gemm_ffn_out on the fp16 hidden.
+    // Result kept FP32 (sO == sA++sC; sA held n2 (done), sC free) and added to
+    // the fp32 residual -- matches `x = x + ffn` in the shipped path.
     gemm_ffn_out<D>(sB, FOW, warp, lane, [&](int r, int n, float v) {
-      sC[r * D + n] = __float2half(v + FOB[n]);
+      sO[r * D + n] = v + FOB[n];
     });
     __syncthreads();
 #pragma unroll
-    for (int d = 0; d < 64; ++d) xr[d] += __half2float(sC[tok * D + c0 + d]);
+    for (int d = 0; d < 64; ++d) xr[d] += sO[tok * D + c0 + d];
     __syncthreads();
   }
 
