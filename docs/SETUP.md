@@ -90,7 +90,7 @@ From: nvidia/cuda:13.1.0-devel-ubuntu24.04
 ```
 
 ```bash
-apptainer build /scratch/kernel.sif kernel.def
+apptainer build /scratch/kernel.sif infra/apptainer/kernel.def
 
 # ncu needs perf counter access, otherwise every profile returns empty
 sudo sh -c 'echo "options nvidia NVreg_RestrictProfilingToAdminUsers=0" \
