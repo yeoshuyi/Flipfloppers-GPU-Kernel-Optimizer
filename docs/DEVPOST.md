@@ -110,7 +110,7 @@ CUTLASS · Nsight Compute.
 ## Challenges we ran into
 
 - **The precision-reduction playbook is off the table** — BF16, FP8, INT8 miss
-  the budget by **5–78×**. Reaching the faster tensor tier needs hand-written
+  the 0.002 budget by **5–40×**. Reaching the faster tensor tier needs hand-written
   **`mma.sync` PTX**; cuBLAS is architecturally capped at FP32 accumulation on
   this chip.
 - A **SASS-level** rewrite via CuAssembler hit a CUDA 13.1 binary-format wall.

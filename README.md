@@ -537,7 +537,7 @@ through Slurm with locked clocks.
 
 <details><summary><b>Challenges</b></summary>
 
-FP8/BF16/INT8 all fail the accuracy budget by 5–78×, so the whole
+FP8/BF16/INT8 all fail the accuracy budget by 5–40× (max_abs 0.010–0.078 vs 0.002), so the whole
 precision-reduction playbook was off the table. cuBLAS is capped at FP32
 accumulation on this chip, so reaching the faster tier meant hand-written
 `mma.sync` PTX. A SASS-level rewrite hit a CUDA 13.1 binary-format wall. A

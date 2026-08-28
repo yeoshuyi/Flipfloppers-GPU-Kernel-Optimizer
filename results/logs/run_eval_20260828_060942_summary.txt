@@ -1,0 +1,2 @@
+entry=torch_transformer_benchmark.py  image=/scratch/kernel.sif  2026-08-28T06:09:42Z
+row | accuracy | speedup

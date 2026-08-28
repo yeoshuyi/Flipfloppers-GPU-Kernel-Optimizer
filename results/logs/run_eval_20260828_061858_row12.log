@@ -1,0 +1,21 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=32, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00140575 | max_rel=473.082 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00122797 | max_rel=10.0796 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=216.103 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00125414 | max_rel=46.8257 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00117177 | max_rel=99.0421 | failed=0/262144
+summary: PASS | max_abs=0.00140575 | max_rel=473.082 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0195 ms | mean=1.0236 ms | p90=1.0271 ms | min=1.0066 ms | throughput=2008788.36 token/s
+optimized: median=0.1219 ms | mean=0.1221 ms | p90=0.1239 ms | min=0.1137 ms | throughput=16806723.17 token/s
+speedup  : 8.367x based on median latency
