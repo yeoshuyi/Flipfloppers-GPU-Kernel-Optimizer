@@ -9,6 +9,11 @@ Doc while acting; commit per unit. `tools/verify_baseline.py` + `tools/sync_entr
 
 - **Iteration 9 — G6.9 (offline cuBLASLt algo-selection): CLOSED, verdict `reject as marginal`.**
   PROGRESS step 50, commit `9b05d91`. benchmark.py UNCHANGED (step-42 / run142 state).
+- **Step 51 (no code):** formal Pareto-frontier analysis delivered on user request —
+  `docs/PARETO_FRONTIER_ANALYSIS.md` + artifact `f28d951c-f5b6-4165-b0b5-9304be667997`.
+  Commit `2eeb964`. Establishes: 165.2 TFLOP/s is the accuracy-legal peak; row-6
+  elementwise is at the BW roofline (23.6 GB predicted vs 22.7 measured); residual
+  gaps are Ada-bound (no TMA/wgmma → no megakernel). Reinforces "loop has converged".
 - **No candidate in flight. Next: pick iteration 10 from the queue below, or await user direction.**
 
 ### G6.9 outcome (for reference)

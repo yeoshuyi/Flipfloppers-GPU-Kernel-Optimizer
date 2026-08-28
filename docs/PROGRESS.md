@@ -3565,3 +3565,31 @@ other 26 show no admissible improvement (the 21 % / 2.9 % figures were
 strawman artefacts against an idx 0 the shipped `F.linear` never uses). No
 accuracy concern (bit-identical throughout). **benchmark.py is untouched.**
 Probes and logs kept; no search machinery added anywhere.
+
+---
+
+### 51. Formal Pareto-frontier analysis (judge-facing deliverable, no code change)
+
+`docs/PARETO_FRONTIER_ANALYSIS.md` + web artifact
+(`https://claude.ai/code/artifact/f28d951c-f5b6-4165-b0b5-9304be667997`).
+Requested: rigorous proof the shipped stack sits on the speed × numerical-error
+Pareto frontier for the official 14-row matrix on RTX 4090 (Ada).
+
+Structure: (1) accuracy-constrained roofline — rejects the naive 0.122 ms FP8
+floor on 3 independent grounds, derives the per-stage precision floor →
+165.2 TFLOP/s (FP16 store / FP32 accum) is the accuracy-legal peak for every
+matmul; per-row legal compute floor from first principles. (2a) compulsory DRAM
+traffic — irreducible boundary-crossing model = 36·M·d·L bytes/layer; at row 6
+predicts 23.6 GB/fwd vs measured 22.7 GB elementwise movement (4% agreement) →
+shipped elementwise IS at the bandwidth roofline. Isolates KV-handoff (7.86 GB,
+158 GB/s mandatory), residual stream (5.24 GB), LN/cast/GELU (10.5 GB). (2b)
+five reasons no megakernel on Ada (no TMA / no wgmma / 99 KB SMEM / no clusters
+/ measured: G5.MEGA x0.74, boundary-removal 3-9x loss, GPU idle -0.55%). (2c)
+kernel-body floor 0.855 µs × count; dispatch gap ≈ 0 (graphs); binds only at
+tiny rows (13.7% at row 1). Gap reconciliation: row 6 residual 11-14% = all
+K=128 GEMM fill; row 8 GEMMs at 84% in-model / 94-96% isolated of legal
+roofline. (3) conclusion: faster ⇒ Hopper (TMA/wgmma/DSMEM) or budget violation
+(FP16 accum fails 2-10x; FP8 attention fails 65-78x) — both built & measured.
+
+All arithmetic verified in a scratch script; cross-checked vs run145/run155
+buckets. benchmark.py untouched. Commits: `2eeb964` (doc), + artifact.
