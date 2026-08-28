@@ -9,7 +9,9 @@ document while acting; commit per unit; keep this file short + current-only.
 ## NOW
 
 - **Iteration:** 8 — **G5.MEGA v3 (CUTLASS-grade)**: user asked to attempt it after the v1/v2 negatives.
-- **Phase:** v3 built; correctness (g5_5) + speed (g5_6) job in flight.
+- **Phase:** v3 iterating. Progress: v1 x0.227 → v2 x0.127 → **v3 x0.739 (71ms)** but correctness FAIL
+  (mega ~1.8e-3 vs shipped ~1.3e-3, over budget at B=10000). Current build: batched gemm16 (A once
+  per k-step, was 16-32x redundant) + ffn_out reverted to fp32 scalar (tf32 mma cost ~0.5e-3). Job in flight.
 - **v3 design:** 256 threads/block (8 warps). Threads (2t, 2t+1) share token t; each owns HALF the
   residual row `xr[64]` fp32 IN REGISTERS (v2 spilled with xr[128]). x read once / written once,
   residual never round-trips. ALL 4 GEMMs tensor-core: qkv/out_proj/ffn_in = mma m16n8k16
