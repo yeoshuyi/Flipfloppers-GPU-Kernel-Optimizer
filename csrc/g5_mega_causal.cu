@@ -64,47 +64,12 @@ __device__ __forceinline__ void mma8_tf32(float (&c)[4], const uint32_t (&a)[4],
 }
 
 // ---- fp16 GEMM: Y[SEQ][N] = Ash(fp16)[SEQ][D] @ Wg(fp16)[N][D]^T (no bias).
-// warp w owns rows [w*16 : w*16+16].  One n8-tile at a time.
+// warp w owns rows [w*16 : w*16+16].  BATCHED: A fragments loaded once per
+// k-step and reused across all n-tiles; epilogue after every A read (so the
+// sink may safely write back into Ash).  N multiple of 8.
 template <int N, class Sink>
 __device__ void gemm16(const __half *Ash, const __half *Wg, int warp, int lane,
                        Sink sink) {
-  const int rb = warp * WROWS;
-  const int ql = lane >> 2, qk = (lane & 3) * 2;
-  constexpr int NTT = N / 8;
-#pragma unroll 1
-  for (int j = 0; j < NTT; ++j) {
-    float acc[4] = {0, 0, 0, 0};
-    const int ar = rb + ql;
-#pragma unroll
-    for (int ks = 0; ks < KB16; ++ks) {
-      const int k0 = ks * 16;
-      const __half *w = Wg + (size_t)(j * 8 + ql) * D + k0 + qk;
-      __half b0[2] = {w[0], w[1]}, b1[2] = {w[8], w[9]};
-      uint32_t bf[2] = {*reinterpret_cast<uint32_t *>(b0),
-                        *reinterpret_cast<uint32_t *>(b1)};
-      const __half *p0 = Ash + ar * D + k0 + qk;
-      const __half *p1 = Ash + (ar + 8) * D + k0 + qk;
-      __half a0[2] = {p0[0], p0[1]}, a1[2] = {p1[0], p1[1]};
-      __half a2[2] = {p0[8], p0[9]}, a3[2] = {p1[8], p1[9]};
-      uint32_t af[4] = {*reinterpret_cast<uint32_t *>(a0),
-                        *reinterpret_cast<uint32_t *>(a1),
-                        *reinterpret_cast<uint32_t *>(a2),
-                        *reinterpret_cast<uint32_t *>(a3)};
-      mma16(acc, af, bf);
-    }
-    const int r = rb + ql, c = j * 8 + qk;
-    sink(r, c + 0, acc[0]);
-    sink(r, c + 1, acc[1]);
-    sink(r + 8, c + 0, acc[2]);
-    sink(r + 8, c + 1, acc[3]);
-  }
-}
-
-// ---- fp16 GEMM, BATCHED accumulator (all n-tiles held, epilogue after every
-//      A read) -- required when the sink writes back into Ash.  N multiple of 8.
-template <int N, class Sink>
-__device__ void gemm16b(const __half *Ash, const __half *Wg, int warp, int lane,
-                        Sink sink) {
   const int rb = warp * WROWS;
   const int ql = lane >> 2, qk = (lane & 3) * 2;
   constexpr int NTT = N / 8;
@@ -240,7 +205,7 @@ __global__ __launch_bounds__(256) void mega_kernel(
       if (n < D) sB[r * D + n] = __float2half(o);
       else sC[r * D + (n - D)] = __float2half(o);
     });
-    gemm16b<D>(sA, QKVW + (size_t)2 * D * D, warp, lane, [&](int r, int n, float v) {
+    gemm16<D>(sA, QKVW + (size_t)2 * D * D, warp, lane, [&](int r, int n, float v) {
       sA[r * D + n] = __float2half(v + __half2float(QKVB[2 * D + n]));
     });
     __syncthreads();
@@ -291,15 +256,19 @@ __global__ __launch_bounds__(256) void mega_kernel(
       sB[r * D + n] = __float2half(v + __half2float(FIB[n]));   // ffn_hidden_fp16
     });
     __syncthreads();
-    // ffn_out (tf32), GELU(erf) applied inside gemm_ffn_out on the fp16 hidden.
-    // Result kept FP32 (sO == sA++sC; sA held n2 (done), sC free) and added to
-    // the fp32 residual -- matches `x = x + ffn` in the shipped path.
-    gemm_ffn_out<D>(sB, FOW, warp, lane, [&](int r, int n, float v) {
-      sO[r * D + n] = v + FOB[n];
-    });
-    __syncthreads();
+    // ffn_out: fp32 scalar, GELU(erf) inline on the fp16-rounded hidden --
+    // matches F.gelu(ffn_hidden_fp16.to(fp32)) then the fp32 nn.Linear exactly
+    // (v1/v2 used this and landed at 1.1-1.4e-3 vs fp64; tf32 mma here cost
+    // ~0.5e-3 of extra error).  Result kept fp32, added to the fp32 residual.
 #pragma unroll
-    for (int d = 0; d < 64; ++d) xr[d] += sO[tok * D + c0 + d];
+    for (int nn = 0; nn < 64; ++nn) {
+      const int n = c0 + nn;
+      float a = FOB[n];
+#pragma unroll
+      for (int k = 0; k < FF; ++k)
+        a += gelu_erf(__half2float(sB[tok * D + k])) * FOW[(size_t)n * FF + k];
+      xr[nn] += a;
+    }
     __syncthreads();
   }
 
