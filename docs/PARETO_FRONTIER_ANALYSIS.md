@@ -117,7 +117,7 @@ baseline medians), `docs/PROGRESS.md` §43, §45.
 *any one* of which is sufficient:
 
 1. **It is accuracy‑illegal (§3.2).** FP8 storage misses `atol=0.002` by
-   65–78× (20‑seed probes, `SUBMISSION.md`), and FP16 *accumulation* — the
+   65–78× (20‑seed probes, `docs/DOCUMENTATION.md` §4), and FP16 *accumulation* — the
    route to the 330 TFLOP/s that produces the 0.122 ms — misses it by ~2×
    at K=128 and ~10× at K=1024 (§3.2).
 
@@ -137,9 +137,9 @@ baseline medians), `docs/PROGRESS.md` §43, §45.
 3. **It prices 100 % of FLOPs at the FFN rate.** The project's own
    precision policy bars the QKV projection and both attention matmuls
    (35 % of FLOPs on the legacy shape) from ever exceeding 165.2 TFLOP/s.
-   The corrected legacy floor is **0.165 ms** (`SUBMISSION.md`
-   "Theoretical Ceiling"), 35 % above the naive figure — and that is
-   before any of the effects in §4–§6.
+   The corrected legacy floor is **0.165 ms** (`0.65·G/330.3e12 +
+   0.35·G/165.2e12` for `G = 40.27` GFLOP), 35 % above the naive figure —
+   and that is before any of the effects in §4–§6.
 
 ### 3.2 The per‑stage precision floor
 

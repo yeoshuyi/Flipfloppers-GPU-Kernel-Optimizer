@@ -17,7 +17,7 @@ a direct child of the repo root and `archive.py` must be run from there.
 Each file holds `{"elite": {...}, "log": [...]}` where an entry is
 `{id, speedup, applied: [G-stage ids], ts}`. `applied` is the exact optimization
 stack that produced that speedup — the audit trail behind every number in
-`docs/DOCUMENTATION.md` §3 and `SUBMISSION.md`.
+`docs/DOCUMENTATION.md` §3 and the top-level `README.md`.
 
 Current shipped causal elites (`causal-*__fp16.json`): default 2.71×, tiny 7.66×,
 long-seq 7.78×, large-batch 2.98×.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real CUDA-event stage-by-stage timing for SUBMISSION.md's regime
+"""Real CUDA-event stage-by-stage timing for the README's regime
 breakdown section. Calls the EAGER (uncompiled) per-layer stage functions
 directly with the real, already-folded weights from a real model instance
 -- this measures real kernel cost per stage but does not include CUDA-graph

@@ -2,10 +2,10 @@
 
 This is the complete technical reference for the `UserOptimizedTransformer`
 project: every optimization implemented, shipped, reverted, or closed as a
-dead end, with the real measured numbers behind each. It is distinct from
-`SUBMISSION.md` (the competition narrative/pitch, cross-referenced but not
-duplicated here) — this document exists so a reviewer can verify every claim
-against the repository's own records.
+dead end, with the real measured numbers behind each. The top-level
+`README.md` carries the project overview, the headline results, and the
+agentic-workflow narrative; this document exists so a reviewer can verify
+every claim against the repository's own records.
 
 Primary sources (all numbers below are cited to one of these; none are
 invented):
@@ -22,7 +22,7 @@ invented):
   byte-equivalent (AST) to `~/torch_transformer_benchmark.py`
 - `docs/ACCURACY_BUDGET.md` — spend/benefit rule for optimisations near the
   0.002 ceiling; §8 ledger of shipped lossy steps
-- `SUBMISSION.md` — competition narrative, cross-referenced only
+- `README.md` — project overview, headline results, agentic-workflow narrative
 
 **A note on currency.** `docs/PROGRESS.md` now runs through **step 42**
 (steps 41 G4.3 non-causal ship, 42 G4.7 causal ship — both narrated in full).
@@ -165,14 +165,13 @@ long-seq,large-batch,padded}.json`, all `id: g6_4a_v2`, applied stack
 2026-08-27T10:22:05): **tiny 7.194x, default 2.494x, long-seq 5.367x,
 large-batch 2.451x, padded 2.513x.**
 
-`SUBMISSION.md`'s Before/After table reports these same regimes very
-slightly higher (tiny 7.24x/7.236x, default 2.52x, long-seq 5.37x,
-large-batch 2.45x, padded 2.50x) plus causal at 2.76x vs 2.71x above —
-that table is one fresh, single-job, all-shapes-together re-verification
-(`jobs/final_reverify.sbatch` → `results/final_reverify_run118.log`), run
-later than and separately from these incrementally-archived per-step
-numbers. Both measure the same shipped commit; treat the deltas as normal
-run-to-run/thermal variance between two differently-timed jobs, not as a
+A fresh, single-job, all-shapes-together re-verification
+(`infra/slurm/final_reverify.sbatch` → `results/logs/final_reverify_run118.log`)
+reports these same regimes very slightly higher (tiny 7.24x, default 2.52x,
+long-seq 5.37x, large-batch 2.45x, padded 2.50x, causal 2.76x vs 2.71x
+above) — run later than and separately from these incrementally-archived
+per-step numbers. Both measure the same shipped commit; treat the deltas as
+normal run-to-run/thermal variance between two differently-timed jobs, not as a
 disagreement about what's shipped.
 
 ### 3.3 Causal path — shipped stack
