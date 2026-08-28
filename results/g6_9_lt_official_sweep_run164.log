@@ -1,0 +1,63 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch=2.13.0+cu130  cuda=13.0  gpu=NVIDIA GeForce RTX 4090
+preferred_blas_library: _BlasBackend.Cublas
+
+  qkv     M128 d128      m2    idx0     2.73us -> best[0]     2.73us  (+0.00%)
+  qkv     M128 d128      m7    idx0     2.72us -> best[0]     2.72us  (+0.00%)
+  proj    M128 d128      m2    idx0     2.63us -> best[0]     2.63us  (+0.00%)
+  proj    M128 d128      m7    idx0     2.62us -> best[0]     2.62us  (+0.00%)
+  ffn_out M128 d128      tf32  idx0     4.38us -> best[0]     4.38us  (+0.00%)
+
+  qkv     M512 d128      m2    idx0     3.25us -> best[0]     3.25us  (+0.00%)
+  qkv     M512 d128      m7    idx0     3.21us -> best[0]     3.21us  (+0.00%)
+  proj    M512 d128      m2    idx0     2.74us -> best[0]     2.74us  (+0.00%)
+  proj    M512 d128      m7    idx0     2.77us -> best[0]     2.77us  (+0.00%)
+  ffn_out M512 d128      tf32  idx0     4.41us -> best[0]     4.41us  (+0.00%)
+
+  qkv     M2048 d128     m2    idx0     5.02us -> best[0]     5.02us  (+0.00%)
+  qkv     M2048 d128     m7    idx0     5.01us -> best[0]     5.01us  (+0.00%)
+  proj    M2048 d128     m2    idx0     3.46us -> best[2]     3.45us  (+0.20%)
+  proj    M2048 d128     m7    idx0     3.45us -> best[2]     3.44us  (+0.09%)
+  ffn_out M2048 d128     tf32  idx0     4.54us -> best[0]     4.54us  (+0.00%)
+
+  qkv     M8192 d128     m2    idx0    14.50us -> best[5]    11.41us  (+21.33%)  <== RETAIN
+  qkv     M8192 d128     m7    idx0    14.49us -> best[5]    11.40us  (+21.34%)  (m7 only -- inadmissible w/o accuracy arg)
+  proj    M8192 d128     m2    idx0     5.54us -> best[3]     5.54us  (+0.00%)
+  proj    M8192 d128     m7    idx0     5.57us -> best[3]     5.53us  (+0.72%)
+  ffn_out M8192 d128     tf32  idx0     8.77us -> best[1]     8.65us  (+1.44%)
+
+  qkv     M16384 d128    m2    idx0    17.52us -> best[0]    17.52us  (+0.00%)
+  qkv     M16384 d128    m7    idx0    17.40us -> best[0]    17.40us  (+0.00%)
+  proj    M16384 d128    m2    idx0     8.21us -> best[0]     8.21us  (+0.00%)
+  proj    M16384 d128    m7    idx0     8.25us -> best[0]     8.25us  (+0.00%)
+  ffn_out M16384 d128    tf32  idx0    13.74us -> best[0]    13.74us  (+0.00%)
+
+  qkv     M65536 d128    m2    idx0    53.50us -> best[0]    53.50us  (+0.00%)
+  qkv     M65536 d128    m7    idx0    54.20us -> best[1]    53.96us  (+0.44%)
+  proj    M65536 d128    m2    idx0    22.30us -> best[0]    22.30us  (+0.00%)
+  proj    M65536 d128    m7    idx0    22.02us -> best[0]    22.02us  (+0.00%)
+  ffn_out M65536 d128    tf32  idx0    43.83us -> best[0]    43.83us  (+0.00%)
+
+  qkv     M1280000 d128  m2    idx0  1454.03us -> best[0]  1454.03us  (+0.00%)
+  qkv     M1280000 d128  m7    idx0  1454.39us -> best[2]  1452.44us  (+0.13%)
+  proj    M1280000 d128  m2    idx0   714.75us -> best[5]   709.99us  (+0.67%)
+  proj    M1280000 d128  m7    idx0   714.15us -> best[6]   709.91us  (+0.60%)
+  ffn_out M1280000 d128  tf32  idx0  1417.59us -> best[0]  1417.59us  (+0.00%)
+
+  qkv     M8192 d32      m2    idx0     3.57us -> best[0]     3.57us  (+0.00%)
+  qkv     M8192 d32      m7    idx0     3.41us -> best[0]     3.41us  (+0.00%)
+  proj    M8192 d32      m2    idx0     2.84us -> best[0]     2.84us  (+0.00%)
+  proj    M8192 d32      m7    idx0     2.85us -> best[0]     2.85us  (+0.00%)
+  ffn_out M8192 d32      tf32  idx0     3.57us -> best[1]     3.57us  (+0.01%)
+
+  qkv     M8192 d1024    m2    idx0   336.79us -> best[1]   326.91us  (+2.93%)  <== RETAIN
+  qkv     M8192 d1024    m7    idx0   343.86us -> best[3]   326.30us  (+5.11%)  (m7 only -- inadmissible w/o accuracy arg)
+  proj    M8192 d1024    m2    idx0   112.03us -> best[1]   111.97us  (+0.05%)
+  proj    M8192 d1024    m7    idx0   112.53us -> best[0]   112.53us  (+0.00%)
+  ffn_out M8192 d1024    tf32  idx0   232.29us -> best[3]   228.57us  (+1.60%)
+
+========================================================================
+PHASE 2 RESULT: candidates surviving isolated >2% (reproducible):
+  qkv     M8192 d128     m2    +21.33%  algo id=21 tile=15 stages=12 splitk=1 reduc=0 swizzle=0 ws=0 wave=3
+  qkv     M8192 d1024    m2    +2.93%  algo id=5 tile=20 stages=7 splitk=1 reduc=0 swizzle=1 ws=0 wave=6
+-> proceed to Phase 3 (static lookup, affected shapes only) for these.
