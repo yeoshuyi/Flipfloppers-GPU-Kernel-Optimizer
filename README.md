@@ -253,7 +253,7 @@ flowchart TD
     A -->|failed != 0| RESC["Numerical rescue patch,<br/>or drop the candidate"]
     RESC --> A
     A -->|failed == 0| B["Matched BEFORE/AFTER benchmark<br/>one sbatch job, exclusive GPU, locked clocks"]
-    B --> G{"gain >= min-gain floor<br/>AND EV positive?<br/>(docs/ACCURACY_BUDGET.md)"}
+    B --> G{"gain &ge; min-gain floor<br/>and EV positive?<br/>see docs/ACCURACY_BUDGET.md"}
     G -->|no| DOC1["Document the negative<br/>with the same rigor as a win"]
     G -->|yes| ARCH["tools/archive.py commit<br/>(MAP-Elites: regime x family)"]
     ARCH --> DOC2["PROGRESS.md step N + commit"]
@@ -290,7 +290,7 @@ project:
 
 ```mermaid
 flowchart LR
-    subgraph inputs [Where candidates come from]
+    subgraph inputs ["Where candidates come from"]
       CAT["docs/CATALOGUE.md<br/>33 catalogued optimizations,<br/>risk-ordered G0 -> G4"]
       MAN["Manual research injection<br/>papers + owner-specified protocols<br/>(e.g. the G6.9 4-phase cuBLASLt spec,<br/>Ootomo-Yokota split-precision, Stream-K)"]
       PROF["Profiler subagent<br/>per-shape ncu facts:<br/>hot kernels, % of peak, DRAM GB/s,<br/>occupancy, stalls, graph replay"]
@@ -299,7 +299,7 @@ flowchart LR
     MAN --> Q
     PROF --> Q
     Q --> LOOP["Implementation & validation loop"]
-    LOOP -->|negative| REC["docs/PROGRESS.md<br/>+ docs/DOCUMENTATION.md 4<br/>(so no dead end is re-tried)"]
+    LOOP -->|negative| REC["docs/PROGRESS.md<br/>+ docs/DOCUMENTATION.md sec 4<br/>so no dead end is re-tried"]
     LOOP -->|shipped| ELITE["archive/ MAP-Elites cell"]
     REC --> Q
 ```
@@ -358,7 +358,7 @@ candidates ever share the SMs.
 flowchart TD
     X["x  (fp32 residual stream)"] --> N1["LayerNorm norm1<br/>pure reduction — affine folded away  (G1.1c)"]
     N1 --> C1["cast -> fp16  (G6.4bc)"]
-    C1 --> QKV["fused QKV GEMM  [d, 3d], Q pre-scaled<br/>fp16 storage / fp32 accumulate<br/>(G0.2c fuse · G1.2 scale->W_Q · G1.1c fold)"]
+    C1 --> QKV["fused QKV GEMM  d then 3d, Q pre-scaled<br/>fp16 storage / fp32 accumulate<br/>(G0.2c fuse · G1.2 scale->W_Q · G1.1c fold)"]
     QKV --> SPL["split + strided head views — no copy  (G0.3)"]
     SPL --> SDPA["SDPA  is_causal=True<br/>fp16 in · FP32 softmax accumulation<br/>(G0.1c · G6.4bc auto flash/efficient)"]
     SDPA --> OP["out_proj GEMM  fp16 / fp32 acc  (G6.4bc)"]
