@@ -3431,43 +3431,49 @@ the standard-kernel toolkit.
 
 ### 49. G5.MEGA (lever 1) — per-sequence fused causal megakernel for official row 6: CORRECT, but a hand-roll cannot beat cuBLAS+flash. Negative.
 
-User asked to try the two remaining large levers ("1 then 2"). Lever 1: a
-megakernel with **one CUDA block per sequence** (row 6 is B=10000, d128, h4,
-S128, L4) that keeps the fp32 residual `x` on-chip across all 4 layers,
-eliminating the LN/residual HBM traffic that step 43 measured at 38.9% of
-row 6's 52 ms forward.
+User asked to try the two remaining large levers ("1 then 2"), then to
+attempt the **CUTLASS-grade** version specifically. Lever 1: a megakernel
+with **one CUDA block per sequence** (row 6 is B=10000, d128, h4, S128, L4)
+that keeps the fp32 residual `x` on-chip across all 4 layers, eliminating the
+LN/residual HBM traffic step 43 measured at 38.9% of row 6's 52 ms forward.
 
-**Two prototypes, both correct, both slower:**
+**Four prototypes** (`csrc/g5_mega_causal.cu`; correctness `probes/g5_5_mega_correct.py`,
+speed `probes/g5_6_mega_speed.py`; `results/g5_6_mega_speed_run15*.log`):
 
-| version | correctness (g5_5) | row-6 speed vs shipped (g5_6) |
+| version | correctness (mega vs fp64) | row-6 speed vs shipped |
 |---|---|---|
-| v1 scalar (`csrc/g5_mega_causal.cu`, thread-per-query-row) | PASS — max\|mega−fp64\| 1.05–1.39e-3, `fail 0`, budget-safe, and consistently *tighter* than the shipped path (fp32 attention vs fp16 flash) | **x0.227** (231 ms) |
-| v2 mma.sync m16n8k16 for qkv/out_proj/ffn_in + fp16-shared k/v + per-block qkv global scratch | PASS — 1.15–1.44e-3, `fail 0` | **x0.127** (413 ms) — *worse* |
+| v1 scalar, thread-per-query-row | PASS — 1.05–1.39e-3, tighter than shipped | **x0.227** (231 ms) |
+| v2 mma m16n8k16 (qkv/out_proj/ffn_in) + fp16-shared k/v + qkv global scratch | PASS — 1.15–1.44e-3 | **x0.127** (413 ms) — worse |
+| **v3 "CUTLASS-grade"** — 256 thr / 8 warps, residual split 64+64 in registers (**0 spill**, 255 regs), all 4 GEMMs tensor-core (`ffn_out` = single-pass tf32), cooperative `__shfl_xor` LN, per-thread-2-heads online-softmax attention | **FAIL** — 1.7–2.2e-3, over budget at B=10000 | **x0.739 (71 ms)** — fastest |
+| v3 + fp32-scalar `ffn_out` + batched GEMM | PASS — 1.15–1.44e-3 | x0.171 (308 ms) |
 
-The megakernel is **verified correct and precision-neutral** (in fact
-slightly more accurate than the shipped path). But it loses on speed, and
-worse with mma than scalar:
+The megakernel is **verified correct and precision-neutral** wherever
+`ffn_out` stays fp32/scalar (v1, v2, v3-corrected) — in fact slightly more
+accurate than the shipped path (it does fp32 attention vs fp16 flash). The
+v3 design finally removes the register spill (256 threads, residual row
+split 64+64 across a token's two threads) and puts every GEMM on tensor
+cores, reaching **x0.74** — but:
 
-- `d_model = 128` makes every `[SEQ][D]` buffer 32 KB fp16 / 64 KB fp32; the
-  99 KB shared budget cannot hold `n1 + q + k + v` at once, forcing either
-  `xr` into registers (**168 regs, 2944 B spill stores** — v2) or a qkv
-  global round-trip (~1 GB write + read at B=10000).
-- The scalar fallbacks that remain (online-softmax attention: O(S²·HD·H) per
-  block; `ffn_out` fp32 128×128 with GELU recomputed per element) are
-  ~20–80 G scalar FMAs across the model — dwarfing the residual traffic the
-  fusion saves.
-- The baseline is *strong*: cuBLAS is at 94–96 % of the GEMM roofline here
-  (step 45) and SDPA already picks the optimal flash kernel (step 44). There
-  is no slack for a non-CUTLASS-grade hand-roll to exploit; the ~18 ms
-  residual-traffic saving is smaller than the overhead a sub-optimal fused
-  kernel adds.
+- **`ffn_out` precision vs speed is a bind.** `matmul_precision="high"` makes
+  the shipped fp32 `ffn_out` effectively **tf32x3** (~fp32). A single-pass
+  tf32 mma (fast) costs ~0.5e-3 of extra error → over budget at B=10000.
+  fp32-scalar `ffn_out` is precise but ~80 G scalar FMAs across the model.
+  tf32x3 (3 passes + a precomputed-GELU buffer) would be the fix, ~1 more
+  iteration.
+- Even with that fixed, v3 sits at **~parity** — the ~18 ms residual saving
+  is roughly cancelled by: scalar online-softmax attention (~4 ms), per-block
+  weight refetch from L2 (cuBLAS keeps them hotter), and mma scheduling
+  without a `cp.async` pipeline or warp specialisation. cuBLAS is at 94–96%
+  of the GEMM roofline here (step 45); SDPA picks the optimal flash kernel
+  (step 44). Beating that needs the *full* CUTLASS-3.x machinery — `cp.async`
+  weight staging + software pipeline, warp-specialised loader/consumer,
+  flash-tiled `mma` attention in the same kernel — 15–30 more build/measure
+  iterations.
 
-**Not shipped.** `csrc/g5_mega_causal.{cu,cpp}`, `probes/g5_5_mega_correct.py`,
-`probes/g5_6_mega_speed.py` are kept — the megakernel is a working, verified
-reference; making it *win* is a full CUTLASS-3.x-style fused-kernel project
-(warp-specialised pipeline, flash-tiled attention in the same kernel, zero
-spill), 20–40 more build/measure iterations for a payoff on 1 of the 14
-official rows. Out of proportion to the remaining opportunity.
+**Not shipped.** `csrc/g5_mega_causal.{cu,cpp}` (currently the v3-corrected,
+verified-correct variant), `probes/g5_5_mega_correct.py`,
+`probes/g5_6_mega_speed.py` are kept as a working reference and a starting
+point for that work.
 
 **Lever 2 (fused `GELU → ffn_out → +residual`) — not built, on the T3
 precedent.** It is the structural mirror of T3 (steps 46-48): fuse an FFN
