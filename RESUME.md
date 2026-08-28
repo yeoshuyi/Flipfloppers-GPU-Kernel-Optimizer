@@ -14,15 +14,12 @@ Doc while acting; commit per unit. `tools/verify_baseline.py` + `tools/sync_entr
   Commit `2eeb964`. Establishes: 165.2 TFLOP/s is the accuracy-legal peak; row-6
   elementwise is at the BW roofline (23.6 GB predicted vs 22.7 measured); residual
   gaps are Ada-bound (no TMA/wgmma → no megakernel). Reinforces "loop has converged".
-- **IN FLIGHT (user asked for final before/after + per-stage + roofline table):**
-  - job **167** `jobs/final_scorecard.sbatch` → `results/final_scorecard_run167.log`
-    (`probes/final_scorecard.py`: all 13 runnable official rows — baseline vs shipped
-    median wall, speedup, CUPTI stage buckets SDPA/GEMM/GELU/ELEM/OTHER, kernel count,
-    accuracy-legal roofline components + which floor binds + ship/roof ratio).
-  - job **168** `jobs/official_causal_sweep.sbatch` → `/scratch/techjam2/runs/168.out`
-    (canonical `benchmark.py` per-row before/after — cross-check for 167's wall numbers).
-  - On resume: `sacct -j 167,168`; `cp /scratch/techjam2/runs/168.out results/official_causal_sweep_run168.log`;
-    assemble the final table; then this task is done.
+- **DONE — final scorecard delivered** (`docs/FINAL_SCORECARD.md`, PROGRESS step 52).
+  Before/after: job 168 `results/official_causal_sweep_run168.log` (Σ 383.4→60.8 ms,
+  6.3×, geomean 7.7×, all PASS). Per-stage + roofline: job 171
+  `results/final_scorecard_run171.log` (`probes/final_scorecard.py`). Probe went
+  167→169→170→171 (recompile-limit / UnboundLocalError / addmm-misbucket, each fixed).
+  benchmark.py UNCHANGED. Nothing in flight.
 
 ### G6.9 outcome (for reference)
 - Phase 1: 27 unique GEMM signatures (9 (M,d) × {qkv, proj, ffn_out}). G4.7c inert on all 14 shapes.

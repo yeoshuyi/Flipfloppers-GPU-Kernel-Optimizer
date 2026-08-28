@@ -1,0 +1,9 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+Traceback (most recent call last):
+  File "/work/probes/final_scorecard.py", line 280, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/probes/final_scorecard.py", line 165, in main
+    print(f"torch={torch.__version__} gpu={torch.cuda.get_device_name(0)}")
+                   ^^^^^
+UnboundLocalError: cannot access local variable 'torch' where it is not associated with a value

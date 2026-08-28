@@ -3593,3 +3593,31 @@ roofline. (3) conclusion: faster ⇒ Hopper (TMA/wgmma/DSMEM) or budget violatio
 
 All arithmetic verified in a scratch script; cross-checked vs run145/run155
 buckets. benchmark.py untouched. Commits: `2eeb964` (doc), + artifact.
+
+---
+
+### 52. Final scorecard — before/after + per-stage + roofline, all 13 runnable official rows
+
+User request: re-run the benchmark, report final before/after, break latency
+into stages, add the theoretical roofline and its bound. `docs/FINAL_SCORECARD.md`.
+
+- **Before/after** (`benchmark.py` per row, fresh process, job 168,
+  `results/official_causal_sweep_run168.log`): Σ 13 rows **383.4 ms → 60.8 ms
+  (6.3×)**, geomean **7.7×**, all PASS. Range 1.93× (row 8, compute-bound) to
+  31.76× (row 13, baseline O(S²) manual attention). Unchanged from the
+  step-42/run155 shipped state — this is a re-measurement, not a new result.
+- **Per-stage + roofline** (`probes/final_scorecard.py`, job 171,
+  `results/final_scorecard_run171.log`): CUPTI census, per-row clean dynamo
+  state, bucket-sum matches `benchmark.py` median to 1–2 %. Stage split
+  SDPA / GEMM(all 4 proj) / GELU / LN+residual+cast, + accuracy-legal roofline
+  (GEMM flop / 165.2 TF + measured SDPA; mem = 36·M·d·L / 918 GB/s; launch =
+  kern × 0.855 µs) + binding wall + ship/roof ratio. Ratios 1.6×–3.8×.
+  Bounds: rows 2–4/12 launch; rows 1/5/9/10 small-GEMM fill; rows 7/11 SDPA;
+  row 6 memory-BW (LN+res+GELU = 47 %, at the 23.6 GB predicted / 22.7 GB
+  measured roofline); row 8 compute (GEMM 72.5 %, cuBLAS 94–96 % of 165 TF);
+  row 13 SDPA O(S²) + LN traffic co-dominant.
+- Probe iteration history: job 167 (all rows one process → dynamo
+  recompile_limit(8) exhausted, rows 12/13 fell out of graph — discarded);
+  job 169 (UnboundLocalError from a local `import torch._dynamo` — fixed);
+  job 170 (clean walls but LN-fused Triton kernels misbucketed as GEMM via
+  "addmm" token — fixed); job 171 (correct). benchmark.py untouched throughout.

@@ -1,0 +1,254 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:24:59 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:00 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:00 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:00 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:00 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+measured streaming BW = 918 GB/s   |   legal tensor peak = 165.2 TFLOP/s (FP16 store / FP32 accum)
+
+row         B     S     d   H       tok    base_ms   ship_ms  speedup  kern     SDPA     GEMM    GELU     ELEM   OTHER  gemm_GF  attnGF  cmp_flr  mem_GB  mem_flr lnch_flr  roofline  ratio  bound
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+row01      64   128   128   4      8192     1.0291    0.2683    3.84x    34   0.0295   0.1200  0.0123   0.0471  0.0000     6.44    1.07   0.0685    0.15   0.1645   0.0291    0.0685  3.91x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           46.049us x  4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+           41.763us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           32.189us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+           29.548us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           12.343us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            6.880us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.534us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            5.854us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            5.564us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            5.525us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            5.331us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            3.993us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            3.872us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            3.584us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row02       1   128   128   4       128     1.3146    0.1448    9.08x    34   0.0175   0.0384  0.0043   0.0158  0.0000     0.10    0.02   0.0181    0.00   0.0026   0.0291    0.0291  4.98x  launch/latency
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           23.805us x 12.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8
+           17.536us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           14.575us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+            4.277us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            2.796us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            2.605us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            1.549us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            1.502us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            1.483us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            1.476us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            1.472us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            1.466us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            1.412us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row03       4   128   128   4       512     1.3310    0.1521    8.75x    34   0.0178   0.0422  0.0045   0.0207  0.0000     0.40    0.07   0.0202    0.01   0.0103   0.0291    0.0291  5.23x  launch/latency
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           17.756us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           17.028us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2_tn_align8
+           14.846us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+           10.329us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+            6.775us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            4.484us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            2.502us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            1.741us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            1.677us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            1.630us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            1.623us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            1.613us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+            1.600us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            1.497us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+row04      16   128   128   4      2048     1.3436    0.1764    7.62x    34   0.0188   0.0569  0.0062   0.0275  0.0000     1.61    0.27   0.0286    0.04   0.0411   0.0291    0.0291  6.07x  launch/latency
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           21.487us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           19.605us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_tn_align8>
+           18.824us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           15.808us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+            6.781us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.180us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            4.860us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            2.524us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            2.460us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+            2.451us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            2.421us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            2.216us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            2.063us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            1.762us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+row05     128   128   128   4     16384     1.7202    0.4280    4.02x    34   0.0519   0.1924  0.0204   0.0971  0.0000    12.88    2.15   0.1299    0.30   0.3290   0.0291    0.1299  3.29x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           72.112us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_tn_align8>
+           68.684us x  4.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+           51.897us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           51.573us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x256_16x4_tn_align4>(cutlass_80_te
+           23.915us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+           20.420us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2USDT:2026-08-28 02:25:15 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:15 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:16 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:16 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:18 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:18 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:18 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:18 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+           13.002us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+           10.385us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+           10.272us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            9.694us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+            9.399us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            9.274us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.775us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            4.401us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+row06   10000   128   128   4   1280000   290.5879   52.5792    5.53x    39  10.6614  17.1169  4.2971  20.4289  0.0000  1006.63  167.77  16.7548   23.59  25.7004   0.0333   25.7004  2.05x  memory-BW
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+        11405.304us x 12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+        10661.374us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+         5711.610us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+         4297.097us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+         3513.024us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+         3166.927us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+         2812.180us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+         2435.417us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+         2112.972us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+         2109.188us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+         1756.281us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+         1474.641us x  2.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+         1048.310us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+row07      64   128    32   4      8192     1.3338    0.1675    7.96x    34   0.0309   0.0405  0.0061   0.0235  0.0000     0.40    0.27   0.0333    0.04   0.0411   0.0291    0.0333  5.03x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           30.882us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           28.290us x 12.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_tn_align8>
+           12.192us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+            6.810us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.077us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            3.518us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            2.050us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            2.039us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            1.969us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            1.828us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            1.798us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            1.771us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            1.762us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row08      64   128  1024   4      8192     8.3884    4.3879    1.91x    34   0.2820   3.1351  0.1245   0.7801  0.0000   412.32    8.59   2.7779    1.21   1.3159   0.0291    2.7779  1.58x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+         2212.735us x 12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+          922.347us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_tn_align4>(cutlass_80_t
+          282.036us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<256, 64, 64, 4, false, fals
+          147.038us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+          141.681us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+          124.534us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+           89.857us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+           87.952us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+           84.122us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+           83.826us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+           77.322us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+           54.194us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+           14.084us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+row09      64   128   128   1      8192     1.2271    0.2728    4.50x    34   0.0275   0.1190  0.0123   0.0468  0.0000     6.44    1.07   0.0665    0.15   0.1645   0.0291    0.0665  4.10x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           45.883us x  4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+           41.476us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           31.601us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+           27.511us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<128, 64, 64, 4, false, fals
+           12.300us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            6.888us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.520us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            5.690us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            5.547us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            5.506us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            5.314us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            3.981us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            3.774us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            3.539us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row10      64   128   128   2      8192     1.3535    0.2784    4.86x    34   0.0311   0.1200  0.0124   0.0475  0.0000     6.44    1.07   0.0701    0.15   0.1645   0.0291    0.0701  3.97x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           46.116us x  4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+           41.725us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           32.151us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+           31.052us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64, 128, 128, 4, false, fal
+           12.373us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            6.922us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.701us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:19 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:25:25 189865:189865 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:25:25 189865:189865 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+            5.820us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            5.574us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            5.555us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            5.367us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            4.019us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            3.944us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            3.558us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row11      64   128   128  16      8192     4.4682    0.3514   12.72x    34   0.1038   0.1204  0.0124   0.0474  0.0000     6.44    1.07   0.1428    0.15   0.1645   0.0291    0.1428  2.46x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+          103.753us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           46.222us x  4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+           41.843us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           32.328us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+           12.424us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            6.925us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.667us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            5.841us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+            5.598us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            5.579us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            5.327us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            4.038us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            3.799us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            3.631us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+row12      64    32   128   4      2048     1.3365    0.1884    7.10x    34   0.0303   0.0575  0.0062   0.0276  0.0000     1.61    0.07   0.0401    0.04   0.0411   0.0291    0.0401  4.70x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+           30.331us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+           21.574us x  8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_tn_align8>
+           20.010us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_tn_align8>
+           15.936us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+            6.788us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+            6.227us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+            4.864us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+            2.530us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+            2.468us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+            2.464us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+            2.421us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+            2.261us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            2.076us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+            1.694us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+row13      64  1024   128   4     65536    70.1722    2.2755   30.84x    34   0.7197   0.5825  0.1342   0.7746  0.0000    51.54   68.72   1.0317    1.21   1.3159   0.0291    1.0317  2.21x  compute 165TF
+        --- all kernels (us/fwd, count/fwd, bucket, name) ---
+          719.698us x  4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, false, fal
+          397.272us x 12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+          185.227us x  4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_ten
+          144.952us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+          137.328us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+          134.236us x  4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+           95.193us x  2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+           86.286us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_6
+           84.229us x  1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::(anonymous
+           82.343us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_8
+           76.707us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_3
+           52.590us x  1.00  [ELEM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_5
+           14.989us x  1.00  [ELEM ] triton_per_fused__to_copy_native_layer_norm_0
+
+==================== FINAL SCORECARD ====================
+row      baseline_ms   shipped_ms   speedup  roofline_ms  ship/roof  bounded_by
+row01         1.0291       0.2683     3.84x       0.0685      3.91x  compute 165TF
+row02         1.3146       0.1448     9.08x       0.0291      4.98x  launch/latency
+row03         1.3310       0.1521     8.75x       0.0291      5.23x  launch/latency
+row04         1.3436       0.1764     7.62x       0.0291      6.07x  launch/latency
+row05         1.7202       0.4280     4.02x       0.1299      3.29x  compute 165TF
+row06       290.5879      52.5792     5.53x      25.7004      2.05x  memory-BW
+row07         1.3338       0.1675     7.96x       0.0333      5.03x  compute 165TF
+row08         8.3884       4.3879     1.91x       2.7779      1.58x  compute 165TF
+row09         1.2271       0.2728     4.50x       0.0665      4.10x  compute 165TF
+row10         1.3535       0.2784     4.86x       0.0701      3.97x  compute 165TF
+row11         4.4682       0.3514    12.72x       0.1428      2.46x  compute 165TF
+row12         1.3365       0.1884     7.10x       0.0401      4.70x  compute 165TF
+row13        70.1722       2.2755    30.84x       1.0317      2.21x  compute 165TF
+--------------------------------------------------------------------
+TOTAL       385.6060      61.6706     6.25x   (sum over the 13 runnable rows; geomean speedup also reported below)
+geomean speedup over 13 rows = 6.629x
