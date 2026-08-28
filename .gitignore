@@ -34,3 +34,6 @@ _before_benchmark.py
 .venv/
 venv/
 .DS_Store
+
+# resume
+.RESUME.md
