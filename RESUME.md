@@ -8,10 +8,23 @@ document while acting; commit per unit; keep this file short + current-only.
 
 ## NOW
 
-- **Iteration:** 7 CLOSED. **LOOP PAUSED — official 14-row causal matrix is at its optimisation
-  end-state for this toolkit.** Awaiting a direction decision from the project owner.
-- **benchmark.py state:** unchanged from the step-42 (run142) verified state. Nothing shipped for
-  the official matrix this whole session. `_ensure_ffn_plan` gate == commit `09dee91`.
+- **Iteration:** 8 — **G5.MEGA v3 (CUTLASS-grade)**: user asked to attempt it after the v1/v2 negatives.
+- **Phase:** v3 built; correctness (g5_5) + speed (g5_6) job in flight.
+- **v3 design:** 256 threads/block (8 warps). Threads (2t, 2t+1) share token t; each owns HALF the
+  residual row `xr[64]` fp32 IN REGISTERS (v2 spilled with xr[128]). x read once / written once,
+  residual never round-trips. ALL 4 GEMMs tensor-core: qkv/out_proj/ffn_in = mma m16n8k16
+  f16.f16.f32; **ffn_out = mma m16n8k8 tf32** (matches shipped fp32 nn.Linear @ high). qkv v-part
+  uses `gemm16b` (batched acc) to dodge the n1-overwrite race. Cooperative LN via `__shfl_xor`.
+  Attention: each thread does 2 heads of its token, online fp32 softmax. 3×[SEQ][D] fp16 shared (96KB).
+- **Next concrete action:** read `results/g5_6_mega_speed_run<J>.log`.
+  - ptxas: check registers / spill. If spilling badly → reduce `gemm16b<D>` acc (NT=16 → chunk it).
+  - g5_5 FAIL → mma fragment / race bug. tf32 m16n8k8 layout is the newest risk (gemm_ffn_out).
+    Debug: in g5_5, dump one layer's ffn_out output vs a torch reference.
+  - g5_5 PASS + g5_6 shows x≥1 → progress; x≥2 → Phase 2 integration.
+  - g5_6 still slow → the scalar attention inner loop (O(S²·HD) per token, 2 heads/thread) is the
+    likely remaining bottleneck → mma-ify Q@K^T and P@V (head_dim=32, needs K/V transposed tiles).
+- **benchmark.py state:** UNCHANGED from step-42 (run142). Nothing shipped for the official matrix.
+  `_ensure_ffn_plan` gate == commit `09dee91`.
 
 ### What was explored this session (PROGRESS steps 43-49)
 
