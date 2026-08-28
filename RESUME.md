@@ -24,30 +24,21 @@ by this restructure — only internal dev tooling paths move.
 `csrc/README.md`, `experiments/README.md`, `archive/README.md`, `infra/*.sh`.
 No `src/`, no `agent_logs/` (resolved in README + docs/ARCHITECTURE.md).
 
-## EXECUTION CHECKLIST  (tick as done; commit per phase)
+## EXECUTION CHECKLIST
 
-- [ ] **P1** `git add jobs/row14_extreme.sbatch results/row14_extreme_run172.log` → commit "chore: track row-14 receipts"
-- [ ] **P2** `git mv kernel.def infra/apptainer/kernel.def`; fix `docs/SETUP.md:93` → commit
-- [ ] **P3** split `results/`: `*.log`→`results/logs/`, `{*.json,*.csv,*.patch}`→`results/artifacts/`;
-      fix `jobs/final_scorecard.sbatch:18` + `jobs/row14_extreme.sbatch:38` cp targets → commit
-- [ ] **P4** `git mv jobs infra/slurm`; fix `tools/slurm.py:6` (`jobs/bench.sbatch`→`infra/slurm/bench.sbatch`) → commit
-- [ ] **P5** `git mv probes experiments && rm -rf probes`;
-      `sed -i 's#/work/probes/#/work/experiments/#g'` across the 61 `infra/slurm/*.sbatch`;
-      fix `experiments/phase0.sbatch` self-path; harden the 2 hardcoded `/work/csrc/cublaslt_gelu.cpp` probes;
-      GATE: `grep -rl '/work/probes/' infra/slurm/` empty → commit
-- [ ] **P6** `git mv DOCUMENTATION.md docs/DOCUMENTATION.md`; grep-fix refs → commit  (RESUME.md stays at root)
-- [ ] **P7** new files: `README.md`, `Makefile`, `run_eval.sh`(+x), `infra/apptainer/build.sh`,
-      `infra/run_container.sh`, `infra/package.sh`, `infra/verify_submission.sh`,
-      `csrc/README.md`, `experiments/README.md`, `archive/README.md`, `docs/ARCHITECTURE.md`;
-      `.gitignore` += `/dist/ *.tar.gz .claude/settings.local.json *.ncu-rep *.nsys-rep *.cubin *.o *.so .pytest_cache/ .venv/ .DS_Store` → commit
-- [ ] **P8** doc-tree rewrites: `docs/MANIFEST.md` tree §, `docs/SETUP.md` §8/§3/§5,
-      `CLAUDE.md` LOOP step 5 + jobs/ refs, `docs/README.md` Files+Loop blocks;
-      layout-change note in `README.md` + `docs/MANIFEST.md`. NO mass rewrite of PROGRESS/DOCUMENTATION/SUBMISSION → commit
-- [ ] **P9** CUDA doc headers: `csrc/g4_4_mma_gemm.cu` (full), `csrc/g5_mega_causal.cu` (expand),
-      `csrc/g4_6_cutlass_gemm.cuh` (add), `csrc/g4_4_warpspec_gemm.cu` (reg/occupancy subsection) → commit
-- [ ] **P10** VERIFY (see plan Verification §) — `verify_baseline.py`, `sync_entrypoint.py --check`,
-      `check_validity.py`, `grep -rl '/work/probes/' infra/slurm/` empty, kernels-found apptainer check,
-      2-row spot-check vs `results/logs/official_causal_sweep_run168.log`
+- [x] **P1** `0a7046f` track row-14 receipts + RESUME plan
+- [x] **P2** `630ff5d` kernel.def → infra/apptainer/; docs/SETUP.md:93
+- [x] **P3** `12b0598` results/ → logs/ + artifacts/; 2 cp lines repointed
+- [x] **P4** `96710e0` jobs/ → infra/slurm/; tools/slurm.py:6
+- [x] **P5** `81b49e8` probes/ → experiments/; 61 sbatch sed'd; GATE passed (0 `/work/probes/` left)
+- [x] **P6** `5c7f864` DOCUMENTATION.md → docs/ (RESUME.md kept at root)
+- [x] **P7** `a2a761a` README.md, Makefile, run_eval.sh, infra/*.sh, per-dir READMEs, .gitignore +=
+- [x] **P8** `edf2d8b` doc-tree rewrites (MANIFEST, SETUP §8/§4/§5, docs/README Loop)
+- [x] **P9** `3cd826a` csrc REGISTER PRESSURE / OCCUPANCY blocks (4 kernels + 2 cross-refs)
+- [~] **P10** VERIFY — guards green (verify_baseline / sync --check / check_validity all pass;
+      both entrypoints parse; `grep -rl /work/probes/ infra/slurm/` = 0; slurm.py → infra/slurm).
+      GPU spot-check: **job 173** `results/logs/restructure_smoke_run173.log` — kernels-found
+      assertion + rows 1 & 13 via torch_transformer_benchmark.py vs run168 (4.96× / 31.76×).
 - [ ] **P11** `make package` → `dist/techjam2_<ver>.tar.gz`; `bash infra/verify_submission.sh dist/*.tar.gz`
 
 ## RESUME NOTES
