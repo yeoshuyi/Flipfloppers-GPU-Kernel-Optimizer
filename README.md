@@ -581,7 +581,9 @@ engineering on hardware that can amortise it: a Hopper port.
 [MIT](LICENSE) © 2026 Yeo Shu Yi.
 
 Built with [Claude Code](https://claude.com/claude-code). Frozen baseline and
-evaluation harness per the TikTok TechJam problem statement. Full engineering
-log: [`docs/PROGRESS.md`](docs/PROGRESS.md) (52 steps) ·
+evaluation harness per the TikTok TechJam problem statement (Problem 3 —
+*Implement a GPU Kernel for a Transformer Layer*). Devpost write-up:
+[`docs/DEVPOST.md`](docs/DEVPOST.md). Full engineering log:
+[`docs/PROGRESS.md`](docs/PROGRESS.md) (52 steps) ·
 [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) (every optimization,
 shipped/closed, with measured numbers).
