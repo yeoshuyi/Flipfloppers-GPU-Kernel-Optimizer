@@ -14,7 +14,15 @@ Doc while acting; commit per unit. `tools/verify_baseline.py` + `tools/sync_entr
   Commit `2eeb964`. Establishes: 165.2 TFLOP/s is the accuracy-legal peak; row-6
   elementwise is at the BW roofline (23.6 GB predicted vs 22.7 measured); residual
   gaps are Ada-bound (no TMA/wgmma → no megakernel). Reinforces "loop has converged".
-- **No candidate in flight. Next: pick iteration 10 from the queue below, or await user direction.**
+- **IN FLIGHT (user asked for final before/after + per-stage + roofline table):**
+  - job **167** `jobs/final_scorecard.sbatch` → `results/final_scorecard_run167.log`
+    (`probes/final_scorecard.py`: all 13 runnable official rows — baseline vs shipped
+    median wall, speedup, CUPTI stage buckets SDPA/GEMM/GELU/ELEM/OTHER, kernel count,
+    accuracy-legal roofline components + which floor binds + ship/roof ratio).
+  - job **168** `jobs/official_causal_sweep.sbatch` → `/scratch/techjam2/runs/168.out`
+    (canonical `benchmark.py` per-row before/after — cross-check for 167's wall numbers).
+  - On resume: `sacct -j 167,168`; `cp /scratch/techjam2/runs/168.out results/official_causal_sweep_run168.log`;
+    assemble the final table; then this task is done.
 
 ### G6.9 outcome (for reference)
 - Phase 1: 27 unique GEMM signatures (9 (M,d) × {qkv, proj, ffn_out}). G4.7c inert on all 14 shapes.
