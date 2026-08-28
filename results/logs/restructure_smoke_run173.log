@@ -1,0 +1,15 @@
+########## 1. kernels discoverable from repo root ##########
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+lt True ws True
+
+########## 2. row 1 via torch_transformer_benchmark.py ##########
+summary: PASS | max_abs=0.0013676 | max_rel=1523.26 | failed=0/5242880
+baseline : median=1.0260 ms | mean=1.0326 ms | p90=1.0428 ms | min=1.0097 ms | throughput=7984032.36 token/s
+optimized: median=0.2109 ms | mean=0.2134 ms | p90=0.2130 ms | min=0.2089 ms | throughput=38834952.03 token/s
+speedup  : 4.864x based on median latency
+
+########## 3. row 13 via torch_transformer_benchmark.py ##########
+summary: PASS | max_abs=0.0013676 | max_rel=2.02073e+08 | failed=0/41943040
+baseline : median=70.1665 ms | mean=70.1685 ms | p90=70.1813 ms | min=70.1245 ms | throughput=934006.61 token/s
+optimized: median=2.2129 ms | mean=2.2147 ms | p90=2.2190 ms | min=2.2006 ms | throughput=29615919.60 token/s
+speedup  : 31.708x based on median latency

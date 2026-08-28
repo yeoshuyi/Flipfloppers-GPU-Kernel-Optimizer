@@ -35,10 +35,12 @@ No `src/`, no `agent_logs/` (resolved in README + docs/ARCHITECTURE.md).
 - [x] **P7** `a2a761a` README.md, Makefile, run_eval.sh, infra/*.sh, per-dir READMEs, .gitignore +=
 - [x] **P8** `edf2d8b` doc-tree rewrites (MANIFEST, SETUP §8/§4/§5, docs/README Loop)
 - [x] **P9** `3cd826a` csrc REGISTER PRESSURE / OCCUPANCY blocks (4 kernels + 2 cross-refs)
-- [~] **P10** VERIFY — guards green (verify_baseline / sync --check / check_validity all pass;
-      both entrypoints parse; `grep -rl /work/probes/ infra/slurm/` = 0; slurm.py → infra/slurm).
-      GPU spot-check: **job 173** `results/logs/restructure_smoke_run173.log` — kernels-found
-      assertion + rows 1 & 13 via torch_transformer_benchmark.py vs run168 (4.96× / 31.76×).
+- [x] **P10** VERIFY — all green. guards pass (verify_baseline / sync --check / check_validity);
+      both entrypoints parse; `grep -rl /work/probes/ infra/slurm/` = 0; slurm.py → infra/slurm.
+      job 173 (`results/logs/restructure_smoke_run173.log`): `lt True ws True` (kernels engage
+      from repo root — no silent disengagement); row 1 PASS 4.86× (run168 4.96×), row 13 PASS
+      31.71× (run168 31.76×), max_abs 0.0013676 unchanged. Runtime behaviour identical —
+      only dev-tooling paths moved.
 - [ ] **P11** `make package` → `dist/techjam2_<ver>.tar.gz`; `bash infra/verify_submission.sh dist/*.tar.gz`
 
 ## RESUME NOTES
