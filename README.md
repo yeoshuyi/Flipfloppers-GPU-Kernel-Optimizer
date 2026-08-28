@@ -578,7 +578,7 @@ engineering on hardware that can amortise it: a Hopper port.
 
 ## License · Acknowledgments
 
-License: _TBD_ — add before making the repo public.
+[MIT](LICENSE) © 2026 Yeo Shu Yi.
 
 Built with [Claude Code](https://claude.com/claude-code). Frozen baseline and
 evaluation harness per the TikTok TechJam problem statement. Full engineering
