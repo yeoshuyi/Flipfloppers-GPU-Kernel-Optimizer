@@ -3,7 +3,7 @@ RUNS = pathlib.Path("/scratch/techjam2/runs")
 
 def submit(candidate, shape, mode="bench"):
     out = subprocess.run(
-        ["sbatch", "--parsable", "/scratch/work/jobs/bench.sbatch",
+        ["sbatch", "--parsable", "/scratch/work/infra/slurm/bench.sbatch",
          candidate, shape, mode],
         capture_output=True, text=True, check=True)
     return out.stdout.strip()
