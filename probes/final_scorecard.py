@@ -33,6 +33,7 @@ import sys
 import tempfile
 
 import torch
+import torch._dynamo  # noqa: F401  (for torch._dynamo.reset() between rows)
 
 sys.path.insert(0, "/work")
 from benchmark import (  # noqa: E402
@@ -130,16 +131,21 @@ def bucket(name):
     if any(t in n for t in ("fmha", "flash", "attention", "mha", "fused_attention",
                             "scaled_dot")):
         return "SDPA"
-    if "gelu" in n or ("erf" in n and "gemm" not in n):
+    if "gelu" in n:
         return "GELU"
+    # LayerNorm / residual / cast fused Triton kernels FIRST -- inductor folds
+    # the FFN-in/out bias-add ("addmm") into a LayerNorm epilogue kernel whose
+    # cost is the [tok,d] memory traffic, not tensor-core math. It must not
+    # land in GEMM just because "addmm" is in the name.
+    if any(t in n for t in ("layer_norm", "native_layer_norm", "triton_poi",
+                            "triton_per", "elementwise", "vectorized",
+                            "multi_tensor_apply", "direct_copy", "_add<",
+                            "copy_kernel", "memcpy", "memset", "cat_", "fill")):
+        return "ELEM"
     if any(t in n for t in ("gemm", "cutlass", "wmma", "s16816", "s1688",
                             "splitk", "implicit_gemm", "ampere_", "sm80_xmma",
-                            "sm89", "sgemm", "dot_kernel", "addmm")):
+                            "sm89", "sgemm", "tensorop")):
         return "GEMM"
-    if any(t in n for t in ("layer_norm", "native_layer_norm", "elementwise",
-                            "vectorized", "triton_poi", "triton_per", "_add",
-                            "copy", "memcpy", "memset", "cat_", "fill")):
-        return "ELEM"
     return "OTHER"
 
 
@@ -177,6 +183,12 @@ def main():
 
     summary = []
     for name, b, s, d, h, f, L in ROWS:
+        # each row gets a clean compile state -- otherwise the process-global
+        # dynamo recompile_limit(8) is exhausted after ~6 shapes and the later
+        # (and smaller) rows silently fall out of the CUDA graph into an eager
+        # path, inflating their wall + kernel count. Reset per row.
+        torch._dynamo.reset()
+        torch.cuda.empty_cache()
         cfg, base, opt, x, mask = build(b, s, d, h, f, L)
         M = b * s
 
@@ -237,9 +249,10 @@ def main():
               f"{mem_floor:>9.4f}{launch_floor:>9.4f}{roofline:>10.4f}"
               f"{ratio:>6.2f}x  {bound}")
 
-        # top kernels for this row (context)
-        for n_, c_, u_ in rows[:6]:
-            print(f"        {u_:9.2f}us x{c_:5.2f}  [{bucket(n_):5s}] {n_[:78]}")
+        # FULL per-kernel dump (so re-bucketing never needs a re-run)
+        print("        --- all kernels (us/fwd, count/fwd, bucket, name) ---")
+        for n_, c_, u_ in rows:
+            print(f"        {u_:9.3f}us x{c_:6.2f}  [{bucket(n_):5s}] {n_[:88]}")
 
         summary.append((name, bmed, omed, sp, roofline, ratio, bound))
         del base, opt, x, mask

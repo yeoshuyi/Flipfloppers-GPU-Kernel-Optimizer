@@ -1,0 +1,142 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:01 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:02 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:02 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:02 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:02 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:17 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:17 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:18 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:18 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:20 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:20 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:20 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:20 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+torch=2.13.0+cu130 gpu=NVIDIA GeForce RTX 4090
+measured streaming BW = 918 GB/s   |   legal tensor peak = 165.2 TFLOP/s (FP16 store / FP32 accum)
+
+row         B     S     d   H       tok    base_ms   ship_ms  speedup  kern     SDPA     GEMM    GELU     ELEM   OTHER  gemm_GF  attnGF  cmp_flr  mem_GB  mem_flr lnch_flr  roofline  ratio  bound
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+row01      64   128   128   4      8192     1.0309    0.2681    3.85x    34   0.0296   0.1489  0.0123   0.0181  0.0000     6.44    1.07   0.0686    0.15   0.1645   0.0291    0.0686  3.91x  compute 165TF
+            45.98us x 4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+            41.78us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            32.11us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+            29.61us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            12.35us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             6.89us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+row02       1   128   128   4       128     1.3351    0.1445    9.24x    34   0.0175   0.0473  0.0043   0.0069  0.0000     0.10    0.02   0.0181    0.00   0.0026   0.0291    0.0291  4.97x  launch/latency
+            23.79us x12.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2
+            17.48us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            14.60us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+             4.28us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             2.81us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+             2.60us x 2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+row03       4   128   128   4       512     1.3522    0.1522    8.89x    34   0.0177   0.0518  0.0045   0.0110  0.0000     0.40    0.07   0.0201    0.01   0.0103   0.0291    0.0291  5.23x  launch/latency
+            17.69us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            16.99us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x2
+            14.82us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+            10.36us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+             6.78us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+             4.48us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+row04      16   128   128   4      2048     1.3500    0.1744    7.74x    34   0.0188   0.0711  0.0062   0.0134  0.0000     1.61    0.27   0.0286    0.04   0.0411   0.0291    0.0291  6.00x  launch/latency
+            21.50us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            19.68us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_
+            18.82us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            15.80us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+             6.81us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+             6.18us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+row05     128   128   128   4     16384     1.7238    0.4284    4.02x    34   0.0519   0.2666  0.0204   0.0231  0.0000    12.88    2.15   0.1299    0.30   0.3291   0.0291    0.1299  3.30x  compute 165TF
+            72.10us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_
+            68.64us x 4.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+            51.93us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            51.48us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x256_16x4_tn_align4>(cut
+            23.94us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+            20.42us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+row06   10000   128   128   4   1280000   290.5845   52.5796    5.53x    39  10.6544  32.2121  4.2979   5.3349  0.0000  1006.63  167.77  16.7478   23.59  25.7086   0.0333   25.7086  2.05x  memory-BW
+         11407.52us x12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+         10654.36us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+          5710.98us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+          4297.88us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+          3512.52us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+          3167.19us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+row07      64   128    32   4      8192     1.3547    0.1679    8.07x    34   0.0310   0.0519  0.0061   0.0122  0.0000     0.40    0.27   0.0334    0.04   0.0411   0.0291    0.0334  5.03x  compute 165TF
+            30.95us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            28.32us x12.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_
+            12.21us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+             6.81us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+             6.07us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             3.52us x 2.00  [ELEM ] triton_per_fused__to_copy_add_native_layer_norm_view_1
+row08      64   128  1024   4      8192     8.3823    4.3899    1.91x    34   0.2823   3.7271  0.1244   0.1879  0.0000   412.32    8.59   2.7781    1.21   1.3163   0.0291    2.7781  1.58x  compute 165TF
+          2213.12us x12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+           922.24us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_tn_align4>(cu
+           282.26us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<256, 64, 64, 4, f
+           146.96us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+           141.57us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+           124.36us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+row09      64   128   128   1      8192     1.2448    0.2729    4.56x    34   0.0275   0.1477  0.0123   0.0180  0.0000     6.44    1.07   0.0665    0.15   0.1645   0.0291    0.0665  4.10x  compute 165TF
+            45.83us x 4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+            41.42us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            31.64us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+            27.49us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<128, 64, 64, 4, f
+            12.31us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             6.91us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+row10      64   128   128   2      8192     1.3683    0.2770    4.94x    34   0.0310   0.1491  0.0124   0.0180  0.0000     6.44    1.07   0.0700    0.15   0.1645   0.0291    0.0700  3.96x  compute 165TF
+            46.12us x 4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tnUSDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:21 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-28 02:23:27 189487:189487 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-28 02:23:27 189487:189487 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+            41.55us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            32.05us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+            30.96us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64, 128, 128, 4, 
+            12.38us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             6.91us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+row11      64   128   128  16      8192     4.4703    0.3501   12.77x    34   0.1035   0.1493  0.0124   0.0180  0.0000     6.44    1.07   0.1425    0.15   0.1645   0.0291    0.1425  2.46x  compute 165TF
+           103.54us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            46.04us x 4.00  [GEMM ] ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn
+            41.80us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            32.16us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+            12.41us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+             6.89us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+row12      64    32   128   4      2048     1.3494    0.1872    7.21x    34   0.0302   0.0716  0.0062   0.0133  0.0000     1.61    0.07   0.0400    0.04   0.0411   0.0291    0.0400  4.68x  compute 165TF
+            30.23us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+            21.52us x 8.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_64x1_
+            19.98us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_
+            15.91us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+             6.81us x 1.00  [ELEM ] void at::native::(anonymous namespace)::multi_tensor_apply_kernel<at::native::
+             6.21us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+row13      64  1024   128   4     65536    70.1728    2.2768   30.82x    34   0.7191   1.1624  0.1346   0.1945  0.0000    51.54   68.72   1.0311    1.21   1.3163   0.0291    1.0311  2.21x  compute 165TF
+           719.14us x 4.00  [SDPA ] void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<32, 128, 128, 4, 
+           396.97us x12.00  [GEMM ] ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1_tn
+           185.11us x 4.00  [GEMM ] void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutl
+           144.91us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_4
+           137.75us x 1.00  [GEMM ] triton_per_fused__to_copy_add_addmm_native_layer_norm_view_7
+           134.63us x 4.00  [GELU ] triton_poi_fused__to_copy_gelu_view_2
+
+==================== FINAL SCORECARD ====================
+row      baseline_ms   shipped_ms   speedup  roofline_ms  ship/roof  bounded_by
+row01         1.0309       0.2681     3.85x       0.0686      3.91x  compute 165TF
+row02         1.3351       0.1445     9.24x       0.0291      4.97x  launch/latency
+row03         1.3522       0.1522     8.89x       0.0291      5.23x  launch/latency
+row04         1.3500       0.1744     7.74x       0.0291      6.00x  launch/latency
+row05         1.7238       0.4284     4.02x       0.1299      3.30x  compute 165TF
+row06       290.5845      52.5796     5.53x      25.7086      2.05x  memory-BW
+row07         1.3547       0.1679     8.07x       0.0334      5.03x  compute 165TF
+row08         8.3823       4.3899     1.91x       2.7781      1.58x  compute 165TF
+row09         1.2448       0.2729     4.56x       0.0665      4.10x  compute 165TF
+row10         1.3683       0.2770     4.94x       0.0700      3.96x  compute 165TF
+row11         4.4703       0.3501    12.77x       0.1425      2.46x  compute 165TF
+row12         1.3494       0.1872     7.21x       0.0400      4.68x  compute 165TF
+row13        70.1728       2.2768    30.82x       1.0311      2.21x  compute 165TF
+--------------------------------------------------------------------
+TOTAL       385.7191      61.6690     6.25x   (sum over the 13 runnable rows; geomean speedup also reported below)
+geomean speedup over 13 rows = 6.688x
