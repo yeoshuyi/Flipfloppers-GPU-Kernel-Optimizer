@@ -102,6 +102,12 @@ sudo update-initramfs -u && sudo reboot
 
 ## 4. Job wrapper
 
+Day-1 template. The `/work/harness/run.py` dispatcher was never built — the
+actual batch scripts under `infra/slurm/` call `python3 /work/benchmark.py …`
+or `python3 /work/experiments/<probe>.py` directly. `tools/slurm.py`'s
+`submit()`/`poll()` wrappers are likewise unused by the shipped flow. Kept for
+the bind-mount / `--exclusive` pattern, which every real script follows.
+
 ```bash
 #!/bin/bash
 #SBATCH --job-name=kbench
@@ -133,7 +139,7 @@ RUNS = pathlib.Path("/scratch/techjam2/runs")
 
 def submit(candidate, shape, mode="bench"):
     out = subprocess.run(
-        ["sbatch", "--parsable", "/scratch/work/jobs/bench.sbatch",
+        ["sbatch", "--parsable", "/scratch/work/infra/slurm/bench.sbatch",
          candidate, shape, mode],
         capture_output=True, text=True, check=True)
     return out.stdout.strip()
@@ -284,25 +290,31 @@ agent's context.**
 
 ## 8. Directory layout
 
+Actual layout (the `src/model.py` / `harness/run.py` split below was the day-1
+plan; the runtime is one file — `benchmark.py` — see `docs/ARCHITECTURE.md`).
+
 ```
 /scratch/work/
-  CLAUDE.md                 always-loaded project memory
-  .claude/
-    settings.json           permissions
-    agents/profiler.md      the one subagent
-  docs/                     load-on-demand references
-  benchmark.py              unmodified reference harness
-  src/
-    model.py                UserOptimizedTransformer + shape dispatch
-    precompute.py           G1 -- fold, swizzle, quantise, arena
-    kernels/{triton,cuda,ptx}/
-  harness/run.py            invoked inside Apptainer by the sbatch wrapper
-  tools/                    check_validity.py, archive.py, submit/poll
-  jobs/bench.sbatch
-  probes/phase0.py
+  README.md                 front door
+  benchmark.py              entry point + source of truth: frozen BaselineTransformer,
+                            UserOptimizedTransformer (+ shape dispatch, custom-op wiring,
+                            G1 precompute), and the scoring harness — one file, on purpose
+  torch_transformer_benchmark.py  GENERATED = judges' harness + our model (tools/sync_entrypoint.py)
+  run_eval.sh · Makefile
+  CLAUDE.md · RESUME.md
+  .claude/  settings.json · agents/profiler.md
+  docs/                     load-on-demand references (ARCHITECTURE.md is the code map)
+  csrc/                     hand-written CUDA / C++ / inline-PTX (csrc/README.md)
+  tools/                    verify_baseline · sync_entrypoint · check_validity · archive · slurm · parse_ncu
+  experiments/              64 g0-g6 probes; phase0.py first (experiments/README.md)
+  infra/
+    apptainer/kernel.def + build.sh
+    slurm/*.sbatch
+    run_container.sh · package.sh · verify_submission.sh
+  results/logs/             Slurm job receipts     results/artifacts/  ncu JSON, ground_truth.csv, .patch
   archive/                  MAP-Elites cells + lineage
-/scratch/techjam2/runs/              job outputs: one JSON + one .out per job id
-/scratch/kernel.sif         Apptainer image
+/scratch/techjam2/runs/     raw job output: one .out per job id (some copied into results/logs/)
+/scratch/kernel.sif         Apptainer image (built from infra/apptainer/kernel.def)
 ```
 
 ---

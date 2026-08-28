@@ -3,39 +3,46 @@
 Everything needed to run the project. Copy the whole tree to
 `/scratch/work/` on `ubuntu-makers`.
 
+Post-restructure layout (2026-08-28). Top-level `README.md` is the front door;
+`docs/ARCHITECTURE.md` maps concepts to `benchmark.py` line ranges.
+
 ```
-CLAUDE.md                    ~1.9k tok  ALWAYS LOADED — invariants, ground truth, dispatch, loop
-MANIFEST.md                  (this file)
-README.md                    why 1 subagent instead of 6; token discipline
+README.md                    front door — problem, result, layout, quickstart
+benchmark.py                  entry point + source of truth (frozen baseline + our model + harness)
+torch_transformer_benchmark.py  GENERATED drop-in (judges' harness + our model). Never hand-edit.
+run_eval.sh · Makefile        standardized eval
+
+CLAUDE.md                    ~1.9k tok  invariants, ground truth, regime dispatch, loop
+RESUME.md                    session cursor (survives token limits)
 
 .claude/
   agents/profiler.md         ~0.3k tok  the ONE subagent (isolated context)
-  settings.json              permissions — create from docs/AGENTS.md §8
+  settings.json              permissions — see docs/AGENTS.md §8
 
 docs/                        LOAD ON DEMAND — never all at once
-  CATALOGUE.md               ~1.5k tok  G0–G4, 33 optimisations. Read before proposing.
-  DIAGNOSIS.md               ~0.4k tok  profiler fact → action. Read after profiling.
-  ACCURACY_BUDGET.md         ~1.8k tok  spend/benefit rule near the 0.002 ceiling. Read for LOOP step 8.
-  MEGAKERNEL.md              ~2.1k tok  G4 only: smem budget, warp roles, failure modes.
-  SETUP.md                   ~2.4k tok  infra + Phase 0 + measurement. Read once, day 1.
-  AGENTS.md                  ~2.2k tok  roles, limits, best practices. Read once, at bootstrap.
+  ARCHITECTURE.md            concept → benchmark.py line range + the 2 sync guards
+  DOCUMENTATION.md           full technical record (every opt shipped/reverted/closed)
+  PROGRESS.md · FINAL_SCORECARD.md · PARETO_FRONTIER_ANALYSIS.md
+  CATALOGUE.md · DIAGNOSIS.md · ACCURACY_BUDGET.md · MEGAKERNEL.md · SETUP.md · AGENTS.md
+  MANIFEST.md (this file) · README.md · CAUSAL_LEDGER.md
 
-torch_transformer_benchmark.py  GENERATED standalone drop-in (judges' harness +
-                             our UserOptimizedTransformer). Never hand-edit.
-
+csrc/                        hand-written CUDA / C++ / inline-PTX  (csrc/README.md — 3 files build at eval)
 tools/
   check_validity.py          static gate — replaces the adversary agent (0 tokens)
   archive.py                 MAP-Elites — replaces the archivist agent (0 tokens)
   slurm.py                   submit() / poll() — never block on srun
-  verify_baseline.py         AST-diff benchmark.py's frozen half vs the judges'
-                             ~/torch_transformer_benchmark.py — before every ship
+  verify_baseline.py         AST-diff benchmark.py's frozen half vs ~/torch_transformer_benchmark.py
   sync_entrypoint.py         regenerate torch_transformer_benchmark.py
+  parse_ncu.py               ncu --csv → compact JSON for the profiler subagent
 
-probes/
+experiments/                 64 g0–g6 investigation drivers  (experiments/README.md)
   phase0.py                  capability probe — RUN THIS FIRST
-
-jobs/
-  bench.sbatch               job wrapper (Apptainer + exclusive GPU)
+infra/
+  apptainer/kernel.def + build.sh    reproducible image
+  slurm/*.sbatch                     batch scripts (Apptainer + exclusive GPU)
+  run_container.sh · package.sh · verify_submission.sh
+results/logs/                120 Slurm job receipts       results/artifacts/  ncu JSON, ground_truth.csv, .patch
+archive/                     MAP-Elites elite-config store  (archive/README.md)
 ```
 
 **Context budget:** ~1.9k always + 0.4–2.4k on demand. Worst case if one session
@@ -51,8 +58,8 @@ touches everything ≈ 8.5k. Typical G0–G2 iteration ≈ 3.6k.
 [ ] configure Slurm + prolog clock locking      docs/SETUP.md §2
 [ ] build Apptainer image                       docs/SETUP.md §3
 [ ] enable ncu perf counters + reboot           docs/SETUP.md §3
-[ ] sbatch probes/phase0.py                     <- GATES EVERYTHING
-[ ] record baseline sweep -> results/ground_truth.csv
+[ ] sbatch infra/slurm/phase0.sbatch            <- GATES EVERYTHING
+[ ] record baseline sweep -> results/artifacts/ground_truth.csv
 [ ] build Track A, verify it passes             <- non-negotiable safety net
 [ ] bootstrap-validate the loop on G3.2         docs/AGENTS.md §6
 [ ] then start Track B
@@ -96,7 +103,7 @@ split · `G4.3` warp specialisation · `G4.4` `mma.sync` FP16 accumulate ·
 - Track A safety net — `docs/CATALOGUE.md`, `docs/SETUP.md §9`
 - Solidification (strip autotune) — `CLAUDE.md`
 - MAP-Elites 2D archive — `CLAUDE.md`, `tools/archive.py`
-- Phase 0 capability probe — `probes/phase0.py`, `docs/SETUP.md §6`
+- Phase 0 capability probe — `experiments/phase0.py`, `docs/SETUP.md §6`
 - Measurement protocol + clock locking — `docs/SETUP.md §2, §7`
 - Agent roles, limits, best practices — `docs/AGENTS.md`
 

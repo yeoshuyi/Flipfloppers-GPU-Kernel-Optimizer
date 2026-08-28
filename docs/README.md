@@ -62,9 +62,8 @@ tools/archive.py             MAP-Elites — replaces the archivist
 # 2. read docs/DIAGNOSIS.md, pick a row
 # 3. read docs/CATALOGUE.md, pick ONE optimisation
 # 4. implement
-python3 tools/check_validity.py src/model.py        # free gate
-sbatch jobs/bench.sbatch cand_0042 B8_S128 accuracy # then full sweep
-sbatch jobs/bench.sbatch cand_0042 B8_S128 bench
+python3 tools/check_validity.py benchmark.py        # free gate
+sbatch infra/slurm/<candidate>.sbatch              # accuracy + matched before/after in one job
 python3 tools/archive.py commit --cell default/fp8 --id cand_0042 \
         --speedup 12.4 --applied G0.1,G1.1
 ```
