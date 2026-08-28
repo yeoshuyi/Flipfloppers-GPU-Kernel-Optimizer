@@ -63,6 +63,7 @@ Reproduce: **`./run_eval.sh`** (see [Reproduce](#reproduce)).
 - [How it was built — the agentic workflow](#how-it-was-built--the-agentic-workflow)
 - [The optimized data path](#the-optimized-data-path)
 - [Hitting the hardware ceiling](#hitting-the-hardware-ceiling)
+- [How this is graded](#how-this-is-graded)
 - [Reproduce](#reproduce)
 - [Repository layout](#repository-layout)
 - [Tools, libraries, datasets](#tools-libraries-datasets)
@@ -407,6 +408,34 @@ full argument in
 
 ---
 
+## How this is graded
+
+**The submission entry point is [`torch_transformer_benchmark.py`](torch_transformer_benchmark.py)
+at the repo root.** It is the competition's official `torch_transformer_benchmark.py`
+**unchanged**, with `UserOptimizedTransformer` (and its module-level helpers)
+implemented in place of the stub `# ====== your codes here ======` — i.e. only
+the part the problem statement says participants may modify. Run it exactly as
+the reference:
+
+```bash
+python3 torch_transformer_benchmark.py --causal \
+    --batch-size <B> --seq-len <S> --d-model <d> --heads <H> --layers <L> --ffn-dim <F>
+```
+
+The scoring half — `BaselineTransformer`, `compare_outputs`,
+`run_accuracy_tests`, `benchmark_models`, `parse_args`, `main`, the
+`atol=0.002 / rtol=0.02` defaults — is **byte-for-byte** the reference harness.
+`tools/verify_baseline.py` AST-asserts this against the official file on every
+build; `make check` runs it.
+
+`benchmark.py` is the **development mirror** we edit (same model, same harness,
+plus the internal probe hooks); `tools/sync_entrypoint.py` regenerates
+`torch_transformer_benchmark.py` from it, and `infra/slurm/g4_7_entrypoint_check.sbatch`
+asserts the two behave identically. Submit / grade against
+`torch_transformer_benchmark.py`.
+
+---
+
 ## Reproduce
 
 **Prerequisites** — Linux, an NVIDIA GPU with `sm_89` (RTX 4090) + recent
@@ -435,11 +464,9 @@ bash infra/verify_submission.sh dist/techjam2_*.tar.gz    # after `make package`
 make entrypoint                     # -> torch_transformer_benchmark.py
 ```
 
-`benchmark.py` is the entry point **and** the source of truth (frozen baseline
-+ our model + harness, one file — see
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for why, and the concept →
-line-range map). `torch_transformer_benchmark.py` is the generated,
-self-contained drop-in a grader would run.
+See [How this is graded](#how-this-is-graded) for `torch_transformer_benchmark.py`
+vs `benchmark.py`, and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+concept → `benchmark.py` line-range map.
 
 ---
 
