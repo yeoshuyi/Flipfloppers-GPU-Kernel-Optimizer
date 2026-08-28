@@ -35,4 +35,4 @@ apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
     python3 /work/benchmark.py $ARGS --benchmark-on-failure 2>&1 || true
 
 J="${SLURM_JOB_ID}"
-cp "/scratch/techjam2/runs/${J}.out" "/scratch/work/results/row14_extreme_run${J}.log" 2>/dev/null || true
+cp "/scratch/techjam2/runs/${J}.out" "/scratch/work/results/logs/row14_extreme_run${J}.log" 2>/dev/null || true

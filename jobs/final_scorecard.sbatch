@@ -15,4 +15,4 @@ apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
     python3 /work/probes/final_scorecard.py
 
 J="${SLURM_JOB_ID}"
-cp "/scratch/techjam2/runs/${J}.out" "/scratch/work/results/final_scorecard_run${J}.log" 2>/dev/null || true
+cp "/scratch/techjam2/runs/${J}.out" "/scratch/work/results/logs/final_scorecard_run${J}.log" 2>/dev/null || true
