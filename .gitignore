@@ -14,3 +14,23 @@ _before_benchmark.py
 # cutlass_library build). Third-party source, not part of this repo.
 # probes/g4_6_cutlass_stage0.py's header documents how to recreate it.
 .cutlass/
+
+# --- submission packaging (added 2026-08-28) ---
+/dist/
+*.tar.gz
+
+# local agent config override
+.claude/settings.local.json
+
+# profiler / build artefacts (belt-and-suspenders; none tracked today)
+*.ncu-rep
+*.nsys-rep
+*.cubin
+*.o
+*.so
+
+# misc
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
