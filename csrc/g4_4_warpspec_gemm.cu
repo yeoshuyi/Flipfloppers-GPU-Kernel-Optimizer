@@ -66,6 +66,18 @@
 //        2 stages = 64 KB OK | 3 stages = 96 KB OK | 4 stages = 128 KB NO
 //   epilogue staging = BM*BN*2 = 32 KB, aliased onto the pipeline pages.
 //   -> smem = max(NSTAGE*32 KB, 32 KB), never more than the pipeline needs.
+//
+// REGISTER BUDGET / OCCUPANCY:
+//   Consumer warps (the ones doing mma) hold the FP32 accumulator: BM*BN fp32
+//   / (NCONS*32) threads. cons 2x2 (4 warps, 128 thr) -> 128*128*4/128 = 512 B
+//     = 128 b32 regs/thread of accumulator alone -> spills unless BN is split;
+//   cons 1x4 (wtile 128x32) -> 128*32*4/128 = 128 B = 32 regs/thread, no spill
+//     (this is why the shipped cfg 58/73 use the 128x32 warp tile).
+//   + ldmatrix fragments + the cp.async ring pointers.
+//   Occupancy is smem-bound before it is register-bound: 3 stages = 96 KB ->
+//   1 CTA/SM (2 CTAs need 192 KB). Warp specialisation buys latency hiding
+//   *within* the CTA via the FULL/EMPTY barrier decoupling, since there is no
+//   2nd CTA to hide behind. Per-config regs + the tile sweep: PROGRESS 37/41/45.
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>

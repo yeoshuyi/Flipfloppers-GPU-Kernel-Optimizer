@@ -16,7 +16,19 @@
 //   of its token (>= shipped fp16-flash accuracy; verified g5_5).
 // LN : 2-thread cooperative reduction (__shfl_xor).  residual/GELU : thread-local.
 //
-// 3 x [SEQ][D] fp16 shared buffers (96 KB).
+// SHARED-MEMORY LAYOUT  (Ada usable 101376 B/CTA)
+//   3 x [SEQ][D] fp16 = 3 x 128 x 128 x 2 = 98304 B (96 KB). Reused across
+//   layers as qkv-staging / K-cache / V-cache. Leaves ~3 KB for LN scratch.
+//
+// REGISTER PRESSURE / OCCUPANCY  -- this is why the kernel is parity, not a win
+//   residual xr[64] fp32 = 64 regs/thread held live for the ENTIRE 4-layer
+//   forward, + 2 heads x online-softmax accumulators + mma fragments. High, but
+//   shared is the binding limit: 96 KB/CTA -> exactly 1 block/SM (a 2nd needs
+//   192 KB). 1 CTA/SM at 8 warps = 25% warp occupancy and ZERO cross-CTA
+//   latency hiding -- the fused-everything design trades DRAM traffic (-38.9%
+//   of row 6) for an occupancy floor it cannot pay back on Ada. Measured x0.74
+//   vs the un-fused pipeline (docs/PROGRESS.md step 49). Kept as the reference
+//   implementation; not wired into benchmark.py.
 
 #include <cuda_fp16.h>
 #include <math.h>

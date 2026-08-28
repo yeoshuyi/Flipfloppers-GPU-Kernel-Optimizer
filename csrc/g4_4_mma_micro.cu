@@ -1,4 +1,6 @@
 // G4.4 Stage 0a -- smallest possible mma.sync / ldmatrix micro-unit-test.
+// Tiling / smem / register documentation for the GEMM this unblocks lives in
+// csrc/g4_4_mma_gemm.cu; this file only pins the fragment addressing it relies on.
 //
 // PURPOSE: this repo contains no .cu file, no mma.sync and no ldmatrix
 // anywhere (nor does the installed torch's headers), so there is no local

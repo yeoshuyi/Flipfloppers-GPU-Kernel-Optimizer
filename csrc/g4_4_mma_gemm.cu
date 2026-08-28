@@ -41,6 +41,21 @@
 // to an FP32 carry at each chunk boundary. SPLIT=0 disables it (pure FP16 over
 // the whole K). This is a WITHIN-BLOCK split, not a grid split -- no partials
 // reach HBM and no extra kernel launch.
+//
+// THREAD / WARP TILING
+//   256 threads = 8 warps, laid out 2x4 over the CTA tile (warp tile 32x32).
+//   Per k-step each warp issues (32/16)x(32/8) = 2x4 = 8 mma.sync.m16n8k16.
+//   K=512 / BK=64 -> 8 outer k-iterations, 4 mma k-steps each.
+//
+// REGISTER PRESSURE / OCCUPANCY
+//   Accumulator: BM*BN fp16 / 256 thr = 16 b32 regs/thread (an FP32 accumulator
+//   would be 32; the whole point of the FP16-accumulate tier). +32 for the FP32
+//   carry when SPLIT>0. Add ldmatrix fragment regs + the cp.async double-buffer
+//   pointers. Shared caps occupancy first: A-tile 3 stages = 72 KB -> 1 CTA/SM
+//   (2nd CTA needs 144 KB > 101376 B); B-tile 7 stages = 84 KB -> also 1 CTA/SM.
+//   So this kernel runs at 1 block/SM regardless of the register count -- no
+//   latency hiding across CTAs, only within the cp.async pipeline. Real
+//   -Xptxas -v numbers and the per-config sweep: docs/PROGRESS.md steps 34-37.
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>

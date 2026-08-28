@@ -1,5 +1,7 @@
 // G4.5 -- standalone single-kernel translation unit for SASS-level work on
 // G4.4's winning configuration.
+// Warp tiling / shared-memory layout / register budget: see csrc/g4_4_mma_gemm.cu
+// (this TU includes and explicitly instantiates that kernel's cfg[11]).
 //
 // docs/PROGRESS.md step 37 measured cfg[11] (accF16 BM128 BN128 BK64 stg2
 // split0) as the fastest FP16-accumulate instantiation at the primary shape
