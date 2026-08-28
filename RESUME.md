@@ -9,14 +9,22 @@ Doc while acting; commit per unit. `tools/verify_baseline.py` + `tools/sync_entr
 
 - **Iteration:** 9 — **G6.9: offline cuBLASLt algo-selection investigation** for the 14 official causal shapes.
   4-phase protocol (owner-specified): inventory → isolated search → e2e lookup → final validation.
-- **Phase:** 2 — isolated search done (g6_9 run164). Now Phase 2 step 5 (artefact rejection) job in flight.
-- **g6_9 (run164):** only 2 of 27 sigs cleared >2% isolated at mask=2 (policy-compliant):
-  `qkv M8192 d128` **+21.3%** (idx0 14.5us → best[5] 11.4us; algo id=21 tile=15 stages=12 splitk=1),
-  `qkv M8192 d1024` +2.9% (marginal). All small-M sigs +0.00%. ffn_out tf32 / proj all <1.6%.
-- **SUSPICION:** step 43 census showed PyTorch `F.linear` for qkv M8192 d128 already runs
-  `ampere_fp16_s16816gemm_fp16_128x64` ~11.5us == our "best", NOT idx0's 14.5us. If so, idx0 is a
-  strawman and the +21% doesn't exist end-to-end. g6_9b times F.linear vs run(idx0) vs run(best) +
-  kernel identity to decide.
+- **Phase:** 2 done + step 5 done (g6_9b run165). Phase 3 e2e probe in flight (g6_9c).
+- **g6_9 (run164):** of 27 sigs, only qkv M8192 d128 (+21% vs idx0) and qkv M8192 d1024 (+2.9%)
+  cleared >2%. All small-M sigs +0.00% (G6.6's small-M win does NOT reproduce at K=128).
+- **g6_9b (run165) — artefact rejection:**
+  - qkv M8192 **d1024**: F.linear == cuBLASLt-best (325.9us, identical `ampere_s1688gemm_128x128`
+    kernel). idx0's 336us is a strawman. **NO opportunity — confirmed artefact.**
+  - qkv M8192 **d128**: partial strawman. F.linear 12.38us (`ampere_s16816gemm_128x64`) is between
+    idx0 (14.52us, unused) and cuBLASLt-best 11.56us (`cutlass_80 64x64_32x6`). Real delta = ~3%
+    kernel time (11.89→11.50us), bit-identical (`max|diff|=0`). Over 4 layers ≈ 1.6us / ~0.75%
+    whole-model on shapes 1/9/10/11.
+- **In-flight:** g6_9c — `jobs/g6_9c_e2e.sbatch` → `results/g6_9c_lt_e2e_run<J>.log`. Static algo
+  captured once outside timing; matched BEFORE/AFTER on `_optimized_forward_causal` (row 1) with qkv
+  monkeypatched to `ext.run(best)`, + accuracy delta.
+- **Next / verdict:** if e2e delta ≥ ~0.7% clean, no accuracy move → "promising but insufficient
+  evidence" (0.75% on 4/14, version-fragile algo blob). If < ~0.4% / noise → "reject as marginal".
+  Do NOT modify benchmark.py either way without a clear ship signal.
 - **benchmark.py state:** UNCHANGED from step-42 (run142). Do not modify the runtime model unless a
   candidate survives all 4 phases.
 
