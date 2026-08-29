@@ -430,7 +430,7 @@ _CHUNK_BYTES_FIXED = int(os.environ.get("CHUNK_BYTES_FIXED", "134217728"))
 _CHUNK_MIN_SEQ = int(os.environ.get("CHUNK_MIN_SEQ", "2048"))
 _CHUNK_Q = int(os.environ.get("CHUNK_Q", "0"))
 _CHUNK_RESERVE_GB = float(os.environ.get("CHUNK_RESERVE_GB", "3.0"))
-_CHUNK_COMPILE = os.environ.get("CHUNK_COMPILE", "0") == "1"
+_CHUNK_COMPILE = os.environ.get("CHUNK_COMPILE", "1") != "0"
 _CHUNK_FLASH = os.environ.get("CHUNK_FLASH", "1") == "1"
 
 

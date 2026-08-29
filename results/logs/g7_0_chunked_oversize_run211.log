@@ -1,0 +1,95 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  device NVIDIA GeForce RTX 4090
+VRAM free 23.13 / 23.52 GB  alloc_conf=expandable_segments:True
+gate: CHUNK_ACT_ELEMS=0 (0 = byte model)  CHUNK_OOM_FRAC=0.8  bytes = 128MiB + tok*(28*d + 8*ffn)
+CHUNK_MIN_SEQ=2048  CHUNK_Q=0  CHUNK_RESERVE_GB=3.0
+
+== 1. prefix_causal_attn (split + LSE merge) ==
+    torch.float32  chunked vs full causal: max|.| = 1.67e-06   ok
+    torch.float16  chunked vs full causal: max|.| = 1.94e-03   ok
+  PASS
+
+== 2. gate ==
+  budget 18.81 GB (80% of total)   fast-skip tokens*max(d,ffn) < 557,396,787
+  gate False for all 13 official rows; tightest margin 3.35x at row 6   PASS
+  row14 est=110.0 GB (5.85x over budget) -> chunk=True   PASS
+  ffn-heavy d=128 ffn=32768: est=253.5 GB  new_gate=True old_B*S*d_proxy=False   PASS
+  boundary (d=ffn=1024): flips at 544,333 tokens; est just below=18.813 GB, at=18.813 GB, budget=18.813 GB   PASS
+[g7.0] chunked causal  B=2 S=4096 d=128 H=4 ffn=128 store=float16  chunk_q=1024 n_chunks=4  kv_cache=0.00GB free=nanGB  compile=True
+[g7.0] chunked causal  B=2 S=4096 d=128 H=4 ffn=128 store=float16  chunk_q=1024 n_chunks=4  kv_cache=0.00GB free=nanGB  compile=True
+  forward() auto-route vs direct _chunked_forward_causal: max|.| = 0.00e+00   PASS
+
+== 3. equivalence (B=2 S=4096 d=256 H=4 L=2 causal) ==
+[g7.0] chunked causal  B=2 S=4096 d=256 H=4 ffn=256 store=float16  chunk_q=512 n_chunks=8  kv_cache=0.01GB free=nanGB  compile=True
+[g7.0] chunked causal  B=2 S=4096 d=256 H=4 ffn=256 store=float32  chunk_q=512 n_chunks=8  kv_cache=0.02GB free=nanGB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  chunked(fp16) vs baseline: max_abs=4.243e-03 max_rel=2.832e+02 failed=0/2097152  PASS
+  chunked(fp32) vs baseline: max_abs=5.203e-04 max_rel=4.296e+02 failed=0/2097152  PASS
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  chunked(fp16) vs shipped  : max_abs=4.175e-03 max_rel=6.237e+02 failed=0/2097152  PASS
+
+== 4. oversize_capability ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.74GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  row14         B*S*d=3,276,800,000  latency= 9952.6 ms (all ['9952', '9953', '9953'])  peak=19.55 GB  finite=True shape_ok=True  PASS
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.78GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.78GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+  B8_S200k      B*S*d=1,638,400,000  latency= 9326.4 ms (all ['9326', '9326', '9328'])  peak=10.39 GB  finite=True shape_ok=True  PASS
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+W0829 07:36:43.484000 257775 torch/_dynamo/convert_frame.py:1994] [1/8] torch._dynamo hit config.recompile_limit (8)
+W0829 07:36:43.484000 257775 torch/_dynamo/convert_frame.py:1994] [1/8]    function: 'post' (/work/benchmark.py:1520)
+W0829 07:36:43.484000 257775 torch/_dynamo/convert_frame.py:1994] [1/8]    last reason: 1/7: tensor 'xc' size mismatch at index 0. expected 8, actual 64
+W0829 07:36:43.484000 257775 torch/_dynamo/convert_frame.py:1994] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0829 07:36:43.484000 257775 torch/_dynamo/convert_frame.py:1994] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W0829 07:36:43.678000 257775 torch/_dynamo/convert_frame.py:1994] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0829 07:36:43.678000 257775 torch/_dynamo/convert_frame.py:1994] [0/8]    function: 'pre' (/work/benchmark.py:1510)
+W0829 07:36:43.678000 257775 torch/_dynamo/convert_frame.py:1994] [0/8]    last reason: 0/7: tensor 'xc' size mismatch at index 1. expected 1024, actual 848
+W0829 07:36:43.678000 257775 torch/_dynamo/convert_frame.py:1994] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0829 07:36:43.678000 257775 torch/_dynamo/convert_frame.py:1994] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  B64_S50k      B*S*d=3,276,800,000  latency= 5725.3 ms (all ['5725', '5725', '5726'])  peak=20.18 GB  finite=True shape_ok=True  PASS
+  -- CHUNK_COMPILE A/B on row14 --
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  row14  CHUNK_COMPILE=0  10098.1 ms   CHUNK_COMPILE=1   9952.0 ms   delta +1.4%
+
+== 5. row14_accuracy ==
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=13  kv_cache=1.53GB free=21.34GB  compile=True
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=19.76GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  B=4: fp16-store vs fp32-store chunked  max_abs=7.847e-03 max_rel=5.806e+04 mean_abs=3.410e-04 failed=0/409600000  PASS
+
+== 6. row14_golden ==
+  reference: commit 741f5fd job 202  (8192 samples over 3,276,800,000 elements)
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+  sampled values vs golden: max_abs=3.906e-03 max_rel=5.060e-01 failed=0/8192  PASS
+  per-batch sum|y| drift: worst relative 1.348e-07 (gate 1e-3)  PASS
+  per-batch signed sums: worst absolute drift 2.777e+00 over 32 batches (diagnostic)
+  max|y| 6.320312 vs golden 6.320312   finite=True
+  perf vs pin: 9685.4 ms (-25.6% vs 13018.2 ms pinned)   peak 19.55 GB (pinned 20.8 GB)
+
+== SUMMARY ==
+  gate                   PASS
+  equivalence            PASS
+  oversize_capability    PASS
+  row14_accuracy         PASS
+  row14_golden           PASS
+
+OVERALL: PASS
+ROW14_SUMMARY row=14 B=32 S=100000 d=1024 H=16 L=2 ffn=1024 baseline=OOM(FP32_[B,H,S,S]_scores) shipped_ms=9952.6 peak_gb=19.55 acc_b=4 acc_max_abs=7.847e-03 acc_failed=0 golden=PASS result=supported
