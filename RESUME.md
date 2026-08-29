@@ -53,6 +53,8 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 | **G7.1 gate in bytes + Row-14 golden** | ✅ DONE — `741f5fd`, `8604192`, jobs 200/201/202 calibrate+pin, **job 203 g7_0 OVERALL PASS**, **job 204 sweep 13/13 byte-identical to run168, no row slower** |
 | Official gate scores the merged drop-in | ✅ DONE — job 216: 13/13 PASS through `torch_transformer_benchmark.py`, `max_abs` byte-identical to run168, largest latency move +0.52%; probe check 7 (splice identity) PASS in job 217. The freshly-pulled official harness was verified **byte-identical** to `~/torch_transformer_benchmark.py` (full-file diff, 747 lines) — no frozen-half change was needed. |
 | README refreshed | ✅ DONE — Row 14 as OOM → 9952.6 ms / 19.55 GB, shape-arbitration mermaid figure, Row-14 measurement/accuracy methodology, 13-row table refreshed from run216 |
+| Row-14 accuracy at the FULL B=32 shape | ✅ DONE — probe check 8, job 220/223: `failed 0/3,276,800,000`, max_abs 5.805e-03. FP32 reference assembled from 8 exact B=4 batch slices (a transformer forward is batch-independent). **The input must be held on the host** — the seeded generator cannot be replayed for a slice (it fills a strided view); job 219 is the kept FAIL showing that mistake (mean_abs 1.122 = 2/sqrt(pi), i.e. independent samples). |
+| **benchmark.py DELETED** | ✅ DONE — `torch_transformer_benchmark.py` is now the single source of truth. Edit ONLY inside the `>>> BEGIN user ... >>>` sentinels. Guards: `verify_baseline` (20 frozen symbols vs the judges' canonical, AST), `sync_entrypoint --check` (file == canonical + sentinel blocks; the splice is self-hosting), and probe check 7 (same invariant inside the container). Verified jobs 221 (sweep 13/13, byte-identical to run168) and 223 (probe OVERALL PASS). |
 | Row-14 *optimization* (this arc) | ✅ **DONE** — `63a9934` (A2 flash, -21.0%), `68b0e6c` (D2 LN casts, -2.0%), `ac0012f` (compile default, -1.4%); jobs 205/207 profile, 208 flash probe, 209/210/211 gates, 213 re-profile, 214 sweep |
 
 ## Code anchors (`benchmark.py`)
@@ -101,17 +103,17 @@ hot copy) → out_proj `F.linear` → residual → `h1.float()`→`F.layer_norm`
 
 ```bash
 python3 tools/sync_entrypoint.py && python3 tools/verify_baseline.py
-python3 tools/check_validity.py benchmark.py
+python3 tools/check_validity.py torch_transformer_benchmark.py
 sbatch infra/slurm/g7_0_chunked_oversize.sbatch      # OVERALL: PASS
 #   check 1 prefix-causal vs full attn ; check 3 vs frozen baseline failed==0 ;
 #   check 4 Row14 + (8,200000,1024) + (64,50000,1024): finite, peak <= ~22 GB, latency ;
 #   check 5 Row14 B=4 fp16-store vs fp32-store: failed==0, max_abs not worse than ~8.1e-3 ;
 #   check 6 Row14 B=32 vs experiments/g7_0_row14_golden.json: failed==0 AND
 #           per-batch sum|y| drift <= 1e-3  <-- THE regression gate for this arc
-#   check 7 splice identity: the generated drop-in has the same _CHUNK_* knobs,
-#           the same gate routing and the same _chunked_forward_causal bytecode
-#           as benchmark.py (the sweep cannot reach row 14, so nothing else
-#           covers the splice on the chunked path)
+#   check 7 harness integrity: module under test is the shipped file, both
+#           sentinel pairs present+ordered, all 20 frozen scoring symbols
+#           defined OUTSIDE the editable region
+#   check 8 Row14 accuracy at the FULL B=32 shape: failed==0 / 3.28e9
 sbatch infra/slurm/official_causal_sweep.sbatch      # 13/13 PASS, max_abs BYTE-IDENTICAL to
 #   results/logs/official_causal_sweep_run168.log  (== run199/204/214/216)
 #   NOTE: as of job 216 this scores the GENERATED torch_transformer_benchmark.py
@@ -141,7 +143,7 @@ OOM fallback. `g7_1_gate_calibration.sbatch` re-validates ≥1.25x headroom on
 
 ## Constraints
 
-- `benchmark.py` edits **additive only** — no frozen-symbol lines
+- `torch_transformer_benchmark.py` edits **additive only, inside the sentinels** — no frozen-symbol lines
   (`verify_baseline` AST-checks 20 names). Regen `torch_transformer_benchmark.py`
   after every edit. `check_validity` bans `attn_mask=<not None>` (raw flash op
   has no such kwarg — fine), `data_ptr` outside `_mask_is_all_ones`,

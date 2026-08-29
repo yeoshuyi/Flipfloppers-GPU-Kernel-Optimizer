@@ -30,7 +30,7 @@ run() {
           export TMPDIR=/work/.ext_build
           export TORCH_EXT_BUILD_DIR=/work/.ext_build
           mkdir -p \"\$TMPDIR\"
-          python3 /work/benchmark.py $* " || true
+          python3 /work/torch_transformer_benchmark.py $* " || true
     echo
 }
 

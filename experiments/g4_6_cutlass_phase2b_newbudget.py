@@ -22,7 +22,7 @@ import torch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 
 CUTLASS = os.path.join(ROOT, ".cutlass")
 SRC_CPP = os.path.join(ROOT, "csrc", "g4_6_cutlass_gemm.cpp")

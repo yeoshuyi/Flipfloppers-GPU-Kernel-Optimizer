@@ -33,7 +33,7 @@
 ## Results
 Evaluated by running the generated judge drop-in `torch_transformer_benchmark.py` — the same file a grader executes — on the fully-causal test shapes at `atol = 0.002`, `rtol = 0.02`. All 13 scorable test shapes pass the accuracy gate. Row 14 (`S = 100000`) cannot be scored by the harness at all — its FP32 reference OOMs a 24 GB card before our model is ever called — but the shipped model still executes it.
 
->**Row 14 has no "before".** It physically OOMs the GPU on the test harness (a single `[32, 100000, 1024]` FP32 activation is 12.2 GiB, and the baseline's `[B, H, S, S]` scores are ~9 TB), so the reference dies first and the harness emits no number to speed up. The shipped model runs it anyway on one 24 GB RTX 4090 via **sequence chunking** (`benchmark.py` → `_chunked_forward_causal`): streaming query chunks against an incrementally-filled FP16 K/V cache, so no full-`S` activation and no `[B, H, S, S]` score tile is ever materialised. Measured in `experiments/g7_0_chunked_oversize.py` (job 211): **9.95 s**, **19.55 GB peak** — down from 13.0 s / 20.8 GB when the capability first landed. Any causal shape above the memory limit routes through the same path.
+>**Row 14 has no "before".** It physically OOMs the GPU on the test harness (a single `[32, 100000, 1024]` FP32 activation is 12.2 GiB, and the baseline's `[B, H, S, S]` scores are ~9 TB), so the reference dies first and the harness emits no number to speed up. The shipped model runs it anyway on one 24 GB RTX 4090 via **sequence chunking** (`_chunked_forward_causal`): streaming query chunks against an incrementally-filled FP16 K/V cache, so no full-`S` activation and no `[B, H, S, S]` score tile is ever materialised. Measured in `experiments/g7_0_chunked_oversize.py` (job 211): **9.95 s**, **19.55 GB peak** — down from 13.0 s / 20.8 GB when the capability first landed. Any causal shape above the memory limit routes through the same path.
 
 ![per-shape speedup](assets/results_speedup.svg)
 
@@ -55,7 +55,7 @@ Evaluated by running the generated judge drop-in `torch_transformer_benchmark.py
 | 11 | 64 | 128 | 16 | 128 | 4.3858 ms | **0.2857 ms** | 15.35× | 0.00137 |
 | 12 | 64 | 128 | 4 | 32 | 1.0363 ms | **0.1229 ms** | 8.43× | 0.00141 |
 | 13 | 64 | 128 | 4 | 1024 | 70.153 ms | **2.2108 ms** | 31.73× | 0.00137 |
-| **14** | 32 | 1024 | 16 | 100000 | **OOM** | **9952.6 ms** | n/a | 0.00785 † |
+| **14** | 32 | 1024 | 16 | 100000 | **OOM** | **9952.6 ms** | n/a | 0.00581 † |
 
 All 13 scorable rows from one run of the generated judge drop-in
 (`results/logs/official_causal_sweep_run216.log`, `python3
@@ -64,10 +64,12 @@ torch_transformer_benchmark.py --causal ...`). `max_abs` is **byte-identical to
 row moved more than `+0.52%` in latency.
 
 † Row 14 is **not** a harness result. Its baseline cell is `OOM` because the
-FP32 reference cannot be constructed at all, so there is no speedup to quote;
-`9952.6 ms` / `19.55 GB peak` and the `max_abs` are from
-`experiments/g7_0_chunked_oversize.py` (job 211) against an FP32-store chunked
-reference at `B = 4` — see [How Row 14 is benchmarked and
+FP32 reference cannot be constructed at all — the harness dies in
+`generate_random_case` at `x * input_scale`, before either model runs
+(`results/logs/row14_extreme_run172.log`) — so there is no speedup to quote.
+`9952.6 ms` / `19.55 GB peak` are from `experiments/g7_0_chunked_oversize.py`
+(job 211); the `max_abs` is the **full `B = 32`** figure over all 3.28e9
+elements, `failed = 0` (job 220) — see [How Row 14 is benchmarked and
 accuracy-checked](#how-row-14-is-benchmarked-and-accuracy-checked).
 
 </details>
@@ -97,15 +99,24 @@ the own-benchmark credible — the same code that produces the Row-14 number is
 shown to agree with the official baseline wherever the official baseline is
 runnable at all.
 
-**3 — the only precision spend is FP16 storage, and it is measured against a
-higher-precision twin.** At Row-14 dimensions the residual and K/V cache are
-held in FP16 because FP32 would not fit. To price that, the driver runs the same
-chunked kernel a second time with `store=torch.float32` — residual, K/V and
-folded weights all widened — and compares: `failed = 0 / 4.096e8`,
-`max_abs = 7.847e-03`, `mean_abs = 3.410e-04`. This runs at **`B = 4`**, not
-`B = 32`, because the FP32-store reference is itself too large at full batch;
-the FP16-vs-FP32 ratio is a per-element property, so the reduced batch measures
-it faithfully, but the number is honestly a `B = 4` measurement.
+**3 — the only precision spend is FP16 storage, and it is priced at the full
+shape.** At Row-14 dimensions the residual and K/V cache are held in FP16
+because FP32 would not fit. To price that, the driver runs the same chunked
+kernel with `store=torch.float32` — residual, K/V and folded weights all
+widened — and compares. An FP32-store reference does not fit at `B = 32`, but a
+transformer forward is **completely independent across the batch** (attention is
+within-sequence, LayerNorm and the FFN are per-token, and the K/V buffers are
+per-`b`), so the reference is assembled from 8 exact `B = 4` slices and compared
+slice-by-slice against the one true `B = 32` forward:
+
+> `failed = 0 / 3,276,800,000` · `max_abs = 5.805e-03` ·
+> `mean_abs = 2.629e-04` — **every element of the real shape**, on the official
+> `abs < 0.002 OR rel < 0.02` criterion (check 8, job 220).
+
+The reference arm also runs at a *different* `chunk_q` than the `B = 32` arm
+(the adaptive sizer picks 8192 at `B = 4` against 2048 at `B = 32`). That is
+deliberate: since chunking is exact by leg 1, agreement across two different
+chunkings is stronger evidence than agreement under one.
 
 > **The answer is also pinned.** `experiments/g7_0_row14_golden.json` is a
 > committed fingerprint of the Row-14 output at the true `B = 32` shape, taken
@@ -154,7 +165,7 @@ it faithfully, but the number is honestly a `B = 4` measurement.
 The artefact is a **dispatcher, not one kernel**. Every forward is arbitrated on
 shape alone — no input values are inspected — and each branch ends in a
 different set of optimizations, because each branch has a different binding
-wall. The gates below are the real conditions in `benchmark.py`'s `forward()`.
+wall. The gates below are the real conditions in `UserOptimizedTransformer.forward()`.
 
 ```mermaid
 flowchart TD
@@ -322,7 +333,7 @@ flowchart TD
     P["Profiler subagent<br/>(haiku, maxTurns 8, tools-limited)<br/>25k-100k tokens of ncu -> 20-line JSON"]
     P --> D["Read DIAGNOSIS.md<br/>map profiled fact -> lever"]
     D --> C["Pick ONE candidate from CATALOGUE.md<br/>cite the profiled fact"]
-    C --> I["Implement one diff in benchmark.py<br/>behind an eager gate + exact fallback"]
+    C --> I["Implement one diff in the model<br/>behind an eager gate + exact fallback"]
     I --> V["tools/check_validity.py<br/>static gate, free, no GPU"]
     V -->|fail| I
     V -->|pass| S["Smoke: 1-2 shapes"]
@@ -382,14 +393,18 @@ zero budget**, and is accepted whenever it provides a performance gain.
 
 ### Run
 
-> The evaluation runs the **generated judge drop-in**
-> `torch_transformer_benchmark.py` — the official harness with our
-> `UserOptimizedTransformer` spliced in place of the stub — so what is scored is
-> exactly what a grader executes. `tools/sync_entrypoint.py` builds it from
-> `benchmark.py`, and both `run_eval.sh` and the Slurm sweep refuse to run
-> against a stale splice (`sync_entrypoint.py --check`). The harness half is
-> byte-for-byte the reference; `tools/verify_baseline.py` asserts that over 20
-> frozen symbols on every build.
+> The evaluation runs `torch_transformer_benchmark.py` — the official harness
+> with our `UserOptimizedTransformer` in place of the stub. **It is the single
+> source of truth**; there is no separate development copy to drift from it, so
+> what is scored is exactly what a grader executes.
+>
+> Our contribution is fenced by `>>> BEGIN user ... >>>` sentinels and
+> everything outside them is byte-for-byte the reference harness. Two
+> independent guards hold that: `tools/verify_baseline.py` diffs all 20 frozen
+> symbols against the judges' own script at AST level, and
+> `tools/sync_entrypoint.py --check` asserts the file is still exactly
+> *(canonical harness + our sentinel blocks)*. `run_eval.sh` and the Slurm
+> sweep both refuse to run if either fails.
 
 ```bash
 # 1. Build the reproducible image  (-> /scratch/kernel.sif; ~10 min)
@@ -398,7 +413,6 @@ bash infra/apptainer/build.sh
 # 2. Run the official evaluation  (rows 1-13; row 14 is unscorable by the harness)
 ./run_eval.sh                       # or: make eval
 #    per-row logs + a summary table land in results/logs/
-#    override the entry point:      ENTRY=benchmark.py ./run_eval.sh
 #    + row-14 chunked-capability probe:  RUN_ROW14=1 ./run_eval.sh
 
 # 3. Regenerate the README figures
@@ -408,8 +422,9 @@ make figures                        # tools/make_figures.py -> assets/*.svg
 make check                          # verify_baseline + sync_entrypoint --check + check_validity
 bash infra/verify_submission.sh dist/techjam2_*.tar.gz    # after `make package`
 
-# 5. Regenerate the standalone judge drop-in from benchmark.py
-make entrypoint                     # -> torch_transformer_benchmark.py
+# 5. Re-splice our model onto a freshly published canonical harness
+make entrypoint                     # self-hosting; only needed if the judges
+                                    # update torch_transformer_benchmark.py
 ```
 
 ### Tools, Libraries, Datasets
@@ -423,8 +438,9 @@ make entrypoint                     # -> torch_transformer_benchmark.py
 
 ### Repository
 ```
-├── benchmark.py                     Entry point + source of truth
-├── torch_transformer_benchmark.py   Generated judge drop-in (tools/sync_entrypoint.py)
+├── torch_transformer_benchmark.py   THE artefact — official harness + our model,
+│                                    single source of truth. Edit only inside the
+│                                    `>>> BEGIN user ... >>>` sentinels.
 ├── run_eval.sh · Makefile           Standardized eval
 ├── csrc/                            Hand-written CUDA / C++ / inline-PTX (csrc/README.md — 3 files build at eval)
 ├── tools/                           verify_baseline · sync_entrypoint · check_validity · archive · make_figures · parse_ncu · slurm
@@ -456,10 +472,11 @@ make entrypoint                     # -> torch_transformer_benchmark.py
   number. The **shipped model does run it** on one 24 GB card via sequence
   chunking (`_chunked_forward_causal`, **9.95 s / 19.55 GB peak**, down from
   13.0 s / 20.8 GB; `experiments/g7_0_chunked_oversize.py`). Its accuracy is
-  therefore measured against our own FP32-store chunked reference at `B = 4`,
-  not against the frozen baseline at `B = 32` — a chunked *baseline* for a
-  genuinely scored comparison, or multi-GPU sharding for speed, is still future
-  work.
+  therefore measured against our own FP32-store chunked reference — at the full
+  `B = 32` shape (`failed = 0 / 3.28e9`), but still *our* reference rather than
+  the frozen baseline, which cannot run at this size at all. A chunked
+  *baseline* for a genuinely scored comparison, or multi-GPU sharding for speed,
+  is still future work.
 - **Ada-specific.** The precision choices, tile sizes, and the "no megakernel"
   conclusion are calibrated to `sm_89`; a Hopper port would reopen TMA +
   `wgmma` + a persistent fused kernel and change the answer.

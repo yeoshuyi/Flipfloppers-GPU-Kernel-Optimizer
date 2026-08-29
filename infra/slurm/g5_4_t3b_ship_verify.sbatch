@@ -26,7 +26,7 @@ mkdir -p /scratch/work/.ext_build
 export TMPDIR=/work/.ext_build
 export TORCH_EXT_BUILD_DIR=/work/.ext_build
 cd /scratch/work
-S=/work/benchmark.py
+S=/work/torch_transformer_benchmark.py
 
 run() {
     local tag="$1"; shift

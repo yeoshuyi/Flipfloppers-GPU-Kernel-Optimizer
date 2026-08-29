@@ -36,7 +36,7 @@ run() {
 }
 
 for pass in BEFORE AFTER; do
-  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/benchmark.py; T=40; fi
+  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/torch_transformer_benchmark.py; T=40; fi
   echo "##################### PASS: $pass ($S, T=$T) #####################"
   run "$pass off_row6_tok1.28M"   "$S" --accuracy-trials "$T" --causal --batch-size 10000 --d-model 128  --heads 4 --seq-len 128  --layers 4 --ffn-dim 128
   run "$pass off_row13_tok65536"  "$S" --accuracy-trials "$T" --causal --batch-size 64    --d-model 128  --heads 4 --seq-len 1024 --layers 4 --ffn-dim 128

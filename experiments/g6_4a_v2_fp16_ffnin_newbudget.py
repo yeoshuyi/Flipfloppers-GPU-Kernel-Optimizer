@@ -46,7 +46,7 @@ import torch.nn.functional as F
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 
 NEW_ATOL = 0.002
 NEW_RTOL = 0.02

@@ -14,7 +14,7 @@ apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
     ncu --metrics "$METRICS" --csv --target-processes all --launch-count 3 \
-    python3 /work/benchmark.py --batch-size 8 --seq-len 128 \
+    python3 /work/torch_transformer_benchmark.py --batch-size 8 --seq-len 128 \
         --accuracy-trials 1 --warmup 1 --repeats 1 --benchmark-rounds 1 \
     2>/dev/null \
     | grep -n -A 3 '"ID"' | head -20

@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Guard against drift between our benchmark.py's FROZEN half (the reference model
-+ the scoring harness) and the judges' canonical baseline script.
+Guard against drift between our shipped torch_transformer_benchmark.py's FROZEN
+half (the reference model + the scoring harness) and the judges' canonical
+baseline script.
 
-The judges publish `torch_transformer_benchmark.py`; our benchmark.py must carry
-a byte-equivalent copy of everything except `UserOptimizedTransformer` and its
-module-level helpers. If the judges update the harness (as they did 2026-08-27,
+Our file IS the judges' script with `UserOptimizedTransformer` and its
+module-level helpers spliced in, so everything else must stay byte-equivalent.
+Since benchmark.py was removed and the shipped file is edited directly, this is
+the guard that makes that safe. If the judges update the harness (as they did 2026-08-27,
 loosening atol/rtol 0.001/0.01 -> 0.002/0.02), this catches it before a ship.
 
     python3 tools/verify_baseline.py
-    python3 tools/verify_baseline.py --ours benchmark.py --canonical ~/torch_transformer_benchmark.py
+    python3 tools/verify_baseline.py --ours torch_transformer_benchmark.py \
+        --canonical ~/torch_transformer_benchmark.py
 
 Exit 1 on any mismatch. Comparison is AST-level (ast.dump), so comments,
 formatting, blank lines and line numbers do not matter -- only semantics.
@@ -78,7 +81,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ours", default=os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "benchmark.py"))
+        "torch_transformer_benchmark.py"))
     ap.add_argument("--canonical", default=os.path.expanduser(
         "~/torch_transformer_benchmark.py"))
     a = ap.parse_args()
@@ -121,7 +124,9 @@ def main():
         print(f"\n  ours:      {a.ours}")
         print(f"  canonical: {a.canonical}")
         print("  If the judges changed the harness, port the change into "
-              "benchmark.py and re-run tools/sync_entrypoint.py.")
+              "torch_transformer_benchmark.py (inside the >>> BEGIN user "
+              "sentinels only), or re-run tools/sync_entrypoint.py to "
+              "re-splice onto the new canonical.")
         return 1
 
     print(f"VERIFY BASELINE: pass -- {len(FROZEN)} frozen symbols match "

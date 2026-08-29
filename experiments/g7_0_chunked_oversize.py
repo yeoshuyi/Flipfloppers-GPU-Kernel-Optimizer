@@ -35,11 +35,12 @@ Checks (a compact report, PASS/FAIL per check + OVERALL):
      reference assembled from exact B=4 batch slices (a transformer forward is
      batch-independent), so all 3.28e9 elements are checked, not check 5's
      reduced-batch proxy.
-  7. splice_identity      -- the GENERATED torch_transformer_benchmark.py (the
-     file the judges run, and now the file the official sweep scores) carries
-     the same gate, the same _CHUNK_* knobs and the same chunked kernel
-     bytecode as benchmark.py. The sweep cannot reach Row 14, so this is the
-     only check that covers the splice on the chunked path.
+  7. harness_integrity    -- torch_transformer_benchmark.py is now the single
+     source of truth (benchmark.py was removed), so the scoring half is
+     guarded rather than structurally untouchable. Asserts, inside the
+     container: the module under test is the shipped file, both sentinel
+     pairs are present and ordered, and all 20 frozen scoring symbols are
+     defined OUTSIDE the editable region.
 
 Run via infra/slurm/g7_0_chunked_oversize.sbatch (needs
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True for the tight Row-14 budget).
@@ -52,7 +53,7 @@ import time
 import torch
 
 sys.path.insert(0, "/work")
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 from torch.nn.attention import SDPBackend, sdpa_kernel  # noqa: E402
 
@@ -510,52 +511,67 @@ def check_row14_golden():
 
 
 # --------------------------------------------------------------------------
-# 7. splice identity: the generated drop-in IS this model
+# 7. harness integrity: the scoring half is intact, inside the container
 # --------------------------------------------------------------------------
-def check_splice_identity():
-    """torch_transformer_benchmark.py is GENERATED from benchmark.py by
-    tools/sync_entrypoint.py, and it is the file the judges run. The official
-    sweep now scores it directly, but the sweep cannot reach Row 14 (its FP32
-    reference OOMs), so nothing else would catch a stale or drifted splice on
-    the chunked path. Assert the two modules agree on the gate and on every
-    knob that path reads."""
-    print("\n== 7. splice_identity ==", flush=True)
-    try:
-        import torch_transformer_benchmark as TB
-    except Exception as e:
-        print(f"  FAIL: cannot import the generated drop-in: {str(e)[:150]}")
-        return False
+def check_harness_integrity():
+    """torch_transformer_benchmark.py is now the SINGLE source of truth -- it is
+    edited directly, benchmark.py is gone. So the thing that used to be
+    structurally impossible (touching the scoring half) is now merely guarded,
+    and the guard has to hold INSIDE the container that actually runs the job.
 
+    tools/sync_entrypoint.py --check and tools/verify_baseline.py run on the
+    host before submission; this asserts the same shape of invariant against
+    the module the GPU job really imported:
+      * it is the shipped /work/torch_transformer_benchmark.py, not a stray copy;
+      * both sentinel pairs delimiting our contribution are present and ordered;
+      * every frozen scoring symbol is defined OUTSIDE those sentinels, i.e.
+        nobody moved a piece of the harness into the editable region.
+    """
+    print("\n== 7. harness_integrity ==", flush=True)
+    import ast as _ast
+    import importlib.util as _ilu
     good = True
-    knobs = ("_CHUNK_ACT_ELEMS", "_CHUNK_OOM_FRAC", "_CHUNK_BYTES_PER_D",
-             "_CHUNK_BYTES_PER_FFN", "_CHUNK_BYTES_FIXED", "_CHUNK_MIN_SEQ",
-             "_CHUNK_Q", "_CHUNK_RESERVE_GB", "_CHUNK_COMPILE", "_CHUNK_FLASH")
-    for k in knobs:
-        a, b = getattr(B, k, "<missing>"), getattr(TB, k, "<missing>")
-        if a != b:
-            good = False
-            print(f"  {k}: benchmark.py={a!r} drop-in={b!r}  MISMATCH")
-    print(f"  {len(knobs)} _CHUNK_* knobs agree: {good}")
 
-    # the gate must route identically on both, including Row 14
-    dev = torch.device("cuda", torch.cuda.current_device())
-    shapes = [(b, s_, d, f) for (b, s_, d, f) in OFFICIAL_BSD]
-    shapes.append((32, 100000, 1024, 1024))
-    routes_ok = True
-    for (b, s_, d, f) in shapes:
-        if (B.UserOptimizedTransformer._would_oom_causal(b, s_, d, f, dev)
-                != TB.UserOptimizedTransformer._would_oom_causal(b, s_, d, f, dev)):
-            routes_ok = False
-            print(f"  gate disagrees at B={b} S={s_} d={d} ffn={f}")
-    print(f"  gate routes identically on all {len(shapes)} shapes "
-          f"(13 official + row 14): {routes_ok}")
-    good &= routes_ok
+    path = getattr(B, "__file__", "") or ""
+    is_shipped = os.path.basename(path) == "torch_transformer_benchmark.py"
+    print(f"  module under test: {path}   {'PASS' if is_shipped else 'FAIL'}")
+    good &= is_shipped
 
-    # and the chunked kernel itself must be the same code object
-    same = (B.UserOptimizedTransformer._chunked_forward_causal.__code__.co_code
-            == TB.UserOptimizedTransformer._chunked_forward_causal.__code__.co_code)
-    print(f"  _chunked_forward_causal bytecode identical: {same}")
-    good &= same
+    src = open(path).read()
+    lines = src.splitlines(keepends=True)
+    marks = {}
+    for name, tok in (("h_beg", "# >>> BEGIN user helpers"),
+                      ("h_end", "# <<< END user helpers"),
+                      ("m_beg", "# >>> BEGIN user model"),
+                      ("m_end", "# <<< END user model")):
+        hit = [i for i, ln in enumerate(lines) if ln.startswith(tok)]
+        marks[name] = hit[0] if len(hit) == 1 else None
+    ordered = (all(v is not None for v in marks.values())
+               and marks["h_beg"] < marks["h_end"] < marks["m_beg"] < marks["m_end"])
+    print(f"  sentinel blocks present and ordered: {ordered}   "
+          f"{'PASS' if ordered else 'FAIL'}")
+    good &= ordered
+
+    if ordered:
+        ours_lines = set(range(marks["h_beg"] + 1, marks["h_end"] + 1))
+        ours_lines |= set(range(marks["m_beg"] + 1, marks["m_end"] + 1))
+        spec = _ilu.spec_from_file_location("vb", "/work/tools/verify_baseline.py")
+        vb = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(vb)
+        tree = _ast.parse(src)
+        inside = []
+        for node in tree.body:
+            if not isinstance(node, (_ast.FunctionDef, _ast.ClassDef)):
+                continue
+            if node.name in vb.FROZEN and (node.lineno - 1) in ours_lines:
+                inside.append(node.name)
+        clean = not inside
+        print(f"  {len(vb.FROZEN)} frozen scoring symbols all outside the "
+              f"editable region: {clean}   {'PASS' if clean else 'FAIL'}")
+        if inside:
+            print(f"    inside the sentinels (must not be): {inside}")
+        good &= clean
+
     print(f"  {'PASS' if good else 'FAIL'}")
     return good
 
@@ -658,7 +674,7 @@ def main():
         "oversize_capability": check_oversize_capability(),
         "row14_accuracy": check_row14_accuracy(),
         "row14_golden": check_row14_golden(),
-        "splice_identity": check_splice_identity(),
+        "harness_integrity": check_harness_integrity(),
         "row14_full_accuracy": check_row14_full_accuracy(),
     }
     print("\n== SUMMARY ==")

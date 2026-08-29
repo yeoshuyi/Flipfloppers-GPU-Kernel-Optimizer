@@ -36,7 +36,7 @@ run() {
 }
 
 for pass in BEFORE AFTER; do
-  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/benchmark.py; T=40; fi
+  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/torch_transformer_benchmark.py; T=40; fi
   export G4_7_FFN_CFG=58
   echo "##################### PASS: $pass ($S, T=$T) #####################"
   run "$pass long_seq_causal"    "$S" --accuracy-trials "$T" --causal --batch-size 8   --seq-len 1024

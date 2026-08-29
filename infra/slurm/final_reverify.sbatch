@@ -11,7 +11,7 @@ run() {
     local name="$1"; shift
     echo "=== SHAPE: $name ==="
     apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-        python3 /work/benchmark.py --accuracy-trials 40 --benchmark-on-failure "$@" || true
+        python3 /work/torch_transformer_benchmark.py --accuracy-trials 40 --benchmark-on-failure "$@" || true
     echo
 }
 run tiny            --batch-size 1   --seq-len 64

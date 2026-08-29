@@ -27,12 +27,12 @@ ARGS="--causal --batch-size 32 --d-model 1024 --heads 16 --seq-len 100000 --laye
 
 echo "############## RUN 1: standard (baseline accuracy-check + both timed) ##############"
 apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-    python3 /work/benchmark.py $ARGS 2>&1 || true
+    python3 /work/torch_transformer_benchmark.py $ARGS 2>&1 || true
 
 echo
 echo "############## RUN 2: --benchmark-on-failure (time whatever can run) ##############"
 apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \
-    python3 /work/benchmark.py $ARGS --benchmark-on-failure 2>&1 || true
+    python3 /work/torch_transformer_benchmark.py $ARGS --benchmark-on-failure 2>&1 || true
 
 J="${SLURM_JOB_ID}"
 cp "/scratch/techjam2/runs/${J}.out" "/scratch/work/results/logs/row14_extreme_run${J}.log" 2>/dev/null || true

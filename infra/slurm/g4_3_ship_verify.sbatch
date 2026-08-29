@@ -39,7 +39,7 @@ export TMPDIR=/work/.ext_build
 export TORCH_EXT_BUILD_DIR=/work/.ext_build
 
 for pass in BEFORE AFTER; do
-  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/benchmark.py; T=40; fi
+  if [ "$pass" = "BEFORE" ]; then S=/work/_before_benchmark.py; T=5; else S=/work/torch_transformer_benchmark.py; T=40; fi
   echo "##################### PASS: $pass ($S, $T accuracy trials) #####################"
   run "$pass tiny"                     "$S" "$T" --batch-size 1   --seq-len 64
   run "$pass default"                  "$S" "$T" --batch-size 8   --seq-len 128

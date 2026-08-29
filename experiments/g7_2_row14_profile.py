@@ -32,7 +32,7 @@ from collections import defaultdict
 import torch
 
 sys.path.insert(0, "/work")
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 
 DEV = torch.device("cuda")
 torch.set_float32_matmul_precision("high")

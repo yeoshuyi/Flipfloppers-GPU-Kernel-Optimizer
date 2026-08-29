@@ -39,7 +39,7 @@ import torch.nn.functional as F
 from torch.nn.attention import SDPBackend, sdpa_kernel
 
 sys.path.insert(0, "/work")
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 
 NEW_ATOL = 0.002
 NEW_RTOL = 0.02

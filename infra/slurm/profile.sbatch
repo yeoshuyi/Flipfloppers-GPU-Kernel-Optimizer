@@ -35,7 +35,7 @@ apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
     ncu --metrics "$METRICS" --csv --target-processes all --launch-count 120 \
-    python3 /work/benchmark.py "$@" \
+    python3 /work/torch_transformer_benchmark.py "$@" \
         --accuracy-trials 1 --warmup 1 --repeats 1 --benchmark-rounds 1 \
     2>/dev/null \
     | apptainer exec --nv --cleanenv --bind /scratch/work:/work /scratch/kernel.sif \

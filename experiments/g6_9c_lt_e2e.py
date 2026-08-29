@@ -25,7 +25,7 @@ import torch.nn.functional as F
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-import benchmark as B  # noqa: E402
+import torch_transformer_benchmark as B  # noqa: E402
 
 DEV = torch.device("cuda")
 torch.set_float32_matmul_precision("high")

@@ -20,7 +20,7 @@ run() {
     apptainer exec --nv --cleanenv \
         --bind /scratch/work:/work \
         /scratch/kernel.sif \
-        python3 /work/benchmark.py "$@"
+        python3 /work/torch_transformer_benchmark.py "$@"
     echo "[clocks after]  $(clocks)"
     echo
 }

@@ -9,7 +9,7 @@ honestly as eager component timing, not a graph-replay breakdown.
 """
 import sys, torch, torch.nn.functional as F
 sys.path.insert(0, "/work")
-import benchmark as B
+import torch_transformer_benchmark as B
 
 SHAPES = [
     ("tiny",        dict(batch_size=1, seq_len=64), False),

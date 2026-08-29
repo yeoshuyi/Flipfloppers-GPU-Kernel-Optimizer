@@ -11,4 +11,4 @@ set -uo pipefail
 apptainer exec --nv --cleanenv \
     --bind /scratch/work:/work \
     /scratch/kernel.sif \
-    python3 /work/benchmark.py --batch-size 1 --seq-len 64 --accuracy-trials 40 --benchmark-on-failure
+    python3 /work/torch_transformer_benchmark.py --batch-size 1 --seq-len 64 --accuracy-trials 40 --benchmark-on-failure

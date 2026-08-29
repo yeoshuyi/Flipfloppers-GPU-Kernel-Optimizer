@@ -4,7 +4,7 @@
 help:
 	@echo "make eval        - run the official 14-row matrix in the container (run_eval.sh)"
 	@echo "make check       - verify_baseline + sync_entrypoint --check + check_validity"
-	@echo "make entrypoint  - regenerate torch_transformer_benchmark.py from benchmark.py"
+	@echo "make entrypoint  - re-splice our model onto the canonical harness (self-hosting)"
 	@echo "make figures     - regenerate assets/*.svg for the README"
 	@echo "make container   - build /scratch/kernel.sif from infra/apptainer/kernel.def"
 	@echo "make package     - clean-tree checks + git archive -> dist/techjam2_<ver>.tar.gz"
@@ -17,7 +17,7 @@ eval:
 check:
 	python3 tools/verify_baseline.py
 	python3 tools/sync_entrypoint.py --check
-	python3 tools/check_validity.py benchmark.py
+	python3 tools/check_validity.py torch_transformer_benchmark.py
 
 entrypoint:
 	python3 tools/sync_entrypoint.py

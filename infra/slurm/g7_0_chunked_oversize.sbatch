@@ -7,7 +7,7 @@
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:rtx4090:1
 #SBATCH --exclusive
-#SBATCH --time=01:00:00
+#SBATCH --time=01:30:00
 #SBATCH --output=/scratch/techjam2/runs/%j.out
 
 set -uo pipefail

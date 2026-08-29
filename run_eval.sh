@@ -12,13 +12,13 @@
 # numerical diff (max abs / max rel error, failed-element count) against the
 # reference, then an aggregate + geometric-mean speedup.
 #
-# Override the entry point to the human-edited file with  ENTRY=benchmark.py.
+# benchmark.py was removed (commit below): torch_transformer_benchmark.py is
+# now the single source of truth, not a generated copy of one.
 # Row 14 (seq_len=100000) is skipped by default -- the FP32 baseline OOMs a
 # 24 GB card before any math (a single [32,100000,1024] fp32 activation is
 # 12.2 GiB). Set RUN_ROW14=1 to attempt it anyway.
 #
 #   ./run_eval.sh                 # rows 1-13
-#   ENTRY=benchmark.py ./run_eval.sh
 #   RUN_ROW14=1 ./run_eval.sh
 set -euo pipefail
 
@@ -60,7 +60,7 @@ ROWS=(
 # reference OOMs a 24 GB card in generate_random_case / baseline's [B,H,S,S]
 # scores before our model runs, and run_accuracy_tests has no try/except). With
 # RUN_ROW14=1 we instead run experiments/g7_0_chunked_oversize.py -- the shipped
-# model executes S=100000 via sequence chunking (benchmark.py
+# model executes S=100000 via sequence chunking (torch_transformer_benchmark.py
 # _chunked_forward_causal) and the probe proves it correct against a
 # higher-precision reference. See docs/FINAL_SCORECARD.md.
 if [[ "${RUN_ROW14:-0}" != "1" ]]; then

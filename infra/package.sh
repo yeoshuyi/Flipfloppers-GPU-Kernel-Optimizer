@@ -30,7 +30,7 @@ if [[ -f "$HOME/torch_transformer_benchmark.py" ]]; then
 else
   echo "package.sh: WARNING ~/torch_transformer_benchmark.py absent -- skipping baseline/entrypoint checks"
 fi
-python3 tools/check_validity.py benchmark.py || fail=1
+python3 tools/check_validity.py torch_transformer_benchmark.py || fail=1
 [[ "$fail" == "0" ]] || { echo "package.sh: guard(s) failed" >&2; exit 1; }
 
 # --- triad sanity ---------------------------------------------------

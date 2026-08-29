@@ -3862,3 +3862,56 @@ accuracy and deliberately not retried: G4.3 FP16-accumulate (step 41 — and thi
 path's margin is thinner still), G2.1 BF16, G2.6 FP8, G2.7 INT8. G4.7's fused
 `ffn_in`+GELU is gated `ffn_dim >= 2048` and row 14 is 1024, with GELU at 0.4%
 of device time.
+
+### 56. Row-14 accuracy at the full B=32 shape; benchmark.py removed
+
+**Row 14's accuracy was still a proxy.** Check 5 priced FP16 storage at `B=4`
+because an FP32-store reference does not fit at `B=32` — so the headline row had
+a full-shape *latency* number but not a full-shape *accuracy* number.
+
+A transformer forward is completely independent across the batch (attention is
+within-sequence, LayerNorm and the FFN are per-token, and `kbuf`/`vbuf` in
+`_chunked_forward_causal` are per-`b`), so the FP32 reference for `B=32` can be
+assembled from 8 exact `B=4` slices and compared slice-by-slice against the one
+true `B=32` forward. New **check 8**, job 220/223:
+`failed = 0 / 3,276,800,000`, `max_abs 5.805e-03`, `mean_abs 2.629e-04`. The
+reference arm runs at a different `chunk_q` than the `B=32` arm (8192 vs 2048),
+which makes the agreement stronger evidence, not weaker, because chunking is
+exact by check 1.
+
+**The first attempt was wrong, and the failure signature identified it.**
+It rebuilt each slice by replaying the seeded generator into a *contiguous*
+temp. `make_input_fp16` fills a *strided* view `x[:, c0:c1]`, so drawing the
+same count into a contiguous tensor maps the values to different elements. The
+two arms came out statistically independent: 99.3% of elements "failed" at
+`mean_abs 1.122`, and `2/sqrt(pi) = 1.128` is exactly the mean absolute
+difference of two independent `N(0,1)` samples. Kept as
+`results/logs/g7_0_chunked_oversize_run219_FAIL_rng_replay.log`. Fixed by
+holding the input on the host (6.55 GB) as the single source of truth for both
+arms.
+
+**`benchmark.py` deleted.** `torch_transformer_benchmark.py` — the file the
+judges execute — is now the single source of truth rather than a generated copy
+of one. The safety property that used to be structural (the scoring half was
+untouchable because the file was generated) is now enforced by three guards:
+
+- `tools/verify_baseline.py` diffs all 20 frozen symbols against the judges'
+  `~/torch_transformer_benchmark.py` at AST level. This is *stronger* than
+  before — it used to compare our copy against our copy.
+- `tools/sync_entrypoint.py --check` asserts the file is still exactly
+  *(canonical harness + our sentinel blocks)*.
+- Probe **check 7** re-asserts the same shape of invariant inside the container:
+  the module under test is the shipped file, both `>>> BEGIN user ... >>>`
+  sentinel pairs are present and ordered, and all 20 frozen scoring symbols are
+  defined outside the editable region.
+
+The splice was made **self-hosting** first, and that was not a formality: in the
+shipped layout `class TransformerConfig` sits *ahead* of our helpers (it comes
+from the canonical head), so the old prefix-based extractor silently dropped the
+entire helper block. Explicit sentinels fixed it, verified by re-splicing the
+file from itself and getting a byte-for-byte match. The re-merge-onto-a-new-
+canonical capability therefore survives the deletion.
+
+Verified with `benchmark.py` gone: job 221 (sweep 13/13 PASS through
+`torch_transformer_benchmark.py`, `max_abs` byte-identical to run 168, largest
+latency move +0.30%) and job 223 (probe `OVERALL: PASS`, all 7 checks).

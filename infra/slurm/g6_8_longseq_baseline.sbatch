@@ -20,5 +20,5 @@ apptainer exec --nv --cleanenv \
       export TMPDIR=/work/.ext_build
       export TORCH_EXT_BUILD_DIR=/work/.ext_build
       mkdir -p "$TMPDIR"
-      python3 /work/benchmark.py --batch-size 8 --seq-len 1024
+      python3 /work/torch_transformer_benchmark.py --batch-size 8 --seq-len 1024
     ' || true

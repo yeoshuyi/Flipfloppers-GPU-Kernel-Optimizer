@@ -24,7 +24,7 @@ run() {
           export TMPDIR=/work/.ext_build
           export TORCH_EXT_BUILD_DIR=/work/.ext_build
           export KOPT_L2_PERSIST=0
-          exec python3 /work/benchmark.py "$@"
+          exec python3 /work/torch_transformer_benchmark.py "$@"
         ' _ "$@"
     echo
 }

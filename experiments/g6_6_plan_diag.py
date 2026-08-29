@@ -24,7 +24,7 @@ import torch
 sys.path.insert(0, "/work" if os.path.isdir("/work") else
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import benchmark as bm  # noqa: E402
+import torch_transformer_benchmark as bm  # noqa: E402
 
 
 SHAPES = [("tiny", 1, 64), ("default", 8, 128), ("long_seq", 8, 1024),

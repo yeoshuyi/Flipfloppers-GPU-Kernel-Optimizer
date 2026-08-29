@@ -14,7 +14,7 @@ run() {
     apptainer exec --nv --cleanenv \
         --bind /scratch/work:/work \
         /scratch/kernel.sif \
-        python3 /work/benchmark.py --causal --accuracy-trials 40 --benchmark-on-failure "$@" || true
+        python3 /work/torch_transformer_benchmark.py --causal --accuracy-trials 40 --benchmark-on-failure "$@" || true
     echo
 }
 

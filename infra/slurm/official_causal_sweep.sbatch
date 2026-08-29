@@ -6,9 +6,8 @@
 # compaction) and substituted the project's own standard causal shapes for
 # the rest.
 #
-# Runs the GENERATED drop-in torch_transformer_benchmark.py -- the file the
-# judges execute -- not the hand-edited benchmark.py. The two are kept identical
-# by tools/sync_entrypoint.py, asserted by the --check guard below.
+# Runs torch_transformer_benchmark.py -- the file the judges execute, and since
+# benchmark.py was removed, the single source of truth.
 #
 # Column mapping to the harness flags:
 #   Batch Size -> --batch-size   QKV Dim -> --d-model   Heads -> --heads
@@ -33,9 +32,9 @@
 set -uo pipefail
 
 # The judges run torch_transformer_benchmark.py, so the standing gate does too.
-# It is GENERATED from benchmark.py by tools/sync_entrypoint.py, so a stale
-# splice would silently score the wrong model -- fail loudly instead. Same
-# guard run_eval.sh applies at its line 37.
+# --check asserts the file is still exactly (judges' canonical + our sentinel
+# blocks): a stray edit to the scoring half would otherwise score a model the
+# judges will not accept. Same guard run_eval.sh applies.
 python3 /scratch/work/tools/sync_entrypoint.py --check || {
     echo "official_causal_sweep: torch_transformer_benchmark.py is STALE -- "\
          "run tools/sync_entrypoint.py and resubmit" >&2

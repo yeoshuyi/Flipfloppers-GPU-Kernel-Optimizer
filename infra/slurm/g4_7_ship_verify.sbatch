@@ -58,8 +58,8 @@ run() {
 for pass in BEFORE AFTER58 AFTER51; do
   case "$pass" in
     BEFORE)  S=/work/_before_benchmark.py; T=5;  export G4_7_FFN_CFG=58 ;;
-    AFTER58) S=/work/benchmark.py;         T=40; export G4_7_FFN_CFG=58 ;;
-    AFTER51) S=/work/benchmark.py;         T=40; export G4_7_FFN_CFG=51 ;;
+    AFTER58) S=/work/torch_transformer_benchmark.py;         T=40; export G4_7_FFN_CFG=58 ;;
+    AFTER51) S=/work/torch_transformer_benchmark.py;         T=40; export G4_7_FFN_CFG=51 ;;
   esac
   echo "##################### PASS: $pass ($S, T=$T, G4_7_FFN_CFG=$G4_7_FFN_CFG) #####################"
 
