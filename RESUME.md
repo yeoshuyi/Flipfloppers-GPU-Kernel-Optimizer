@@ -51,6 +51,8 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 |---|---|
 | Row-14 chunking *capability* (prior arc) | ✅ DONE — `b751393..659bb5b`, job 198 PASS, job 199 regression 13/13 |
 | **G7.1 gate in bytes + Row-14 golden** | ✅ DONE — `741f5fd`, `8604192`, jobs 200/201/202 calibrate+pin, **job 203 g7_0 OVERALL PASS**, **job 204 sweep 13/13 byte-identical to run168, no row slower** |
+| Official gate scores the merged drop-in | ✅ DONE — job 216: 13/13 PASS through `torch_transformer_benchmark.py`, `max_abs` byte-identical to run168, largest latency move +0.52%; probe check 7 (splice identity) PASS in job 217. The freshly-pulled official harness was verified **byte-identical** to `~/torch_transformer_benchmark.py` (full-file diff, 747 lines) — no frozen-half change was needed. |
+| README refreshed | ✅ DONE — Row 14 as OOM → 9952.6 ms / 19.55 GB, shape-arbitration mermaid figure, Row-14 measurement/accuracy methodology, 13-row table refreshed from run216 |
 | Row-14 *optimization* (this arc) | ✅ **DONE** — `63a9934` (A2 flash, -21.0%), `68b0e6c` (D2 LN casts, -2.0%), `ac0012f` (compile default, -1.4%); jobs 205/207 profile, 208 flash probe, 209/210/211 gates, 213 re-profile, 214 sweep |
 
 ## Code anchors (`benchmark.py`)
@@ -106,8 +108,15 @@ sbatch infra/slurm/g7_0_chunked_oversize.sbatch      # OVERALL: PASS
 #   check 5 Row14 B=4 fp16-store vs fp32-store: failed==0, max_abs not worse than ~8.1e-3 ;
 #   check 6 Row14 B=32 vs experiments/g7_0_row14_golden.json: failed==0 AND
 #           per-batch sum|y| drift <= 1e-3  <-- THE regression gate for this arc
+#   check 7 splice identity: the generated drop-in has the same _CHUNK_* knobs,
+#           the same gate routing and the same _chunked_forward_causal bytecode
+#           as benchmark.py (the sweep cannot reach row 14, so nothing else
+#           covers the splice on the chunked path)
 sbatch infra/slurm/official_causal_sweep.sbatch      # 13/13 PASS, max_abs BYTE-IDENTICAL to
-#   results/logs/official_causal_sweep_run168.log  (== run199.log == run204.log)
+#   results/logs/official_causal_sweep_run168.log  (== run199/204/214/216)
+#   NOTE: as of job 216 this scores the GENERATED torch_transformer_benchmark.py
+#   (the file the judges run), not benchmark.py, behind a sync_entrypoint --check
+#   guard. If the guard trips, run tools/sync_entrypoint.py and resubmit.
 sbatch infra/slurm/g7_1_gate_calibration.sbatch      # only if the COMPILED path's
 #   activation set changed -- re-validates the byte model + regenerates the golden
 ```
