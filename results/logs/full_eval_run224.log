@@ -1,0 +1,472 @@
+################ ROWS 1-13 + row-14 probe : ./run_eval.sh ################
+GPU 0: NVIDIA GeForce RTX 4090 (UUID: GPU-4badf97d-3c49-c255-98ed-5fd0b58fad15)
+sync_entrypoint: torch_transformer_benchmark.py is up to date
+entry=torch_transformer_benchmark.py  image=/scratch/kernel.sif  2026-08-29T09:18:44Z
+
+row       B      S     d    H base_med_ms  opt_med_ms   speedup     max_abs      max_rel  failed(n/tot)  result
+---------------------------------------------------------------------------------------------------------------
+>>> row 1 : B=64 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=65.1683 | failed=0/1048576
+trial 02/5: PASS | max_abs=0.00107318 | max_rel=37.6065 | failed=0/1048576
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=167.744 | failed=0/1048576
+trial 04/5: PASS | max_abs=0.00118493 | max_rel=46.8257 | failed=0/1048576
+trial 05/5: PASS | max_abs=0.001279 | max_rel=1523.26 | failed=0/1048576
+summary: PASS | max_abs=0.0013676 | max_rel=1523.26 | failed=0/5242880
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0397 ms | mean=1.0489 ms | p90=1.0647 ms | min=1.0168 ms | throughput=7879104.89 token/s
+optimized: median=0.2120 ms | mean=0.2143 ms | p90=0.2140 ms | min=0.2099 ms | throughput=38647342.14 token/s
+speedup  : 4.905x based on median latency
+1        64    128   128    4      1.0397      0.2120    4.905x   0.0013676      1523.26      0/5242880  PASS
+>>> row 2 : B=1 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=1, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=0.955362 | failed=0/16384
+trial 02/5: PASS | max_abs=0.00083518 | max_rel=3.72818 | failed=0/16384
+trial 03/5: PASS | max_abs=0.000992417 | max_rel=269.106 | failed=0/16384
+trial 04/5: PASS | max_abs=0.000922918 | max_rel=0.915374 | failed=0/16384
+trial 05/5: PASS | max_abs=0.000733614 | max_rel=3.35439 | failed=0/16384
+summary: PASS | max_abs=0.0013676 | max_rel=269.106 | failed=0/81920
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0519 ms | mean=1.0544 ms | p90=1.0659 ms | min=1.0271 ms | throughput=121685.96 token/s
+optimized: median=0.0788 ms | mean=0.0817 ms | p90=0.0819 ms | min=0.0768 ms | throughput=1623376.69 token/s
+speedup  : 13.341x based on median latency
+2         1    128   128    4      1.0519      0.0788   13.341x   0.0013676      269.106        0/81920  PASS
+>>> row 3 : B=4 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=4, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=19.003 | failed=0/65536
+trial 02/5: PASS | max_abs=0.0010184 | max_rel=6.03087 | failed=0/65536
+trial 03/5: PASS | max_abs=0.000992417 | max_rel=91.8419 | failed=0/65536
+trial 04/5: PASS | max_abs=0.00118493 | max_rel=2.08863 | failed=0/65536
+trial 05/5: PASS | max_abs=0.000996426 | max_rel=31.0268 | failed=0/65536
+summary: PASS | max_abs=0.0013676 | max_rel=91.8419 | failed=0/327680
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0550 ms | mean=1.0742 ms | p90=1.0939 ms | min=1.0324 ms | throughput=485326.45 token/s
+optimized: median=0.0881 ms | mean=0.0916 ms | p90=0.0901 ms | min=0.0870 ms | throughput=5813953.49 token/s
+speedup  : 11.979x based on median latency
+3         4    128   128    4      1.0550      0.0881   11.979x   0.0013676      91.8419       0/327680  PASS
+>>> row 4 : B=16 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=16, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=10.0783 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00106415 | max_rel=19.6737 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=244.999 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00118493 | max_rel=46.8257 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00108433 | max_rel=1327.53 | failed=0/262144
+summary: PASS | max_abs=0.0013676 | max_rel=1327.53 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0594 ms | mean=1.0757 ms | p90=1.0970 ms | min=1.0361 ms | throughput=1933242.66 token/s
+optimized: median=0.1116 ms | mean=0.1139 ms | p90=0.1137 ms | min=0.1106 ms | throughput=18348623.77 token/s
+speedup  : 9.491x based on median latency
+4        16    128   128    4      1.0594      0.1116    9.491x   0.0013676      1327.53      0/1310720  PASS
+>>> row 5 : B=128 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=128, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=104.309 | failed=0/2097152
+trial 02/5: PASS | max_abs=0.00113112 | max_rel=119.382 | failed=0/2097152
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=167.744 | failed=0/2097152
+trial 04/5: PASS | max_abs=0.00119511 | max_rel=254.758 | failed=0/2097152
+trial 05/5: PASS | max_abs=0.001288 | max_rel=2600.44 | failed=0/2097152
+summary: PASS | max_abs=0.0013676 | max_rel=2600.44 | failed=0/10485760
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.7080 ms | mean=1.7107 ms | p90=1.7111 ms | min=1.7019 ms | throughput=9592326.07 token/s
+optimized: median=0.3738 ms | mean=0.3761 ms | p90=0.3748 ms | min=0.3717 ms | throughput=43835614.71 token/s
+speedup  : 4.570x based on median latency
+5       128    128   128    4      1.7080      0.3738    4.570x   0.0013676      2600.44     0/10485760  PASS
+>>> row 6 : B=10000 S=128 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=10000, seq_len=128, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00195017 | max_rel=20683.8 | failed=0/163840000
+trial 02/5: PASS | max_abs=0.00153732 | max_rel=7880.3 | failed=0/163840000
+trial 03/5: PASS | max_abs=0.00154169 | max_rel=2.47806e+07 | failed=0/163840000
+trial 04/5: PASS | max_abs=0.00150752 | max_rel=8905.06 | failed=0/163840000
+trial 05/5: PASS | max_abs=0.00154489 | max_rel=2.54421e+08 | failed=0/163840000
+summary: PASS | max_abs=0.00195017 | max_rel=2.54421e+08 | failed=0/819200000
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=290.5477 ms | mean=290.5543 ms | p90=290.6051 ms | min=290.4279 ms | throughput=4405472.85 token/s
+optimized: median=52.4841 ms | mean=52.4859 ms | p90=52.4974 ms | min=52.4421 ms | throughput=24388340.18 token/s
+speedup  : 5.536x based on median latency
+6     10000    128   128    4    290.5477     52.4841    5.536x  0.00195017  2.54421e+08    0/819200000  PASS
+>>> row 7 : B=64 S=128 d=32 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=32, num_heads=4, ffn_dim=32, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00211424 | max_rel=79.7228 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00129086 | max_rel=33.6045 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00132155 | max_rel=372.853 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00137094 | max_rel=21.8546 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00123984 | max_rel=44.0058 | failed=0/262144
+summary: PASS | max_abs=0.00211424 | max_rel=372.853 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0510 ms | mean=1.0550 ms | p90=1.0647 ms | min=1.0281 ms | throughput=7794303.31 token/s
+optimized: median=0.1034 ms | mean=0.1059 ms | p90=0.1055 ms | min=0.1024 ms | throughput=79207922.51 token/s
+speedup  : 10.162x based on median latency
+7        64    128    32    4      1.0510      0.1034   10.162x  0.00211424      372.853      0/1310720  PASS
+>>> row 8 : B=64 S=128 d=1024 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=1024, num_heads=4, ffn_dim=1024, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00141025 | max_rel=1492.71 | failed=0/8388608
+trial 02/5: PASS | max_abs=0.00123686 | max_rel=1.8467e+08 | failed=0/8388608
+trial 03/5: PASS | max_abs=0.00135434 | max_rel=1373.88 | failed=0/8388608
+trial 04/5: PASS | max_abs=0.00137815 | max_rel=754.581 | failed=0/8388608
+trial 05/5: PASS | max_abs=0.0013321 | max_rel=1419.81 | failed=0/8388608
+summary: PASS | max_abs=0.00141025 | max_rel=1.8467e+08 | failed=0/41943040
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=8.3610 ms | mean=8.3629 ms | p90=8.3661 ms | min=8.3520 ms | throughput=979789.89 token/s
+optimized: median=4.3277 ms | mean=4.3300 ms | p90=4.3305 ms | min=4.3223 ms | throughput=1892924.05 token/s
+speedup  : 1.932x based on median latency
+8        64    128  1024    4      8.3610      4.3277    1.932x  0.00141025   1.8467e+08     0/41943040  PASS
+>>> row 9 : B=64 S=128 d=128 H=1
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=1, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=1609.43 | failed=0/1048576
+trial 02/5: PASS | max_abs=0.00120968 | max_rel=1563.56 | failed=0/1048576
+trial 03/5: PASS | max_abs=0.0012126 | max_rel=45.914 | failed=0/1048576
+trial 04/5: PASS | max_abs=0.00145066 | max_rel=130.279 | failed=0/1048576
+trial 05/5: PASS | max_abs=0.00130342 | max_rel=49.7236 | failed=0/1048576
+summary: PASS | max_abs=0.00145066 | max_rel=1609.43 | failed=0/5242880
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0250 ms | mean=1.0156 ms | p90=1.0398 ms | min=0.9585 ms | throughput=7992007.55 token/s
+optimized: median=0.2099 ms | mean=0.2122 ms | p90=0.2120 ms | min=0.2079 ms | throughput=39024389.50 token/s
+speedup  : 4.883x based on median latency
+9        64    128   128    1      1.0250      0.2099    4.883x  0.00145066      1609.43      0/5242880  PASS
+>>> row 10 : B=64 S=128 d=128 H=2
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=2, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=335.982 | failed=0/1048576
+trial 02/5: PASS | max_abs=0.00116515 | max_rel=112.5 | failed=0/1048576
+trial 03/5: PASS | max_abs=0.0011946 | max_rel=39.0731 | failed=0/1048576
+trial 04/5: PASS | max_abs=0.00127625 | max_rel=42.3553 | failed=0/1048576
+trial 05/5: PASS | max_abs=0.00138116 | max_rel=70.5137 | failed=0/1048576
+summary: PASS | max_abs=0.00138116 | max_rel=335.982 | failed=0/5242880
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0383 ms | mean=1.0470 ms | p90=1.0629 ms | min=1.0149 ms | throughput=7889911.11 token/s
+optimized: median=0.2140 ms | mean=0.2160 ms | p90=0.2150 ms | min=0.2120 ms | throughput=38277511.00 token/s
+speedup  : 4.851x based on median latency
+10       64    128   128    2      1.0383      0.2140    4.851x  0.00138116      335.982      0/5242880  PASS
+>>> row 11 : B=64 S=128 d=128 H=16
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=128, d_model=128, num_heads=16, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=318.04 | failed=0/1048576
+trial 02/5: PASS | max_abs=0.00122714 | max_rel=74.4908 | failed=0/1048576
+trial 03/5: PASS | max_abs=0.00111675 | max_rel=482.383 | failed=0/1048576
+trial 04/5: PASS | max_abs=0.00121211 | max_rel=78.0045 | failed=0/1048576
+trial 05/5: PASS | max_abs=0.00119552 | max_rel=179.051 | failed=0/1048576
+summary: PASS | max_abs=0.0013676 | max_rel=482.383 | failed=0/5242880
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=4.3858 ms | mean=4.3874 ms | p90=4.3909 ms | min=4.3738 ms | throughput=1867849.73 token/s
+optimized: median=0.2857 ms | mean=0.2881 ms | p90=0.2877 ms | min=0.2836 ms | throughput=28673835.14 token/s
+speedup  : 15.351x based on median latency
+11       64    128   128   16      4.3858      0.2857   15.351x   0.0013676      482.383      0/5242880  PASS
+>>> row 12 : B=64 S=32 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=32, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.00140575 | max_rel=473.082 | failed=0/262144
+trial 02/5: PASS | max_abs=0.00122797 | max_rel=10.0796 | failed=0/262144
+trial 03/5: PASS | max_abs=0.00134333 | max_rel=216.103 | failed=0/262144
+trial 04/5: PASS | max_abs=0.00125414 | max_rel=46.8257 | failed=0/262144
+trial 05/5: PASS | max_abs=0.00117177 | max_rel=99.0421 | failed=0/262144
+summary: PASS | max_abs=0.00140575 | max_rel=473.082 | failed=0/1310720
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=1.0526 ms | mean=1.0565 ms | p90=1.0652 ms | min=1.0314 ms | throughput=1945673.20 token/s
+optimized: median=0.1229 ms | mean=0.1260 ms | p90=0.1249 ms | min=0.1219 ms | throughput=16666667.09 token/s
+speedup  : 8.566x based on median latency
+12       64     32   128    4      1.0526      0.1229    8.566x  0.00140575      473.082      0/1310720  PASS
+>>> row 13 : B=64 S=1024 d=128 H=4
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+=== Configuration ===
+TransformerConfig(batch_size=64, seq_len=1024, d_model=128, num_heads=4, ffn_dim=128, num_layers=4, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+trial 01/5: PASS | max_abs=0.0013676 | max_rel=2.02073e+08 | failed=0/8388608
+trial 02/5: PASS | max_abs=0.00128078 | max_rel=244.875 | failed=0/8388608
+trial 03/5: PASS | max_abs=0.00116193 | max_rel=2109.24 | failed=0/8388608
+trial 04/5: PASS | max_abs=0.00114298 | max_rel=1837.1 | failed=0/8388608
+trial 05/5: PASS | max_abs=0.00111926 | max_rel=2600.44 | failed=0/8388608
+summary: PASS | max_abs=0.0013676 | max_rel=2.02073e+08 | failed=0/41943040
+
+=== Performance benchmark ===
+timing excludes random-data generation and uses a fixed input
+CUDA latency is measured with torch.cuda.Event on the current stream
+baseline : median=70.1573 ms | mean=70.1614 ms | p90=70.1747 ms | min=70.1327 ms | throughput=934129.31 token/s
+optimized: median=2.2118 ms | mean=2.2136 ms | p90=2.2170 ms | min=2.2006 ms | throughput=29629630.78 token/s
+speedup  : 31.719x based on median latency
+13       64   1024   128    4     70.1573      2.2118   31.719x   0.0013676  2.02073e+08     0/41943040  PASS
+---------------------------------------------------------------------------------------------------------------
+TOTAL  base 383.533 ms  ->  opt 60.824 ms   aggregate 6.31x   geomean 7.75x  (n=13)
+GATE   PASS   (0 shape(s) failed / errored; the official gate is failed==0 on every shape)
+>>> row 14 : chunked-capability probe (experiments/g7_0_chunked_oversize.py)
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  device NVIDIA GeForce RTX 4090
+VRAM free 23.13 / 23.52 GB  alloc_conf=expandable_segments:True
+gate: CHUNK_ACT_ELEMS=0 (0 = byte model)  CHUNK_OOM_FRAC=0.8  bytes = 128MiB + tok*(28*d + 8*ffn)
+CHUNK_MIN_SEQ=2048  CHUNK_Q=0  CHUNK_RESERVE_GB=3.0
+
+== 1. prefix_causal_attn (split + LSE merge) ==
+    torch.float32  chunked vs full causal: max|.| = 1.67e-06   ok
+    torch.float16  chunked vs full causal: max|.| = 1.94e-03   ok
+  PASS
+
+== 2. gate ==
+  budget 18.81 GB (80% of total)   fast-skip tokens*max(d,ffn) < 557,396,787
+  gate False for all 13 official rows; tightest margin 3.35x at row 6   PASS
+  row14 est=110.0 GB (5.85x over budget) -> chunk=True   PASS
+  ffn-heavy d=128 ffn=32768: est=253.5 GB  new_gate=True old_B*S*d_proxy=False   PASS
+  boundary (d=ffn=1024): flips at 544,333 tokens; est just below=18.813 GB, at=18.813 GB, budget=18.813 GB   PASS
+[g7.0] chunked causal  B=2 S=4096 d=128 H=4 ffn=128 store=float16  chunk_q=1024 n_chunks=4  kv_cache=0.00GB free=nanGB  compile=True
+[g7.0] chunked causal  B=2 S=4096 d=128 H=4 ffn=128 store=float16  chunk_q=1024 n_chunks=4  kv_cache=0.00GB free=nanGB  compile=True
+  forward() auto-route vs direct _chunked_forward_causal: max|.| = 0.00e+00   PASS
+
+== 3. equivalence (B=2 S=4096 d=256 H=4 L=2 causal) ==
+[g7.0] chunked causal  B=2 S=4096 d=256 H=4 ffn=256 store=float16  chunk_q=512 n_chunks=8  kv_cache=0.01GB free=nanGB  compile=True
+[g7.0] chunked causal  B=2 S=4096 d=256 H=4 ffn=256 store=float32  chunk_q=512 n_chunks=8  kv_cache=0.02GB free=nanGB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  chunked(fp16) vs baseline: max_abs=4.243e-03 max_rel=2.832e+02 failed=0/2097152  PASS
+  chunked(fp32) vs baseline: max_abs=5.203e-04 max_rel=4.296e+02 failed=0/2097152  PASS
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  chunked(fp16) vs shipped  : max_abs=4.175e-03 max_rel=6.237e+02 failed=0/2097152  PASS
+
+== 4. oversize_capability ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.74GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  row14         B*S*d=3,276,800,000  latency= 9953.1 ms (all ['9953', '9953', '9953'])  peak=19.55 GB  finite=True shape_ok=True  PASS
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.78GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.78GB  compile=True
+[g7.0] chunked causal  B=8 S=200000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=25  kv_cache=6.10GB free=19.76GB  compile=True
+  B8_S200k      B*S*d=1,638,400,000  latency= 9326.9 ms (all ['9326', '9327', '9327'])  peak=10.39 GB  finite=True shape_ok=True  PASS
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+W0829 09:24:32.338000 276934 torch/_dynamo/convert_frame.py:1994] [1/8] torch._dynamo hit config.recompile_limit (8)
+W0829 09:24:32.338000 276934 torch/_dynamo/convert_frame.py:1994] [1/8]    function: 'post' (/work/torch_transformer_benchmark.py:1534)
+W0829 09:24:32.338000 276934 torch/_dynamo/convert_frame.py:1994] [1/8]    last reason: 1/7: tensor 'xc' size mismatch at index 0. expected 8, actual 64
+W0829 09:24:32.338000 276934 torch/_dynamo/convert_frame.py:1994] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0829 09:24:32.338000 276934 torch/_dynamo/convert_frame.py:1994] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W0829 09:24:32.532000 276934 torch/_dynamo/convert_frame.py:1994] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0829 09:24:32.532000 276934 torch/_dynamo/convert_frame.py:1994] [0/8]    function: 'pre' (/work/torch_transformer_benchmark.py:1524)
+W0829 09:24:32.532000 276934 torch/_dynamo/convert_frame.py:1994] [0/8]    last reason: 0/7: tensor 'xc' size mismatch at index 1. expected 1024, actual 848
+W0829 09:24:32.532000 276934 torch/_dynamo/convert_frame.py:1994] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0829 09:24:32.532000 276934 torch/_dynamo/convert_frame.py:1994] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=64 S=50000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  B64_S50k      B*S*d=3,276,800,000  latency= 5725.7 ms (all ['5725', '5726', '5726'])  peak=20.18 GB  finite=True shape_ok=True  PASS
+  -- CHUNK_COMPILE A/B on row14 --
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.71GB  compile=True
+  row14  CHUNK_COMPILE=0  10098.6 ms   CHUNK_COMPILE=1   9952.8 ms   delta +1.4%
+
+== 5. row14_accuracy ==
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=13  kv_cache=1.53GB free=21.34GB  compile=True
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=19.76GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+  B=4: fp16-store vs fp32-store chunked  max_abs=7.847e-03 max_rel=5.806e+04 mean_abs=3.410e-04 failed=0/409600000  PASS
+
+== 6. row14_golden ==
+  reference: commit 741f5fd job 202  (8192 samples over 3,276,800,000 elements)
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+  sampled values vs golden: max_abs=3.906e-03 max_rel=5.060e-01 failed=0/8192  PASS
+  per-batch sum|y| drift: worst relative 1.348e-07 (gate 1e-3)  PASS
+  per-batch signed sums: worst absolute drift 2.777e+00 over 32 batches (diagnostic)
+  max|y| 6.320312 vs golden 6.320312   finite=True
+  perf vs pin: 9686.7 ms (-25.6% vs 13018.2 ms pinned)   peak 19.55 GB (pinned 20.8 GB)
+
+== 7. harness_integrity ==
+  module under test: /work/torch_transformer_benchmark.py   PASS
+  sentinel blocks present and ordered: True   PASS
+  20 frozen scoring symbols all outside the editable region: True   PASS
+  PASS
+
+== 8. row14_full_accuracy (B=32, all 3.28e9 elements) ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.73GB  compile=True
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows  0- 3: max_abs=5.805e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows  4- 7: max_abs=5.636e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows  8-11: max_abs=5.434e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows 12-15: max_abs=5.672e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows 16-19: max_abs=5.715e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows 20-23: max_abs=5.503e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows 24-27: max_abs=5.486e-03 mean_abs=2.629e-04 failed=0/409600000
+[g7.0] chunked causal  B=4 S=100000 d=1024 H=16 ffn=1024 store=float32  chunk_q=8192 n_chunks=13  kv_cache=3.05GB free=14.45GB  compile=True
+[warning] dtype mismatch: baseline=torch.float32, optimized=torch.float16
+    rows 28-31: max_abs=5.646e-03 mean_abs=2.629e-04 failed=0/409600000
+  FULL B=32: max_abs=5.805e-03 max_rel=1.847e+08 mean_abs=2.629e-04  failed=0/3276800000  PASS
+
+== SUMMARY ==
+  gate                   PASS
+  equivalence            PASS
+  oversize_capability    PASS
+  row14_accuracy         PASS
+  row14_golden           PASS
+  harness_integrity      PASS
+  row14_full_accuracy    PASS
+
+OVERALL: PASS
+ROW14_SUMMARY row=14 B=32 S=100000 d=1024 H=16 L=2 ffn=1024 baseline=OOM(FP32_[B,H,S,S]_scores) shipped_ms=9953.1 peak_gb=19.55 acc_b=4 acc_max_abs=7.847e-03 acc_failed=0 full_failed=0/3276800000 golden=PASS result=supported
+14       32 100000  1024   16  baseline: OOM (FP32 [B,H,S,S] scores)  |  shipped: 9953.1 ms chunked, peak 19.55 GB  |  acc(B4 fp16-vs-fp32): max_abs 7.847e-03, failed 0  |  PASS -> supported via sequence chunking
+
+run_eval: per-row logs + this summary in /scratch/work/results/logs  (stamp 20260829_091844)
+run_eval: reference numbers -> docs/FINAL_SCORECARD.md
+
+################ ROW 14 THROUGH THE HARNESS ITSELF ################
+# expected: the FP32 reference OOMs before either model runs.
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+[W829 09:28:14.371331643 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+[W829 09:28:14.371523041 CUDACachingAllocator.cpp:3933] memory allocation failed with OOM on device 0 while trying to allocate 13107200000 bytes (free: 11620057088, total: 25250627584).
+=== Configuration ===
+TransformerConfig(batch_size=32, seq_len=100000, d_model=1024, num_heads=16, ffn_dim=1024, num_layers=2, causal=True)
+device=cuda, dtype=torch.float32, torch=2.13.0+cu130
+gpu=NVIDIA GeForce RTX 4090
+
+=== Accuracy check ===
+criterion: abs_error <= 0.002 OR relative_error <= 2.00%
+Traceback (most recent call last):
+  File "/work/torch_transformer_benchmark.py", line 2275, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/torch_transformer_benchmark.py", line 2239, in main
+    accuracy_passed = run_accuracy_tests(
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/work/torch_transformer_benchmark.py", line 1911, in run_accuracy_tests
+    x, valid_mask = generate_random_case(
+                    ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/torch_transformer_benchmark.py", line 1781, in generate_random_case
+    x = x * input_scale
+        ~~^~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 12.21 GiB. GPU 0 has a total capacity of 23.52 GiB of which 10.82 GiB is free. Including non-PyTorch memory, this process has 12.69 GiB memory in use. Of the allocated memory 12.30 GiB is allocated by PyTorch, and 5.83 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

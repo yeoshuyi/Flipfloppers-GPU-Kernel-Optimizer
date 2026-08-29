@@ -3915,3 +3915,68 @@ canonical capability therefore survives the deletion.
 Verified with `benchmark.py` gone: job 221 (sweep 13/13 PASS through
 `torch_transformer_benchmark.py`, `max_abs` byte-identical to run 168, largest
 latency move +0.30%) and job 223 (probe `OVERALL: PASS`, all 7 checks).
+
+### 57. Full 14-shape end-to-end eval + conformance / anti-gaming audit
+
+**Full eval, job 224** (`results/logs/full_eval_run224.log`) — `./run_eval.sh`
+driving `python3 /work/torch_transformer_benchmark.py --causal <shape args>` per
+row inside the pinned image, no extra flags, harness defaults throughout
+(`atol 0.002`, `rtol 0.02`, 5 trials, 20 warmup, 100 repeats, 3 rounds):
+
+```
+TOTAL  base 383.533 ms -> opt 60.824 ms   aggregate 6.31x   geomean 7.75x  (n=13)
+GATE   PASS   (0 shapes failed / errored)
+```
+
+Row 14 was additionally **attempted through the harness itself**, so the OOM is
+reproduced rather than asserted: it dies in `generate_random_case` at
+`x * input_scale` trying to allocate 12.21 GiB, before either model is built.
+Our model is never reached. The capability probe then reports 9953.1 ms /
+19.55 GB.
+
+**Conformance, checked independently of `sync_entrypoint`.** Reconstructed the
+judges' file from ours — delete the header, delete both sentinel blocks, restore
+the canonical stub `UserOptimizedTransformer`, drop the added `import os` — and
+diffed textually against `~/torch_transformer_benchmark.py`: **identical**. Our
+contribution is 1527 of 2275 lines and lies entirely inside the sentinels.
+`run_eval.sh` passes only `--causal <shape args>` — no tolerance, compile,
+`--benchmark-on-failure` or `--non-strict-weight-copy` override — and parses the
+harness's own printed numbers rather than computing its own.
+
+**Anti-gaming audit of the model region.** No second CUDA stream (work cannot
+escape the harness's `torch.cuda.Event` timing), no `non_blocking` async hiding,
+no manual CUDA-graph capture, no output caching, no benchmark/iteration
+detection, no env-gated path that skips math, no `detach` on the output path.
+`data_ptr` appears exactly once, in `_mask_is_all_ones`, caching a *property* of
+the mask and never an output.
+
+Two real findings, both now closed:
+
+1. **`_chunked_forward_causal` writes the residual in place.** New **check 9**
+   pins the contract empirically instead of by reading: with the fp32 input the
+   harness actually supplies, the caller's tensor is **not** mutated on either
+   path (`x = x.to(store)` rebinds to an fp16 copy), the output shape matches the
+   baseline, the output depends on the input, and repeat calls agree. The
+   in-place write is asserted to be real but confined to an fp16 caller buffer —
+   which the harness never supplies, since `--dtype` defaults to `float32`. It is
+   what lets Row 14 fit in 19.55 GB; a non-mutating variant would need a second
+   6.55 GB buffer and would not fit.
+2. **The gate could refuse a shape the reference could run.** When
+   `_would_oom_causal` fired with `S < CHUNK_MIN_SEQ`, `forward()` raised
+   `NotImplementedError` — chunking is over `S` and cannot help a batch-driven
+   footprint. But refusing was strictly worse than trying: the byte model
+   deliberately over-predicts (≥1.4x on every calibration shape), so a shape it
+   estimates at 19 GB typically really uses ~13.5 GB and runs fine. Now a short
+   sequence **falls through to the compiled path**, and a genuine overflow
+   surfaces as an ordinary CUDA OOM. Checking `S` first also means every official
+   row (`S ≤ 1024`) short-circuits before the gate is consulted at all.
+
+Re-verified after both changes: job 225 probe `OVERALL: PASS` (all 8 checks),
+job 226 sweep 13/13 PASS with `max_abs` byte-identical to run 168 and the
+largest latency move `+0.00%`.
+
+**One deviation worth stating plainly:** on the chunked path the returned tensor
+is FP16 while the baseline returns FP32. `compare_outputs` prints a dtype-mismatch
+warning and compares correctly (it casts both to float). This is unreachable from
+the harness — the only shape that routes there cannot be constructed by it — and
+casting back would need a 13.1 GB buffer that does not fit.

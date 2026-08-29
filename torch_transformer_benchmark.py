@@ -1190,18 +1190,22 @@ class UserOptimizedTransformer(BaselineTransformer):
             # a 3.35x margin, and it short-circuits on the cheap
             # tokens*max(d,ffn) test before any device lookup.
             # See experiments/g7_0_chunked_oversize.py.
+            # S is checked FIRST, and a short sequence now FALLS THROUGH to
+            # the compiled path instead of raising. Chunking is over S, so it
+            # cannot help a batch-driven footprint -- but raising there was
+            # strictly worse than trying: the byte model deliberately
+            # over-predicts (>=1.4x on every calibration shape), so a shape it
+            # estimates at 19 GB typically really uses ~13.5 GB and runs fine.
+            # If it genuinely does not fit, PyTorch raises an ordinary CUDA OOM,
+            # which is a better failure than refusing a shape the reference
+            # itself could have run. Ordering also means every official row
+            # (S <= 1024) short-circuits here without touching the gate at all.
             if (no_pad_causal and x.is_cuda
+                    and x.shape[1] >= _CHUNK_MIN_SEQ
                     and self._would_oom_causal(x.shape[0], x.shape[1],
                                                self.config.d_model,
                                                self.config.ffn_dim,
                                                x.device)):
-                if x.shape[1] < _CHUNK_MIN_SEQ:
-                    raise NotImplementedError(
-                        f"causal shape B={x.shape[0]} S={x.shape[1]} "
-                        f"d={self.config.d_model}: activation footprint exceeds "
-                        f"the 24 GB card and S<{_CHUNK_MIN_SEQ}, so sequence "
-                        f"chunking cannot bring it down (would need batch "
-                        f"chunking or multi-GPU)")
                 return self._chunked_forward_causal(x, valid_token_mask)
 
             if self._compiled_causal is None:

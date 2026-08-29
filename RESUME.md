@@ -53,6 +53,7 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 | **G7.1 gate in bytes + Row-14 golden** | ✅ DONE — `741f5fd`, `8604192`, jobs 200/201/202 calibrate+pin, **job 203 g7_0 OVERALL PASS**, **job 204 sweep 13/13 byte-identical to run168, no row slower** |
 | Official gate scores the merged drop-in | ✅ DONE — job 216: 13/13 PASS through `torch_transformer_benchmark.py`, `max_abs` byte-identical to run168, largest latency move +0.52%; probe check 7 (splice identity) PASS in job 217. The freshly-pulled official harness was verified **byte-identical** to `~/torch_transformer_benchmark.py` (full-file diff, 747 lines) — no frozen-half change was needed. |
 | README refreshed | ✅ DONE — Row 14 as OOM → 9952.6 ms / 19.55 GB, shape-arbitration mermaid figure, Row-14 measurement/accuracy methodology, 13-row table refreshed from run216 |
+| Full 14-shape eval + conformance/anti-gaming audit | ✅ DONE — job 224 (`run_eval.sh`, 13/13 PASS, aggregate 6.31x, geomean 7.75x; row 14 OOMs the harness in `generate_random_case`, reproduced). Conformance verified by reconstructing the judges' file from ours (delete header + both sentinel blocks, restore stub) → textually identical. Audit found and fixed: the `S < CHUNK_MIN_SEQ` `NotImplementedError` (now falls through to the compiled path) and pinned the in-place-write contract as probe check 9. Re-verified jobs 225/226. |
 | Row-14 accuracy at the FULL B=32 shape | ✅ DONE — probe check 8, job 220/223: `failed 0/3,276,800,000`, max_abs 5.805e-03. FP32 reference assembled from 8 exact B=4 batch slices (a transformer forward is batch-independent). **The input must be held on the host** — the seeded generator cannot be replayed for a slice (it fills a strided view); job 219 is the kept FAIL showing that mistake (mean_abs 1.122 = 2/sqrt(pi), i.e. independent samples). |
 | **benchmark.py DELETED** | ✅ DONE — `torch_transformer_benchmark.py` is now the single source of truth. Edit ONLY inside the `>>> BEGIN user ... >>>` sentinels. Guards: `verify_baseline` (20 frozen symbols vs the judges' canonical, AST), `sync_entrypoint --check` (file == canonical + sentinel blocks; the splice is self-hosting), and probe check 7 (same invariant inside the container). Verified jobs 221 (sweep 13/13, byte-identical to run168) and 223 (probe OVERALL PASS). |
 | Row-14 *optimization* (this arc) | ✅ **DONE** — `63a9934` (A2 flash, -21.0%), `68b0e6c` (D2 LN casts, -2.0%), `ac0012f` (compile default, -1.4%); jobs 205/207 profile, 208 flash probe, 209/210/211 gates, 213 re-profile, 214 sweep |
@@ -114,6 +115,8 @@ sbatch infra/slurm/g7_0_chunked_oversize.sbatch      # OVERALL: PASS
 #           sentinel pairs present+ordered, all 20 frozen scoring symbols
 #           defined OUTSIDE the editable region
 #   check 8 Row14 accuracy at the FULL B=32 shape: failed==0 / 3.28e9
+#   check 9 harness contract: fp32 caller tensor NOT mutated on either path,
+#           output depends on input, repeat calls agree (anti-gaming)
 sbatch infra/slurm/official_causal_sweep.sbatch      # 13/13 PASS, max_abs BYTE-IDENTICAL to
 #   results/logs/official_causal_sweep_run168.log  (== run199/204/214/216)
 #   NOTE: as of job 216 this scores the GENERATED torch_transformer_benchmark.py

@@ -31,6 +31,11 @@ Checks (a compact report, PASS/FAIL per check + OVERALL):
      cannot score row 14, so the current implementation is the benchmark;
      this is what catches an optimization silently changing the answer at
      B=32 (check 4 only asserts finite+shape, check 5 runs at B=4).
+  9. harness_contract     -- anti-gaming / conformance: the model must not
+     mutate the fp32 tensor the harness hands it (on either the compiled or
+     the chunked path), its output must depend on its input, and repeat calls
+     must agree. The in-place write that lets row 14 fit is asserted to be
+     confined to an fp16 caller buffer, which the harness never supplies.
   8. row14_full_accuracy  -- the FULL B=32 shape against an FP32-store
      reference assembled from exact B=4 batch slices (a transformer forward is
      batch-independent), so all 3.28e9 elements are checked, not check 5's
@@ -655,6 +660,88 @@ def check_row14_full_accuracy(slice_b=4):
         return False
 
 
+# --------------------------------------------------------------------------
+# 9. harness contract: behaviours the frozen harness relies on
+# --------------------------------------------------------------------------
+@torch.no_grad()
+def check_harness_contract():
+    """Anti-gaming / conformance assertions on the SHIPPED model.
+
+    The accuracy gate already makes functional cheating impossible (5 trials,
+    fresh seeds, compared against the frozen baseline). These cover the things
+    the gate would NOT catch:
+      a) the model must not mutate the caller's tensor -- the harness reuses one
+         `x` for the baseline forward, the optimized forward and 300+ timed
+         calls. _chunked_forward_causal DOES write in place, so this pins that
+         it only ever happens to its own fp16 copy, never to the fp32 tensor the
+         harness hands over;
+      b) the same on the CHUNKED path specifically, forced on a small shape;
+      c) the output has to depend on the input (not a cached constant);
+      d) two calls on equal inputs have to agree.
+    """
+    print("\n== 9. harness_contract ==", flush=True)
+    good = True
+    saved = B._CHUNK_ACT_ELEMS
+    try:
+        for label, force_chunk in (("compiled path", False),
+                                   ("chunked path ", True)):
+            B._CHUNK_ACT_ELEMS = 1_000_000 if force_chunk else 0
+            _, base, opt = build_models(2, 4096, 128, 4, 128, 2)
+            mask = torch.ones(2, 4096, dtype=torch.bool, device=DEV)
+            # fp32 in -- exactly what the harness supplies (--dtype float32)
+            x = torch.randn(2, 4096, 128, device=DEV, dtype=torch.float32)
+            x_ref = x.clone()
+            y1 = opt(x, mask).clone()          # clone: cudagraph reuses buffers
+            unmutated = torch.equal(x, x_ref)
+            yb = base(x, mask)
+            shape_ok = tuple(y1.shape) == tuple(yb.shape)
+            routed = "chunked" if force_chunk else "compiled"
+            print(f"  {label}: input unmutated={unmutated}  shape{tuple(y1.shape)}"
+                  f" matches baseline={shape_ok}  out_dtype={str(y1.dtype).split('.')[-1]}"
+                  f"  {'PASS' if unmutated and shape_ok else 'FAIL'}")
+            good &= unmutated and shape_ok
+
+            # (c) output depends on the input
+            y0 = opt(torch.zeros_like(x), mask).clone()
+            depends = not torch.allclose(y1.float(), y0.float(), atol=1e-4)
+            # (d) equal inputs -> equal outputs
+            y2 = opt(x_ref.clone(), mask).clone()
+            agree = torch.equal(y1.float(), y2.float())
+            print(f"                 output depends on input={depends}  "
+                  f"repeat-call agreement={agree}  "
+                  f"{'PASS' if depends and agree else 'FAIL'}")
+            good &= depends and agree
+            del base, opt, x, x_ref, y1, y2, y0, yb, mask
+            torch.cuda.empty_cache()
+
+        # (b') the documented exception: an fp16 caller buffer IS written in
+        # place (that is how row 14 fits in 19.55 GB). Assert it is real and
+        # confined to that case, so the contract is stated, not assumed.
+        B._CHUNK_ACT_ELEMS = 1_000_000
+        _, base, opt = build_models(2, 4096, 128, 4, 128, 2)
+        del base
+        mask = torch.ones(2, 4096, dtype=torch.bool, device=DEV)
+        xh = torch.randn(2, 4096, 128, device=DEV, dtype=torch.float16)
+        xh_ref = xh.clone()
+        yh = opt(xh, mask)
+        mutated = not torch.equal(xh, xh_ref)
+        aliases = yh.data_ptr() == xh.data_ptr()
+        print(f"  fp16 caller buffer IS written in place: {mutated} "
+              f"(returned tensor aliases it: {aliases}) -- documented contract, "
+              f"unreachable from the harness (--dtype float32)")
+        good &= mutated and aliases
+        del opt, xh, xh_ref, yh, mask
+        torch.cuda.empty_cache()
+    except RuntimeError as e:
+        print(f"  FAIL: {str(e)[:200]}")
+        good = False
+    finally:
+        B._CHUNK_ACT_ELEMS = saved
+        torch.cuda.empty_cache()
+    print(f"  {'PASS' if good else 'FAIL'}")
+    return good
+
+
 def main():
     print(f"torch {torch.__version__}  device {torch.cuda.get_device_name(0)}")
     free, total = torch.cuda.mem_get_info()
@@ -676,6 +763,7 @@ def main():
         "row14_golden": check_row14_golden(),
         "harness_integrity": check_harness_integrity(),
         "row14_full_accuracy": check_row14_full_accuracy(),
+        "harness_contract": check_harness_contract(),
     }
     print("\n== SUMMARY ==")
     for k, v in results.items():
