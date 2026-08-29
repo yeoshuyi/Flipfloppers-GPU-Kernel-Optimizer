@@ -126,30 +126,10 @@ shape.
 
 ### Shape Arbitration
 The artefact is a **dispatcher, not one kernel**. Every forward is arbitrated on
-shape alone. The gates below are the real conditions in `UserOptimizedTransformer.forward()`.
-
-```mermaid
-flowchart TD
-    IN["forward(x, valid_token_mask)"] --> CAUSAL{"config.causal ?"}
-
-    CAUSAL -->|no| NP["_mask_is_all_ones -&gt; no_pad  (G0.5)<br/>_ensure_folded_weights  (G1.1 / G1.2 folds)<br/>_ensure_lt_plan   gate: tok &le; 127  (G6.6)<br/>_ensure_ws_plan   gate: FP16-accum legal  (G4.3)"]
-    NP --> NCOMP["torch.compile(reduce-overhead)<br/>_optimized_forward"]
-
-    CAUSAL -->|yes| MASK["_mask_is_all_ones -&gt; no_pad_causal  (G0.5)<br/>_ensure_ffn_plan<br/>gate: d_model &ge; 512 and ffn_dim &ge; 2048 and tok &ge; 8192  (G4.7)"]
-    MASK --> OOM{"_would_oom_causal   (G7.1)<br/>128 MiB + tok x (28 d_model + 8 ffn_dim)<br/>&gt; 80% of device VRAM ?"}
-
-    OOM -->|"no — the compiled path fits"| CCOMP["torch.compile(reduce-overhead)<br/>_optimized_forward_causal<br/>OFFICIAL ROWS 1-13"]
-    OOM -->|"yes — it would OOM"| CHUNK["_chunked_forward_causal   (G7.0)<br/>query chunks vs an incremental K/V cache<br/>ROW 14 AND LARGER"]
-
-    CCOMP --> REG{"regime<br/>CLAUDE.md dispatch table"}
-    REG -->|"tok &le; 16k and S &lt; 1024<br/>rows 1-5, 7-12"| DEF["DEFAULT / TINY — launch and compute bound<br/>CUDA graphs (G2.4b), fused QKV (G0.2c),<br/>FP16 attention (G6.4bc), cuBLASLt FFN at tok &le; 127 (G6.6)"]
-    REG -->|"S &ge; 1024<br/>row 13"| LS["LONG-SEQ — attention is O(S^2)<br/>FP16 storage unlocks flash dispatch (G6.4bc)<br/>31.7x, the largest win on the board"]
-    REG -->|"tok &gt; 16k<br/>row 6"| LB["LARGE-BATCH — GEMM and DRAM bound<br/>tensor-core occupancy, FP16 storage<br/>elementwise path at the bandwidth roofline"]
-
-    CHUNK --> STORE{"store dtype"}
-    STORE -->|"fp16 — shipped"| FLASH["ONE bottom-right-causal flash call per chunk<br/>_flash_attention_forward, BSHD K/V cache<br/>no LSE merge, no transpose copy  (G7.4)<br/>LayerNorm on fp16 (G7.5) · compiled body (G7.6)"]
-    STORE -->|"fp32 — accuracy reference only"| EFF["two-block mem-efficient split + FP32 LSE merge<br/>no FP32 flash kernel exists on this stack,<br/>so the reference path keeps the G7.0 structure"]
-```
+shape alone — no input values are ever inspected — and each branch ends in a
+different set of optimizations, because each branch has a different binding
+wall. The [combined dispatch and datapath figure](#the-full-path-a-batch-takes)
+below traces it end to end.
 
 ### Accepted Optimizations
 All applied optimizations are exact or precision-neutral, with the exception of two FP16-storage casts. These casts are strictly gated by an `atol = 0.002` budget and a fixed `allow_fp16_reduced_precision_reduction = False` (which forces FP32 GEMM reduction, entirely avoiding the FP16-accumulate tier). 
@@ -176,28 +156,59 @@ Because the tightest accuracy margin on the baseline stack sits at `max_abs = 0.
 | **G7.5** | LayerNorm applied directly to the FP16 residual — CUDA already accumulates in FP32 for half input | Exact (bit-identical) |
 | **G7.6** | `torch.compile` on the chunk body (`CHUNK_COMPILE` default on) | Exact (no value change) |
 
-> The graph below depicts the optimizations as part of the datapath
+#### The Full Path a Batch Takes
 
-`x` enters in **FP32**. Per layer:
+Dispatch and datapath in one picture: how a shape is routed, then what actually
+happens to the tensor inside every layer. Hand-written kernels are outlined in
+**amber** — each one names the shapes it engages on, because none of them fire
+on the official causal matrix (the fused FFN kernel needs `ffn_dim ≥ 2048`; the
+widest official row is 1024).
 
 ```mermaid
 flowchart TD
-    X["x  (fp32 residual stream)"] --> N1["LayerNorm norm1<br/>pure reduction — affine folded away  (G1.1c)"]
-    N1 --> C1["cast -> fp16  (G6.4bc)"]
-    C1 --> QKV["fused QKV GEMM  d then 3d, Q pre-scaled<br/>fp16 storage / fp32 accumulate<br/>(G0.2c fuse · G1.2 scale->W_Q · G1.1c fold)"]
-    QKV --> SPL["split + strided head views — no copy  (G0.3)"]
-    SPL --> SDPA["SDPA  is_causal=True<br/>fp16 in · FP32 softmax accumulation<br/>(G0.1c · G6.4bc auto flash/efficient)"]
-    SDPA --> OP["out_proj GEMM  fp16 / fp32 acc  (G6.4bc)"]
-    OP --> C2["cast -> fp32  (G6.4bc)"]
-    C2 --> R1["+ residual   (fp32, kept exact)"]
-    R1 --> N2["LayerNorm norm2 — affine folded  (G1.1c)"]
-    N2 --> C3["cast -> fp16  (G6.4a_v2c)"]
-    C3 --> FI["ffn_in GEMM  fp16 / fp32 acc  (G6.4a_v2c)"]
-    FI --> GE["GELU  exact erf, in fp32<br/>[G4.7c would fuse ffn_in+GELU here when it engages]"]
-    GE --> FO["ffn_out GEMM  TF32x3 (matmul_precision=high) ≈ fp32 — kept exact"]
-    FO --> R2["+ residual   (fp32)"]
-    R2 --> X
+    IN(["Incoming Batch — FP32"]) --> MASK["Check the Padding Mask Once<br/>An All-Ones Mask Skips Every Masking Pass"]
+    MASK --> FOLD["Pre-Fold the Normalisation Scale and Bias,<br/>and the Attention Scale, into the GEMM Weights<br/>Exact, and Free at Runtime"]
+    FOLD --> CAUSAL{"Causal Attention?"}
+
+    CAUSAL -->|"No"| NCK["Search cuBLASLt for the Fastest FFN Algorithm<br/>Tiny Batches Only"]
+    NCK --> NCW["Hand-Written Warp-Specialised GEMM<br/>for the Attention Projections<br/>Non-Causal Shapes Only"]
+
+    CAUSAL -->|"Yes"| FIT{"Does the Whole Forward<br/>Fit in VRAM?"}
+    FIT -->|"Yes · Official Rows 1-13"| GRAPH["Capture the Forward as a CUDA Graph<br/>One Replay per Call, Near-Zero Launch Overhead"]
+    FIT -->|"No · Row 14, 3.2M Tokens"| CHUNK["Stream the Sequence in Query Chunks<br/>Against a Growing Key/Value Cache<br/>No Full-Length Score Matrix Ever Exists"]
+
+    subgraph LAYER["Inside Every Layer"]
+        L1["Normalise the Activations<br/>Scale and Bias Already Folded Away"]
+        L1 --> L2["Cast Tensor Down to FP16"]
+        L2 --> L3["One Fused Query/Key/Value Projection<br/>Replaces Three Separate GEMMs"]
+        L3 --> L4["Reshape into Heads Without Copying a Byte"]
+        L4 --> L5["Flash Attention<br/>FP16 Inputs · Softmax Accumulated in FP32"]
+        L5 --> L6["Project the Heads Back Out,<br/>Cast Up to FP32, Add the Residual"]
+        L6 --> L7["Normalise Again · Cast Down to FP16"]
+        L7 --> L8["Expand Through the Feed-Forward Layer"]
+        L8 --> L9["Exact GELU — Deliberately Kept in FP32"]
+        L9 --> L10["Contract Back Down, Kept Near FP32<br/>for Accuracy, and Add the Residual"]
+    end
+
+    NCW --> L1
+    GRAPH --> L1
+    CHUNK -->|"Same Layer Body, Three Changes:<br/>FP16 Residual · One Flash Call per Chunk<br/>Normalise Directly in FP16"| L1
+
+    PTX["Hand-Written Inline-PTX Warp-Specialised Kernel<br/>Fuses the Expansion and the Exact GELU into One Pass<br/>Engages on Wider Feed-Forward Layers"]
+    PTX -.-> L8
+    PTX -.-> L9
+
+    L10 --> OUT(["Normalise Once More After the Layer Loop"])
+
+    classDef kernel stroke:#b0762f,stroke-width:3px
+    classDef decision stroke:#3b6ea5,stroke-width:2px
+    class NCK,NCW,PTX kernel
+    class CAUSAL,FIT decision
 ```
+
+> Drawing note: the mask check and the weight folds are drawn once at the top
+> because that reads as one pipeline. In the code each branch does its own,
+> lazily, on first use.
 
 After the layer loop: `final_norm` (not folded — it has no consumer). The
 FP32 residual stream is never downcast, both LayerNorms do only the mean/var
