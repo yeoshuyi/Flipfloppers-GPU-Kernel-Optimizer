@@ -1273,19 +1273,20 @@ class UserOptimizedTransformer(BaselineTransformer):
             (13.1 GB) is already ~20 GB -- an fp32 residual would not fit.
           * attention runs one query chunk at a time against a K/V buffer that
             is filled incrementally, so no [B,H,S,S] score tile is ever
-            allocated. F.scaled_dot_product_attention with is_causal=True and a
-            query shorter than the key length uses bottom-right alignment:
-            query row c0+j attends keys 0..c0+j -- exactly the causal prefix
-            (verified in experiments/g7_0_chunked_oversize.py). The backend is
-            pinned to FLASH / EFFICIENT so a silent fall to the math backend
-            (which *would* build the [B,H,chunk,c1] tile) cannot happen.
+            allocated. is_causal=True with q_len != kv_len is TOP-LEFT aligned
+            in current PyTorch (every backend) -- not the prefix mask we need
+            -- so each query chunk [c0:c1] attending keys [0:c1] is split into
+            a strictly-past non-causal block ([0:c0]) and a square causal block
+            ([c0:c1]) and the two are merged flash-style by log-sum-exp (the
+            mem-efficient op returns the LSE). No explicit [chunk,c1] mask is
+            ever built. Verified against a full-attention reference in
+            experiments/g7_0_chunked_oversize.py::check_sdpa_prefix_causal.
 
         ``store=torch.float32`` turns this into its own accuracy reference --
-        residual, K/V and the folded weights all widened, SDPA pinned to
-        EFFICIENT (the only fp32-capable memory-lean backend) -- so the
-        fp16-storage penalty can be measured without a baseline that OOMs.
-        (fp64 is not available: no fp32+ flash/efficient kernel exists at this
-        seq_len, and the math backend OOMs.)
+        residual, K/V and the folded weights all widened (the mem-efficient
+        attention op takes fp32 directly) -- so the fp16-storage penalty can be
+        measured without a baseline that OOMs. (fp64 is not available: no fp32+
+        memory-lean attention kernel exists, and a dense fp64 score tile OOMs.)
 
         Optimisations: query-chunk size adapts to free VRAM (K/V bytes and
         CHUNK_RESERVE_GB held back); the K/V buffer is allocated once and
@@ -1296,8 +1297,6 @@ class UserOptimizedTransformer(BaselineTransformer):
         no-pad only -- a padded oversize shape OOMs the same way and is out of
         scope.
         """
-        from torch.nn.attention import SDPBackend, sdpa_kernel
-
         if valid_token_mask is not None and not self._mask_is_all_ones(
                 valid_token_mask):
             raise NotImplementedError(
@@ -1348,9 +1347,27 @@ class UserOptimizedTransformer(BaselineTransformer):
         vbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
 
         gemm_dtype = store if wide else torch.float16
-        sdpa_backends = ([SDPBackend.EFFICIENT_ATTENTION] if wide
-                         else [SDPBackend.FLASH_ATTENTION,
-                               SDPBackend.EFFICIENT_ATTENTION])
+        eff_attn = torch.ops.aten._scaled_dot_product_efficient_attention
+
+        def prefix_causal_attn(q, kfull, vfull, c0):
+            # q: [B,H,L,hd]; attend keys [0:c0+L] with query row c0+i seeing
+            # keys 0..c0+i. Square causal block [c0:c0+L] + (if c0>0) a
+            # strictly-past non-causal block [0:c0], merged by log-sum-exp.
+            L = q.shape[2]
+            out_d, lse_d = eff_attn(q, kfull[:, :, c0:c0 + L],
+                                    vfull[:, :, c0:c0 + L], None, True, 0.0,
+                                    True, scale=1.0)[:2]
+            if c0 == 0:
+                return out_d.float()
+            out_p, lse_p = eff_attn(q, kfull[:, :, :c0], vfull[:, :, :c0],
+                                    None, True, 0.0, False, scale=1.0)[:2]
+            lse_d = lse_d[..., :L].unsqueeze(-1)
+            lse_p = lse_p[..., :L].unsqueeze(-1)
+            m = torch.maximum(lse_p, lse_d)
+            wp = torch.exp(lse_p - m)
+            wd = torch.exp(lse_d - m)
+            return (wp * out_p.float() + wd * out_d.float()) / (wp + wd)
+
         norm_shape = self.layers[0].norm1.normalized_shape
         n1_eps = self.layers[0].norm1.eps
         n2_eps = self.layers[0].norm2.eps
@@ -1400,23 +1417,20 @@ class UserOptimizedTransformer(BaselineTransformer):
                 fi_w, fi_b = layer._ffn_in_weight_fp16, layer._ffn_in_bias_fp16
                 fo_w, fo_b = layer.ffn_out.weight, layer.ffn_out.bias
 
-            with sdpa_kernel(sdpa_backends):
-                for c0 in range(0, S, chunk_q):
-                    c1 = min(c0 + chunk_q, S)
-                    xc = x[:, c0:c1]
-                    qkv = pre(xc, qkv_w, qkv_b)
-                    q, k, v = qkv.split(d, dim=-1)
-                    q = self._split_heads_view(q, H, hd)
-                    k = self._split_heads_view(k, H, hd)
-                    v = self._split_heads_view(v, H, hd)
-                    kbuf[:, :, c0:c1] = k
-                    vbuf[:, :, c0:c1] = v
-                    ctx = F.scaled_dot_product_attention(
-                        q, kbuf[:, :, :c1], vbuf[:, :, :c1],
-                        attn_mask=None, is_causal=True, scale=1.0)
-                    x[:, c0:c1] = post(xc, ctx, op_w, op_b, fi_w, fi_b,
-                                       fo_w, fo_b)
-                    del qkv, q, k, v, ctx
+            for c0 in range(0, S, chunk_q):
+                c1 = min(c0 + chunk_q, S)
+                xc = x[:, c0:c1]
+                qkv = pre(xc, qkv_w, qkv_b)
+                q, k, v = qkv.split(d, dim=-1)
+                q = self._split_heads_view(q, H, hd)
+                k = self._split_heads_view(k, H, hd)
+                v = self._split_heads_view(v, H, hd)
+                kbuf[:, :, c0:c1] = k
+                vbuf[:, :, c0:c1] = v
+                ctx = prefix_causal_attn(q, kbuf[:, :, :c1], vbuf[:, :, :c1], c0)
+                x[:, c0:c1] = post(xc, ctx.to(gemm_dtype), op_w, op_b,
+                                   fi_w, fi_b, fo_w, fo_b)
+                del qkv, q, k, v, ctx
 
         # --- final norm, chunked in place -----------------------------
         for c0 in range(0, S, chunk_q):

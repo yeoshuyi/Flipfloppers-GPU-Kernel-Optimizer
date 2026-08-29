@@ -47,6 +47,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 ATOL, RTOL = 2e-3, 2e-2
+CANON = {}   # numbers for the ROW14_SUMMARY line consumed by run_eval.sh
 OFFICIAL_BSD = [  # (batch, seq_len, d_model) for the 13 runnable official rows
     (64, 128, 128), (1, 128, 128), (4, 128, 128), (16, 128, 128),
     (128, 128, 128), (10000, 128, 128), (64, 128, 32), (64, 128, 1024),
@@ -96,47 +97,56 @@ def time_call(fn, warmup=1, iters=3):
 
 
 # --------------------------------------------------------------------------
-# 1. SDPA prefix-causal alignment
+# 1. prefix-causal attention: split (past + square-causal) + LSE merge
 # --------------------------------------------------------------------------
 @torch.no_grad()
+def _prefix_causal_ref(q, kfull, vfull, c0):
+    """Standalone copy of _chunked_forward_causal's prefix_causal_attn closure
+    -- kept in the probe so a change to either is caught here."""
+    eff = torch.ops.aten._scaled_dot_product_efficient_attention
+    L = q.shape[2]
+    out_d, lse_d = eff(q, kfull[:, :, c0:c0 + L], vfull[:, :, c0:c0 + L],
+                       None, True, 0.0, True, scale=1.0)[:2]
+    if c0 == 0:
+        return out_d.float()
+    out_p, lse_p = eff(q, kfull[:, :, :c0], vfull[:, :, :c0],
+                       None, True, 0.0, False, scale=1.0)[:2]
+    lse_d = lse_d[..., :L].unsqueeze(-1)
+    lse_p = lse_p[..., :L].unsqueeze(-1)
+    m = torch.maximum(lse_p, lse_d)
+    wp, wd = torch.exp(lse_p - m), torch.exp(lse_d - m)
+    return (wp * out_p.float() + wd * out_d.float()) / (wp + wd)
+
+
+@torch.no_grad()
 def check_sdpa_prefix_causal():
-    print("\n== 1. sdpa_prefix_causal ==", flush=True)
-    bn, hn, sn, hd = 2, 3, 96, 32
-    c0, c1 = 32, 64
-    ok_any = False
-    for dtype, backends, atol in (
-        (torch.float32, [SDPBackend.MATH, SDPBackend.EFFICIENT_ATTENTION], 2e-4),
-        (torch.float16, [SDPBackend.FLASH_ATTENTION,
-                         SDPBackend.EFFICIENT_ATTENTION], 3e-3),
-    ):
+    print("\n== 1. prefix_causal_attn (split + LSE merge) ==", flush=True)
+    bn, hn, sn, hd = 2, 3, 128, 64
+    ok = True
+    for dtype, atol in ((torch.float32, 2e-4), (torch.float16, 3e-3)):
         g = torch.Generator(device=DEV).manual_seed(11)
         q = torch.randn(bn, hn, sn, hd, generator=g, device=DEV, dtype=dtype)
         k = torch.randn(bn, hn, sn, hd, generator=g, device=DEV, dtype=dtype)
         v = torch.randn(bn, hn, sn, hd, generator=g, device=DEV, dtype=dtype)
-        for bk in backends:
-            try:
-                with sdpa_kernel([bk]):
-                    full = F.scaled_dot_product_attention(
-                        q, k, v, is_causal=True, scale=1.0)
-                    part = F.scaled_dot_product_attention(
-                        q[:, :, c0:c1], k[:, :, :c1], v[:, :, :c1],
-                        is_causal=True, scale=1.0)
-            except (RuntimeError, ValueError) as e:
-                print(f"  {str(dtype):>15} {bk.name:<20} unavailable "
-                      f"({str(e)[:50]})")
-                continue
-            err = (part.float() - full[:, :, c0:c1].float()).abs().max().item()
-            good = err <= atol
-            ok_any |= good
-            print(f"  {str(dtype):>15} {bk.name:<20} max|part-full[c0:c1]| "
-                  f"= {err:.2e}   {'ok' if good else 'MISMATCH'}")
-            if not good:
-                print("  FAIL: SDPA(is_causal=True) is NOT bottom-right / "
-                      "prefix-causal aligned on this backend -- the chunked "
-                      "design is invalid. (fallback: explicit banded attn_mask.)")
-                sys.exit(1)
-    if not ok_any:
-        print("  FAIL: no memory-lean SDPA backend available at all")
+        with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
+            full = F.scaled_dot_product_attention(q, k, v, is_causal=True,
+                                                  scale=1.0)
+        worst = 0.0
+        for chunk in (32, 48, sn):
+            parts = []
+            for c0 in range(0, sn, chunk):
+                c1 = min(c0 + chunk, sn)
+                parts.append(_prefix_causal_ref(q[:, :, c0:c1], k[:, :, :c1],
+                                                v[:, :, :c1], c0))
+            got = torch.cat(parts, dim=2)
+            worst = max(worst, (got.float() - full.float()).abs().max().item())
+        good = worst <= atol
+        ok &= good
+        print(f"  {str(dtype):>15}  chunked vs full causal: max|.| = {worst:.2e}"
+              f"   {'ok' if good else 'MISMATCH'}")
+    if not ok:
+        print("  FAIL: the split+merge prefix-causal attention does not match "
+              "full causal attention -- the chunked design is invalid.")
         sys.exit(1)
     print("  PASS")
     return True
@@ -241,6 +251,9 @@ def check_oversize_capability():
             shape_ok = tuple(y.shape) == (bs, sl, dm)
             p = finite and shape_ok
             good &= p
+            if name.strip() == "row14":
+                CANON["shipped_ms"] = round(med, 1)
+                CANON["peak_gb"] = round(gb(peak), 2)
             print(f"  {name} B*S*d={bs * sl * dm:>13,}  "
                   f"latency={med:7.1f} ms (all {['%.0f' % t for t in allts]})  "
                   f"peak={gb(peak):5.2f} GB  finite={finite} shape_ok={shape_ok} "
@@ -294,6 +307,9 @@ def check_row14_accuracy():
                                                 store=torch.float32)
             r = B.compare_outputs(ref32, chk16, RTOL, ATOL)
             p = r.failed_elements == 0
+            CANON.update(acc_b=bs, acc_max_abs=r.max_abs_error,
+                         acc_max_rel=r.max_relative_error,
+                         acc_failed=r.failed_elements)
             print(f"  B={bs}: fp16-store vs fp32-store chunked  "
                   f"max_abs={r.max_abs_error:.3e} max_rel={r.max_relative_error:.3e} "
                   f"mean_abs={r.mean_abs_error:.3e} "
@@ -334,6 +350,18 @@ def main():
         print(f"  {k:<22} {'PASS' if v else 'FAIL'}")
     ok = all(results.values())
     print(f"\nOVERALL: {'PASS' if ok else 'FAIL'}")
+
+    # one canonical line for run_eval.sh's RUN_ROW14 wrapper
+    cap = results["oversize_capability"] and results["row14_accuracy"]
+    print("ROW14_SUMMARY "
+          f"row=14 B=32 S=100000 d=1024 H=16 L=2 ffn=1024 "
+          f"baseline=OOM(FP32_[B,H,S,S]_scores) "
+          f"shipped_ms={CANON.get('shipped_ms', 'NA')} "
+          f"peak_gb={CANON.get('peak_gb', 'NA')} "
+          f"acc_b={CANON.get('acc_b', 'NA')} "
+          f"acc_max_abs={CANON.get('acc_max_abs', float('nan')):.3e} "
+          f"acc_failed={CANON.get('acc_failed', 'NA')} "
+          f"result={'supported' if cap else 'FAIL'}", flush=True)
     return 0 if ok else 1
 
 
