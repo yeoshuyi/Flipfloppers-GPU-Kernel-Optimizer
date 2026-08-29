@@ -1508,8 +1508,13 @@ class UserOptimizedTransformer(BaselineTransformer):
         # one compiled graph serves every layer; only the last, short chunk is
         # a second shape). The SDPA-over-growing-prefix in between stays eager.
         def pre(xc, qkv_w, qkv_b):
-            ln_in = xc if wide else xc.float()
-            n1 = F.layer_norm(ln_in, norm_shape, eps=n1_eps)
+            # G7.5 (D2): layer_norm straight on the fp16 residual. CUDA's
+            # layer_norm carries fp32 accumulators for half input, so this is
+            # the same arithmetic as widening first -- it just drops a
+            # [B,L,d] fp32 round-trip (two casts, ~0.8 GB of traffic) per LN
+            # per chunk. The `wide` path lands here too: xc is already fp32,
+            # so the old branch collapses.
+            n1 = F.layer_norm(xc, norm_shape, eps=n1_eps)
             return F.linear(n1.to(gemm_dtype), qkv_w, qkv_b)
 
         def post(xc, ctx, op_w, op_b, fi_w, fi_b, fo_w, fo_b):
@@ -1523,9 +1528,11 @@ class UserOptimizedTransformer(BaselineTransformer):
                     xc.shape[0], xc.shape[1], d)
             ao = F.linear(ctx, op_w, op_b)
             h1 = xc + ao.to(store)
-            ln2_in = h1 if wide else h1.float()
-            n2 = F.layer_norm(ln2_in, norm_shape, eps=n2_eps)
+            # G7.5 (D2): same as in pre() -- no fp32 round-trip around norm2.
+            n2 = F.layer_norm(h1, norm_shape, eps=n2_eps)
             hidden = F.linear(n2.to(gemm_dtype), fi_w, fi_b)
+            # NOT touched: the fp32 GELU and the fp32 ffn_out GEMM below are
+            # load-bearing for this path's accuracy margin.
             act = F.gelu(hidden if wide else hidden.float(), approximate="none")
             ffn = F.linear(act, fo_w, fo_b)
             return h1 + ffn.to(store)
