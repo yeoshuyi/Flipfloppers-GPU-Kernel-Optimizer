@@ -1,100 +1,65 @@
 # RESUME — live cursor
 
-**Task:** support official **Row 14** (`B=32 d=1024 H=16 S=100000 L=2 ffn=1024
-causal`) — and any causal shape whose activation set exceeds the 24 GB card —
-via a sequence-**chunked** eager causal forward. Baseline stays OOM (the frozen
-harness emits no number for row 14); the shipped model must *execute* the shape
-and we must *prove it correct* with a standalone probe.
+## Current task: COMPLETE ✅
 
-Plan: `/home/techjam2/.claude/plans/crispy-cooking-pine.md` (approved).
+**Support official Row 14** (`B=32 d=1024 H=16 S=100000 L=2 ffn=1024 causal`)
+— and any causal shape above the 24 GB activation limit — via a sequence-
+**chunked** eager causal forward. Baseline stays OOM (frozen harness emits no
+Row-14 number); the shipped model executes the shape and it is proven correct.
 
-## State
+Plan: `/home/techjam2/.claude/plans/crispy-cooking-pine.md` (approved, done).
 
 | phase | status |
 |---|---|
-| P1 `benchmark.py`: `_CHUNK_*` consts + `_would_oom_causal` + `forward()` gate + `_chunked_forward_causal` | DONE — commit `b751393` |
-| P2 `experiments/g7_0_chunked_oversize.py` + `infra/slurm/g7_0_chunked_oversize.sbatch` | DONE — commit pending |
-| P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | DONE — commit `4d30211` |
-| P4 sbatch the probe → real numbers | **DONE — job 198 OVERALL: PASS**, `results/logs/g7_0_chunked_oversize_run198.log` |
-| P5 regression: rows 1-13 vs run168 (gate must NOT fire) | **DONE — job 199: 13/13 PASS, max_abs byte-identical to run168, speedups within jitter** |
-| P6 docs: README + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | DONE — commit pending |
-| P7 `make package` + `bash infra/verify_submission.sh` | in progress |
+| P1 `benchmark.py` `_CHUNK_*` + `_would_oom_causal` + `forward()` gate + `_chunked_forward_causal` | ✅ `b751393` |
+| P2 `experiments/g7_0_chunked_oversize.py` + sbatch | ✅ `e6c6c21`, top-left fix `2b45c0c` |
+| P3 `run_eval.sh` `RUN_ROW14=1` → probe | ✅ `4d30211` |
+| P4 sbatch probe → real numbers | ✅ **job 198 OVERALL: PASS** → `results/logs/g7_0_chunked_oversize_run198.log` |
+| P5 regression rows 1-13 | ✅ **job 199: 13/13 PASS**, `max_abs` byte-identical to run 168 → `results/logs/official_causal_sweep_run199.log` |
+| P6 docs (README, FINAL_SCORECARD, PARETO, DEVPOST, ARCHITECTURE, PROGRESS 53) | ✅ `e9178b8` |
+| P7 `make package` + `verify_submission.sh` | ✅ `dist/techjam2_e9178b8.tar.gz` → `verify_submission: PASS` |
 
-## Job 198 results (all PASS) — `results/logs/g7_0_chunked_oversize_run198.log`
+## Results (job 198)
 
-- **Row 14** (B=32 S=100000 d=1024 H=16 L=2 ffn=1024 causal): shipped chunked
-  forward **13018 ms**, **peak 20.80 GB** / 24 GB card, output finite + right
-  shape. adaptive chunk_q=2048, 49 chunks, KV cache 12.21 GB.
-- Also ran (B=8 S=200000): 12055 ms, 11.64 GB. (B=64 S=50000): 7546 ms, 20.80 GB.
-- **CHUNK_COMPILE** A/B on Row 14: 13079 → 12793 ms (**+2.2%**), default stays off.
-- **Row-14 accuracy** (B=4, fp16-store vs fp32-store chunked): max_abs 8.13e-3,
-  **mean_abs 3.41e-4**, **failed 0 / 409,600,000** — passes the disjunctive
-  `abs<0.002 OR rel<0.02` gate. Contingency (fp32 residual + block-flash) NOT
-  needed.
-- Equivalence (small): fp16 chunked vs frozen baseline `failed=0`; fp32 chunked
-  vs baseline max_abs 5.10e-4. Gate never trips on the 13 official rows;
-  auto-route bit-identical to a direct `_chunked_forward_causal` call.
-- Fix along the way (commit `2b45c0c`): `SDPA(is_causal=True)` with q_len≠kv_len
-  is **top-left** aligned (every backend), so per-chunk attention is a
-  past-block + square-causal-block split merged by LSE via
-  `torch.ops.aten._scaled_dot_product_efficient_attention`.
+- **Row 14**: shipped chunked forward **13.0 s**, **peak 20.80 GB** / 24 GB
+  card, output finite + right shape. adaptive chunk_q 2048, 49 chunks, KV
+  cache 12.21 GB FP16.
+- Also: `(8,200000,1024)` 12.1 s / 11.6 GB · `(64,50000,1024)` 7.5 s / 20.8 GB.
+- **Row-14 accuracy** (B=4, FP16-store vs FP32-store chunked): `failed
+  0 / 4.096e8`, mean_abs `3.4e-4`, max_abs `8.1e-3` — passes disjunctive
+  `abs<0.002 ∨ rel<0.02`. Contingency (FP32 residual + block-flash) NOT needed.
+- **CHUNK_COMPILE** A/B: 13.08 → 12.79 s (+2.2 %), default stays off.
+- Equivalence (small): FP16 chunked vs frozen baseline `failed=0`; FP32
+  chunked vs baseline max_abs `5.1e-4`. Gate never trips on the 13 official
+  rows; auto-route bit-identical to a direct call.
 
-## In flight
+## Regression (job 199)
 
-- **Slurm job 199** `official_causal_sweep.sbatch` → regression, rows 1-13.
-  Expect speedups + max_abs to match `results/logs/official_causal_sweep_run168.log`
-  (the G7.0 gate must NOT fire for any of them).
+13/13 PASS. `max_abs` byte-identical to run 168 on every row (0.0013676,
+0.00195017, …). Speedups within run-to-run jitter (row 8, most stable, 1.933×
+vs 1.932×). G7.0 gate does not fire; compiled path for rows 1-13 unchanged.
 
-## Design (locked)
+## Design notes (for future reference)
 
-- **Gate** (`_would_oom_causal`, staticmethod): `B*S*d >= _CHUNK_ACT_ELEMS`
-  (default `8e8` ≈ 20 GB; largest official row 1-13 is row 6 = `1.64e8`, ~5×
-  under). Plus `x.is_cuda`, `no_pad`, `self.config.causal`, `S >= _CHUNK_MIN_SEQ`
-  (2048); if over-budget but `S < 2048` → `NotImplementedError` (S-chunking
-  can't help).
-- **`_chunked_forward_causal`**: eager, no-pad only. Residual `x` kept in
-  `store` (fp16 default) and **mutated in place**. K/V buffer `[B,H,S,hd]` in
-  `store`, allocated once, refilled per layer. Per query chunk: LN→fused QKV
-  (folded fp16 weights)→write K/V slice→`SDPA(q, kbuf[:, :, :c1], vbuf[:, :, :c1],
-  is_causal=True, scale=1.0)` (bottom-right causal = exact prefix)→out_proj→
-  residual→LN2→ffn_in→GELU(fp32)→ffn_out→residual. Final norm chunked in place.
-  SDPA forced to FLASH/EFFICIENT (never math → never a `[B,H,c,S]` tile).
-- **Optimization**: adaptive `chunk_q` from `mem_get_info()` (K/V bytes +
-  `_CHUNK_RESERVE_GB` held back); K/V buffers reused across layers; per-chunk
-  transients `del`'d; optional `_CHUNK_COMPILE=1` wraps the position-wise
-  pre/post halves in `torch.compile` (2 shape variants) — probe reports the
-  naive-vs-compiled delta.
-- **Accuracy reference**: same method with `store=torch.float32` (residual +
-  K/V + weights widened; SDPA forced EFFICIENT which supports fp32). fp64 is
-  out (no fp32+ flash/efficient at S=100000 → math OOM).
+- **`SDPA(is_causal=True)` with `q_len ≠ kv_len` is TOP-LEFT aligned** in
+  current PyTorch on every backend — NOT bottom-right. Job 197 check 1 caught
+  this (MATH gave `max|part−full[c0:c1]| = 5.07`). The chunked path therefore
+  splits each query chunk `[c0:c1]` → strictly-past non-causal block `[0:c0]`
+  + square-causal diagonal block `[c0:c1]`, merged by log-sum-exp via
+  `torch.ops.aten._scaled_dot_product_efficient_attention` (returns LSE). No
+  `[chunk,c1]` mask is ever built.
+- `_chunked_forward_causal` **mutates its input `x` in place** (residual
+  stream) — only reachable behind the `_would_oom_causal` gate, never by the
+  scored rows. `store=torch.float32` makes it its own accuracy reference.
+- Env knobs: `CHUNK_ACT_ELEMS` (8e8) · `CHUNK_MIN_SEQ` (2048) · `CHUNK_Q`
+  (0=adaptive) · `CHUNK_RESERVE_GB` (3.0) · `CHUNK_COMPILE` (0).
+- `benchmark.py` diff across the whole arc is **purely additive** — no
+  frozen-symbol lines touched (`verify_baseline` green).
 
-## Env knobs (benchmark.py module consts, all `os.environ`)
+## If more is wanted
 
-`CHUNK_ACT_ELEMS` (8e8) · `CHUNK_MIN_SEQ` (2048) · `CHUNK_Q` (0=adaptive) ·
-`CHUNK_RESERVE_GB` (3.0) · `CHUNK_COMPILE` (0)
-
-## Verify (per plan)
-
-```
-python3 -c "import ast; ast.parse(open('benchmark.py').read())"
-python3 tools/sync_entrypoint.py && python3 tools/verify_baseline.py
-python3 tools/check_validity.py benchmark.py
-sbatch infra/slurm/g7_0_chunked_oversize.sbatch
-sbatch infra/slurm/official_causal_sweep.sbatch      # regression, rows 1-13
-make package && bash infra/verify_submission.sh dist/techjam2_*.tar.gz
-```
-
-## Commits (RESUME updated after each)
-
-1. `benchmark.py: _chunked_forward_causal for row-14-class causal shapes` (+ regen entrypoint)
-2. `experiments: g7_0 row-14 chunked capability + accuracy probe` (+ sbatch)
-3. `run_eval.sh: RUN_ROW14 runs the chunked probe`
-4. (after job) `docs: Row 14 supported via sequence chunking — PROGRESS 53; ...`
-
-## Contingency
-
-If the probe's row-14 accuracy check reports `failed != 0` (fp16 residual over
-the 0.002 budget at L=2): STOP, report. Fix path = fp32 residual + hand-rolled
-block-flash (fp32 x 13.1 GB + fp16 K/V 13.1 GB won't co-fit → needs the
-online-softmax merge from `csrc/g5_mega_causal.cu`, a bigger change). Needs a
-user call — do not ship a lossy row-14 path silently.
+- A **chunked baseline** so the harness can actually *score* Row 14 (currently
+  it can't — reference OOMs first).
+- Multi-GPU sharding to bring the 13 s single-card chunked forward down.
+- `_chunked_forward_causal` currently no-pad only; padded oversize raises
+  `NotImplementedError`.
