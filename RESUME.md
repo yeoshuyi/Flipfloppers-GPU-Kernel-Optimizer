@@ -14,21 +14,24 @@ Plan: `/home/techjam2/.claude/plans/crispy-cooking-pine.md` (approved).
 |---|---|
 | P1 `benchmark.py`: `_CHUNK_*` consts + `_would_oom_causal` + `forward()` gate + `_chunked_forward_causal` | DONE — commit `b751393` |
 | P2 `experiments/g7_0_chunked_oversize.py` + `infra/slurm/g7_0_chunked_oversize.sbatch` | DONE — commit pending |
-| P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | not started |
-| P4 sbatch the probe → real numbers in `results/logs/g7_0_chunked_oversize_run<J>.log` | **IN FLIGHT — job 197 (PD)** |
+| P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | DONE — commit pending |
+| P4 sbatch the probe → real numbers in `results/logs/g7_0_chunked_oversize_run<J>.log` | **IN FLIGHT — job 198 (R)** |
 | P5 regression: rows 1/8/13 vs `official_causal_sweep_run168.log` (gate must NOT fire) | not started |
 | P6 docs: README row-14 lines + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | not started |
 | P7 `make package` + `bash infra/verify_submission.sh` | not started |
 
 ## In flight
 
-- **Slurm job 197** `g7_0_chunked_oversize.sbatch` → `results/logs/g7_0_chunked_oversize_run197.log`
-  - expect: `1. sdpa_prefix_causal PASS` · `2. gate PASS` (auto-route == direct) ·
-    `3. equivalence PASS` (fp16 chunked vs baseline failed==0, max_abs ~1e-3) ·
-    `4. oversize_capability PASS` (row14 finite, peak <~23 GB, latency printed;
-    CHUNK_COMPILE A/B delta) · `5. row14_accuracy PASS` (fp16 vs fp32 store,
-    failed==0)
-  - if `5` FAILs → CONTINGENCY (see bottom): stop, report, do not ship.
+- **Slurm job 198** `g7_0_chunked_oversize.sbatch` → `results/logs/g7_0_chunked_oversize_run198.log`
+  - job 197: check 1 FAILED — `SDPA(is_causal=True)` with q_len≠kv_len is
+    **top-left** aligned (every backend), not bottom-right. FIXED in commit
+    `<prefix-causal split+LSE merge>`: split each query chunk into a
+    strictly-past non-causal block + a square causal block, merge by LSE via
+    `torch.ops.aten._scaled_dot_product_efficient_attention`.
+  - job 198 partial (as of this note): `1. prefix_causal_attn PASS`
+    (fp32 1.7e-6, fp16 1.9e-3) · `2. gate PASS` (auto-route bit-identical) ·
+    `3. equivalence PASS` (fp16 chunked vs baseline `failed=0`, max_abs 5.1e-3
+    passes on rel; fp32 chunked max_abs 5.1e-4) · `4./5.` running.
 
 ## Design (locked)
 
