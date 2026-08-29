@@ -177,29 +177,71 @@ def measure_peak(label, bs, sl, dm, nh, ff, nl):
         return None
 
 
-def fit_coeffs(rows, key):
-    """Least-squares fit of  bytes/token = C_d*d + C_ffn*ffn  (no intercept)."""
-    import numpy as np
-    A = np.array([[r["d"], r["ffn"]] for r in rows], dtype=np.float64)
-    y = np.array([r[key] / r["tokens"] for r in rows], dtype=np.float64)
-    coef, *_ = np.linalg.lstsq(A, y, rcond=None)
-    return float(coef[0]), float(coef[1])
+HEADROOM = 1.25   # required predicted/measured ratio (no OOM fallback)
 
 
-def report_fit(rows, key, c_d, c_ffn):
-    print(f"\n  -- fit on '{key}':  bytes/token = {c_d:.2f}*d + {c_ffn:.2f}*ffn")
-    worst = 0.0
-    print(f"     {'label':<16} {'measured':>10} {'predicted':>10} {'pred/meas':>10}")
+def validate_model(rows):
+    """Check benchmark.py's SHIPPED byte model against every measurement.
+
+    This is the load-bearing assertion of the whole gate: the model must
+    OVER-predict everywhere. _would_oom_causal has no OOM-retry fallback, so
+    an under-prediction is a hard crash, not a slow path.
+    """
+    U = B.UserOptimizedTransformer
+    print(f"\n  shipped model: {B._CHUNK_BYTES_FIXED / 2 ** 20:.0f} MiB + "
+          f"tokens*({B._CHUNK_BYTES_PER_D}*d + {B._CHUNK_BYTES_PER_FFN}*ffn)"
+          f"   frac={B._CHUNK_OOM_FRAC}")
+    print(f"  {'label':<16} {'measured':>10} {'predicted':>10} {'pred/meas':>10}")
+    worst, worst_label, ok = float("inf"), "", True
     for r in rows:
-        meas = r[key] / r["tokens"]
-        pred = c_d * r["d"] + c_ffn * r["ffn"]
+        # the model is deliberately independent of num_layers, so feed the
+        # token count as the single token dimension
+        pred = U._causal_capture_bytes(r["tokens"], 1, r["d"], r["ffn"])
+        meas = r["capture"]
         ratio = pred / meas if meas > 0 else float("inf")
-        worst = max(worst, meas / pred) if pred > 0 else float("inf")
-        flag = "  <-- UNDER-PREDICTS" if ratio < 1.0 else ""
-        print(f"     {r['label']:<16} {meas:10.1f} {pred:10.1f} {ratio:10.3f}{flag}")
-    print(f"     worst measured/predicted = {worst:.3f} "
-          f"(>1.0 means the fit under-predicts somewhere)")
-    return worst
+        if ratio < worst:
+            worst, worst_label = ratio, r["label"]
+        flag = ""
+        if ratio < 1.0:
+            flag, ok = "  <-- UNDER-PREDICTS (FAIL)", False
+        elif ratio < HEADROOM:
+            flag, ok = f"  <-- below {HEADROOM}x headroom (FAIL)", False
+        print(f"  {r['label']:<16} {gb(meas):10.3f} {gb(pred):10.3f} "
+              f"{ratio:10.2f}{flag}")
+    print(f"  worst predicted/measured = {worst:.3f} @ {worst_label} "
+          f"(need >= {HEADROOM})   {'PASS' if ok else 'FAIL'}")
+    return ok
+
+
+def check_official_rows_never_chunk():
+    """Every scored row must route to the compiled path, with its margin
+    printed so the headroom is auditable rather than asserted blind."""
+    U = B.UserOptimizedTransformer
+    dev = torch.device("cuda", torch.cuda.current_device())
+    budget, skip = U._causal_vram_budget(dev.index)
+    print(f"\n  budget = {gb(budget):.2f} GB "
+          f"({B._CHUNK_OOM_FRAC:.0%} of total)   "
+          f"fast-skip tokens*max(d,ffn) < {skip:,}")
+    print(f"  {'row':<8} {'tokens':>10} {'d':>6} {'ffn':>6} {'est GB':>9} "
+          f"{'margin':>9}  route")
+    ok = True
+    for label, bs, sl, dm, nh, ff, nl in OFFICIAL:
+        est = U._causal_capture_bytes(bs, sl, dm, ff)
+        fired = U._would_oom_causal(bs, sl, dm, ff, dev)
+        if fired:
+            ok = False
+        print(f"  {label:<8} {bs * sl:>10,} {dm:>6} {ff:>6} {gb(est):9.3f} "
+              f"{budget / est:8.2f}x  "
+              f"{'CHUNK  <-- MISFIRE (FAIL)' if fired else 'compiled'}")
+    b, s, d, f = 32, 100000, 1024, 1024
+    est14 = U._causal_capture_bytes(b, s, d, f)
+    fired14 = U._would_oom_causal(b, s, d, f, dev)
+    print(f"  {'row14':<8} {b * s:>10,} {d:>6} {f:>6} {gb(est14):9.3f} "
+          f"{budget / est14:8.2f}x  "
+          f"{'CHUNK' if fired14 else 'compiled  <-- FAILED TO FIRE (FAIL)'}")
+    if not fired14:
+        ok = False
+    return ok
 
 
 def calibrate():
@@ -219,31 +261,41 @@ def calibrate():
             rows.append(r)
 
     if len(rows) < 4:
-        print("\n  too few successful shapes to fit")
-        return rows, None
+        print("\n  too few successful shapes to validate")
+        return rows, False
 
     print("\n" + "-" * 74)
-    fits = {}
-    for key in ("capture", "steady"):
-        c_d, c_ffn = fit_coeffs(rows, key)
-        worst = report_fit(rows, key, c_d, c_ffn)
-        fits[key] = (c_d, c_ffn, worst)
-
-    # The shipped coefficients come from the CAPTURE fit (the pass the gate
-    # must survive), scaled so predicted >= measured everywhere with >=1.25x
-    # headroom -- the no-OOM-fallback decision requires never under-predicting.
-    c_d, c_ffn, worst = fits["capture"]
-    scale = max(1.0, worst) * 1.25
-    print(f"\n  SHIPPED (capture fit x {scale:.3f} for >=1.25x headroom):")
-    print(f"    C_d   = {c_d * scale:.1f}  -> round up to {int(c_d * scale) + 1}")
-    print(f"    C_ffn = {c_ffn * scale:.1f}  -> round up to {int(c_ffn * scale) + 1}")
-    print(f"  naive live-set upper bound from the source is 36*d + 10*ffn")
-    return rows, (c_d * scale, c_ffn * scale)
+    model_ok = validate_model(rows)
+    route_ok = check_official_rows_never_chunk()
+    return rows, (model_ok and route_ok)
 
 
 # --------------------------------------------------------------------------
 # (b) Row-14 golden fingerprint
 # --------------------------------------------------------------------------
+def reduce_tiled(y, tile=2048):
+    """(per-batch sums, per-batch abs-sums, max|y|, all-finite), tiled.
+
+    Both bulk invariants are kept because the plain sum very nearly cancels
+    (~1e0 over 1e8 roughly zero-mean elements), which makes it a weak drift
+    detector on its own; sum|y| does not cancel.
+    """
+    bn, sn, _ = y.shape
+    sums = torch.zeros(bn, dtype=torch.float64, device=y.device)
+    abs_sums = torch.zeros(bn, dtype=torch.float64, device=y.device)
+    ymax = 0.0
+    finite = True
+    for c0 in range(0, sn, tile):
+        blk = y[:, c0:min(c0 + tile, sn)].float()
+        sums += blk.sum(dim=(1, 2), dtype=torch.float64)
+        ablk = blk.abs()
+        abs_sums += ablk.sum(dim=(1, 2), dtype=torch.float64)
+        ymax = max(ymax, float(ablk.max()))
+        finite = finite and bool(torch.isfinite(blk).all())
+        del blk, ablk
+    return sums.cpu().tolist(), abs_sums.cpu().tolist(), ymax, finite
+
+
 def sample_indices(numel, n, seed):
     g = torch.Generator().manual_seed(seed)
     return torch.randint(0, numel, (n,), generator=g, dtype=torch.int64)
@@ -271,9 +323,10 @@ def capture_golden():
     numel = y.numel()
     idx = sample_indices(numel, N_SAMPLES, SAMPLE_SEED)
     samples = y.reshape(-1)[idx.to(DEV)].float().cpu().tolist()
-    batch_sums = torch.sum(y, dim=(1, 2), dtype=torch.float64).cpu().tolist()
-    finite = bool(torch.isfinite(y).all())
-    ymax = float(y.abs().max().float())
+    # Reduce in sequence tiles. torch.sum(y, dtype=torch.float64) upcasts the
+    # WHOLE [32,100000,1024] tensor first -- 24.4 GB, an instant OOM on a
+    # 23.5 GB card (job 200 died exactly here).
+    batch_sums, batch_abs_sums, ymax, finite = reduce_tiled(y)
     print(f"  one forward on fresh input: {single_ms:.1f} ms  "
           f"peak={gb(peak_single):.2f} GB  finite={finite}  max|y|={ymax:.4f}")
     print(f"  fingerprint: {len(batch_sums)} per-batch fp64 sums + "
@@ -348,6 +401,7 @@ def capture_golden():
             "sample_indices": idx.tolist(),
             "sample_values": samples,
             "batch_sums_fp64": batch_sums,
+            "batch_abs_sums_fp64": batch_abs_sums,
         },
     }
     with open(GOLDEN_PATH, "w") as f:
@@ -364,20 +418,22 @@ def main():
     print(f"VRAM free {gb(free):.2f} / {gb(total):.2f} GB  "
           f"total_memory={gb(props.total_memory):.3f} GB  "
           f"alloc_conf={os.environ.get('PYTORCH_CUDA_ALLOC_CONF', '<unset>')}")
-    print(f"current gate: CHUNK_ACT_ELEMS={B._CHUNK_ACT_ELEMS:,}")
+    print(f"gate: CHUNK_ACT_ELEMS={B._CHUNK_ACT_ELEMS} (0 = byte model)  "
+          f"CHUNK_OOM_FRAC={B._CHUNK_OOM_FRAC}  "
+          f"bytes = {B._CHUNK_BYTES_FIXED / 2 ** 20:.0f}MiB + "
+          f"tok*({B._CHUNK_BYTES_PER_D}*d + {B._CHUNK_BYTES_PER_FFN}*ffn)")
 
-    rows, shipped = calibrate()
+    rows, gate_ok = calibrate()
     golden = capture_golden()
 
     print("\n== SUMMARY ==")
-    if shipped:
-        print(f"  proposed byte model: {shipped[0]:.1f}*d + {shipped[1]:.1f}*ffn "
-              f"bytes per token")
+    print(f"  byte_model_and_routing  {'PASS' if gate_ok else 'FAIL'}")
     print(f"  golden written for commit "
           f"{golden['provenance']['commit']} job "
           f"{golden['provenance']['job_id']}")
+    print(f"\nOVERALL: {'PASS' if gate_ok else 'FAIL'}")
     print("\nG7_1_DONE", flush=True)
-    return 0
+    return 0 if gate_ok else 1
 
 
 if __name__ == "__main__":

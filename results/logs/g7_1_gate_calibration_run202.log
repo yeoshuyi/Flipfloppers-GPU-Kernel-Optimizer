@@ -1,0 +1,104 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  device NVIDIA GeForce RTX 4090
+VRAM free 23.13 / 23.52 GB  total_memory=23.516 GB  alloc_conf=expandable_segments:True
+gate: CHUNK_ACT_ELEMS=0 (0 = byte model)  CHUNK_OOM_FRAC=0.8  bytes = 128MiB + tok*(28*d + 8*ffn)
+
+==========================================================================
+(a) CALIBRATION -- compiled causal path activation footprint
+==========================================================================
+
+-- official rows 1-13 (all have ffn_dim == d_model) --
+  row01            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3826.2 std=   210.2  finite=True
+  row02            tok=      128 d=128   ffn=128   L=4  floor= 0.002  capture=  0.010 GB  steady=  0.002 GB  B/tok: cap= 82592.0 std= 13456.0  finite=True
+  row03            tok=      512 d=128   ffn=128   L=4  floor= 0.002  capture=  0.011 GB  steady=  0.002 GB  B/tok: cap= 22580.0 std=  3364.0  finite=True
+  row04            tok=    2,048 d=128   ffn=128   L=4  floor= 0.002  capture=  0.014 GB  steady=  0.002 GB  B/tok: cap=  7577.0 std=   841.0  finite=True
+  row05            tok=   16,384 d=128   ffn=128   L=4  floor= 0.009  capture=  0.049 GB  steady=  0.002 GB  B/tok: cap=  3201.1 std=   105.1  finite=True
+  row06            tok=1,280,000 d=128   ffn=128   L=4  floor= 0.613  capture=  3.080 GB  steady=  0.002 GB  B/tok: cap=  2584.0 std=     1.3  finite=True
+  row07            tok=    8,192 d=32    ffn=32    L=4  floor= 0.001  capture=  0.013 GB  steady=  0.000 GB  B/tok: cap=  1710.5 std=    14.5  finite=True
+  row08            tok=    8,192 d=1024  ffn=1024  L=4  floor= 0.125  capture=  0.266 GB  steady=  0.102 GB  B/tok: cap= 34861.2 std= 13325.2  finite=True
+  row09            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3814.2 std=   210.2  finite=True
+  row10            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3818.2 std=   210.2  finite=True
+  row11            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.030 GB  steady=  0.002 GB  B/tok: cap=  3874.2 std=   210.2  finite=True
+  row12            tok=    2,048 d=128   ffn=128   L=4  floor= 0.002  capture=  0.014 GB  steady=  0.002 GB  B/tok: cap=  7577.0 std=   841.0  finite=True
+  row13            tok=   65,536 d=128   ffn=128   L=4  floor= 0.033  capture=  0.167 GB  steady=  0.002 GB  B/tok: cap=  2732.3 std=    26.3  finite=True
+
+-- synthetic: d != ffn, token ladder, layer ladder --
+  dneq_d128_f1024  tok=  204,800 d=128   ffn=1024  L=4  floor= 0.103  capture=  1.428 GB  steady=  0.004 GB  B/tok: cap=  7487.5 std=    21.9  finite=True
+  dneq_d128_f4096  tok=  204,800 d=128   ffn=4096  L=4  floor= 0.115  capture=  4.953 GB  steady=  0.013 GB  B/tok: cap= 25966.0 std=    68.4  finite=True
+  dneq_d256_f2048  tok=  204,800 d=256   ffn=2048  L=4  floor= 0.215  capture=  2.857 GB  steady=  0.017 GB  B/tok: cap= 14977.0 std=    87.4  finite=True
+  dneq_d1024_f128  tok=  204,800 d=1024  ffn=128   L=4  floor= 0.848  capture=  3.763 GB  steady=  0.081 GB  B/tok: cap= 19731.0 std=   425.4  finite=True
+  dneq_d1024_f256  tok=  102,400 d=1024  ffn=256   L=4  floor= 0.461  capture=  2.002 GB  steady=  0.084 GB  B/tok: cap= 20996.7 std=   881.5  finite=True
+  tok_b1000        tok=  128,000 d=128   ffn=128   L=4  floor= 0.063  capture=  0.317 GB  steady=  0.002 GB  B/tok: cap=  2656.0 std=    13.5  finite=True
+  tok_b2000        tok=  256,000 d=128   ffn=128   L=4  floor= 0.124  capture=  0.624 GB  steady=  0.002 GB  B/tok: cap=  2616.0 std=     6.7  finite=True
+  tok_b4000        tok=  512,000 d=128   ffn=128   L=4  floor= 0.246  capture=  1.238 GB  steady=  0.002 GB  B/tok: cap=  2596.0 std=     3.4  finite=True
+  tok_b8000        tok=1,024,000 d=128   ffn=128   L=4  floor= 0.491  capture=  2.466 GB  steady=  0.002 GB  B/tok: cap=  2586.0 std=     1.7  finite=True
+  lay_L2           tok=  256,000 d=128   ffn=128   L=2  floor= 0.123  capture=  0.440 GB  steady=  0.001 GB  B/tok: cap=  1844.6 std=     3.4  finite=True
+  lay_L8           tok=  256,000 d=128   ffn=128   L=8  floor= 0.125  capture=  0.625 GB  steady=  0.003 GB  B/tok: cap=  2622.7 std=    13.4  finite=True
+
+--------------------------------------------------------------------------
+
+  shipped model: 128 MiB + tokens*(28*d + 8*ffn)   frac=0.8
+  label              measured  predicted  pred/meas
+  row01                 0.029      0.160       5.49
+  row02                 0.010      0.126      12.75
+  row03                 0.011      0.127      11.81
+  row04                 0.014      0.134       9.26
+  row05                 0.049      0.195       4.00
+  row06                 3.080      5.618       1.82
+  row07                 0.013      0.134      10.25
+  row08                 0.266      0.406       1.53
+  row09                 0.029      0.160       5.50
+  row10                 0.029      0.160       5.50
+  row11                 0.030      0.160       5.42
+  row12                 0.014      0.134       9.26
+  row13                 0.167      0.406       2.44
+  dneq_d128_f1024       1.428      2.371       1.66
+  dneq_d128_f4096       4.953      7.059       1.43
+  dneq_d256_f2048       2.857      4.617       1.62
+  dneq_d1024_f128       3.763      5.789       1.54
+  dneq_d1024_f256       2.002      3.055       1.53
+  tok_b1000             0.317      0.674       2.13
+  tok_b2000             0.624      1.224       1.96
+  tok_b4000             1.238      2.322       1.88
+  tok_b8000             2.466      4.520       1.83
+  lay_L2                0.440      1.224       2.78
+  lay_L8                0.625      1.224       1.96
+  worst predicted/measured = 1.425 @ dneq_d128_f4096 (need >= 1.25)   PASS
+
+  budget = 18.81 GB (80% of total)   fast-skip tokens*max(d,ffn) < 557,396,787
+  row          tokens      d    ffn    est GB    margin  route
+  row01         8,192    128    128     0.160   117.47x  compiled
+  row02           128    128    128     0.126   149.85x  compiled
+  row03           512    128    128     0.127   147.91x  compiled
+  row04         2,048    128    128     0.134   140.62x  compiled
+  row05        16,384    128    128     0.195    96.32x  compiled
+  row06     1,280,000    128    128     5.618     3.35x  compiled
+  row07         8,192     32     32     0.134   140.62x  compiled
+  row08         8,192   1024   1024     0.406    46.31x  compiled
+  row09         8,192    128    128     0.160   117.47x  compiled
+  row10         8,192    128    128     0.160   117.47x  compiled
+  row11         8,192    128    128     0.160   117.47x  compiled
+  row12         2,048    128    128     0.134   140.62x  compiled
+  row13        65,536    128    128     0.406    46.31x  compiled
+  row14     3,200,000   1024   1024   109.988     0.17x  CHUNK
+
+==========================================================================
+(b) ROW-14 GOLDEN FINGERPRINT
+==========================================================================
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.80GB  compile=False
+  one forward on fresh input: 12678.9 ms  peak=20.79 GB  finite=True  max|y|=6.3203
+  fingerprint: 32 per-batch fp64 sums + 8192 sampled values (seed 20260829) over 3,276,800,000 elements
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.78GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.78GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.80GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.78GB  compile=False
+  check-4-style timing: median=13042.2 ms (all ['13017', '13042', '13062'])  peak=20.79 GB
+  wrote /work/experiments/g7_0_row14_golden.json (263 KB)
+
+== SUMMARY ==
+  byte_model_and_routing  PASS
+  golden written for commit 741f5fd job 202
+
+OVERALL: PASS
+
+G7_1_DONE

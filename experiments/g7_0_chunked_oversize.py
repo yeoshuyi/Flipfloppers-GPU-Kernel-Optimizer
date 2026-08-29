@@ -26,10 +26,16 @@ Checks (a compact report, PASS/FAIL per check + OVERALL):
      latency; plus the CHUNK_COMPILE on/off delta on Row 14.
   5. row14_accuracy       -- Row 14 dims at reduced batch: fp16-store chunked
      vs fp32-store chunked, within atol 0.002 / rtol 0.02 -> failed==0.
+  6. row14_golden         -- the REAL Row-14 shape against the committed
+     fingerprint in experiments/g7_0_row14_golden.json. The frozen harness
+     cannot score row 14, so the current implementation is the benchmark;
+     this is what catches an optimization silently changing the answer at
+     B=32 (check 4 only asserts finite+shape, check 5 runs at B=4).
 
 Run via infra/slurm/g7_0_chunked_oversize.sbatch (needs
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True for the tight Row-14 budget).
 """
+import json
 import os
 import sys
 import time
@@ -48,11 +54,17 @@ torch.backends.cudnn.allow_tf32 = True
 
 ATOL, RTOL = 2e-3, 2e-2
 CANON = {}   # numbers for the ROW14_SUMMARY line consumed by run_eval.sh
-OFFICIAL_BSD = [  # (batch, seq_len, d_model) for the 13 runnable official rows
-    (64, 128, 128), (1, 128, 128), (4, 128, 128), (16, 128, 128),
-    (128, 128, 128), (10000, 128, 128), (64, 128, 32), (64, 128, 1024),
-    (64, 128, 128), (64, 128, 128), (64, 128, 128), (64, 32, 128),
-    (64, 1024, 128),
+GOLDEN_PATH = "/work/experiments/g7_0_row14_golden.json"
+OFFICIAL_BSD = [  # (batch, seq_len, d_model, ffn_dim) -- 13 runnable rows.
+    # ffn_dim matters now: G7.1's gate is a byte estimate with an explicit
+    # ffn term, where G7.0's B*S*d proxy silently assumed ffn_dim == d_model.
+    # Every official row happens to satisfy that (incl. row 7 at 32 and row 8
+    # at 1024), but the gate must be checked with the real value.
+    (64, 128, 128, 128), (1, 128, 128, 128), (4, 128, 128, 128),
+    (16, 128, 128, 128), (128, 128, 128, 128), (10000, 128, 128, 128),
+    (64, 128, 32, 32), (64, 128, 1024, 1024), (64, 128, 128, 128),
+    (64, 128, 128, 128), (64, 128, 128, 128), (64, 32, 128, 128),
+    (64, 1024, 128, 128),
 ]
 
 
@@ -158,13 +170,60 @@ def check_sdpa_prefix_causal():
 @torch.no_grad()
 def check_gate():
     print("\n== 2. gate ==", flush=True)
-    f = B.UserOptimizedTransformer._would_oom_causal
-    worst = max(OFFICIAL_BSD, key=lambda r: r[0] * r[1] * r[2])
-    for (b, s, d) in OFFICIAL_BSD:
-        assert not f(b, s, d), f"gate misfired on official shape {(b, s, d)}"
-    print(f"  _would_oom_causal False for all 13 official rows "
-          f"(worst B*S*d = {worst[0] * worst[1] * worst[2]:,} @ {worst}, "
-          f"threshold {B._CHUNK_ACT_ELEMS:,})")
+    U = B.UserOptimizedTransformer
+    f = U._would_oom_causal
+    dev = torch.device("cuda", torch.cuda.current_device())
+    budget, skip = U._causal_vram_budget(dev.index)
+    good = True
+
+    # -- 2a: no scored row may ever be routed to the slow chunked path -----
+    print(f"  budget {gb(budget):.2f} GB ({B._CHUNK_OOM_FRAC:.0%} of total)   "
+          f"fast-skip tokens*max(d,ffn) < {skip:,}")
+    tightest, tightest_row = float("inf"), None
+    for i, (b, s, d, ff) in enumerate(OFFICIAL_BSD, start=1):
+        est = U._causal_capture_bytes(b, s, d, ff)
+        fired = f(b, s, d, ff, dev)
+        margin = budget / est
+        if margin < tightest:
+            tightest, tightest_row = margin, i
+        if fired:
+            good = False
+            print(f"    row{i:<2} B={b} S={s} d={d} ffn={ff}  est={gb(est):.3f} GB"
+                  f"  MISFIRED -- would be chunked")
+    print(f"  gate False for all 13 official rows; tightest margin "
+          f"{tightest:.2f}x at row {tightest_row}   "
+          f"{'PASS' if good else 'FAIL'}")
+
+    # -- 2b: it DOES fire for row 14, and for an ffn-heavy shape the old
+    #        B*S*d proxy waved through ----------------------------------
+    r14 = f(32, 100000, 1024, 1024, dev)
+    est14 = U._causal_capture_bytes(32, 100000, 1024, 1024)
+    print(f"  row14 est={gb(est14):.1f} GB ({est14 / budget:.2f}x over budget) "
+          f"-> chunk={r14}   {'PASS' if r14 else 'FAIL'}")
+    good &= r14
+    ffn_heavy = f(2000, 512, 128, 32768, dev)
+    old_proxy = 2000 * 512 * 128 >= 800_000_000
+    print(f"  ffn-heavy d=128 ffn=32768: est="
+          f"{gb(U._causal_capture_bytes(2000, 512, 128, 32768)):.1f} GB  "
+          f"new_gate={ffn_heavy} old_B*S*d_proxy={old_proxy}   "
+          f"{'PASS' if ffn_heavy else 'FAIL'}")
+    good &= ffn_heavy
+
+    # -- 2c: the gate flips exactly where the byte model says it should ----
+    lo, hi = 1, 8_000_000
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if f(1, mid, 1024, 1024, dev):
+            hi = mid
+        else:
+            lo = mid + 1
+    est_at = U._causal_capture_bytes(1, lo, 1024, 1024)
+    est_below = U._causal_capture_bytes(1, lo - 1, 1024, 1024)
+    exact = est_below <= budget < est_at
+    print(f"  boundary (d=ffn=1024): flips at {lo:,} tokens; "
+          f"est just below={gb(est_below):.3f} GB, at={gb(est_at):.3f} GB, "
+          f"budget={gb(budget):.3f} GB   {'PASS' if exact else 'FAIL'}")
+    good &= exact
 
     _, base, opt = build_models(2, 4096, 128, 4, 128, 2)
     x = make_input_fp16(2, 4096, 128, seed=1)
@@ -179,7 +238,7 @@ def check_gate():
     finally:
         B._CHUNK_ACT_ELEMS, B._CHUNK_Q = saved_elems, saved_q
     diff = (y_auto.float() - y_dir.float()).abs().max().item()
-    good = diff <= 1e-5           # same implementation; <= flash atomic jitter
+    good &= diff <= 1e-5          # same implementation; <= flash atomic jitter
     print(f"  forward() auto-route vs direct _chunked_forward_causal: "
           f"max|.| = {diff:.2e}   {'PASS' if good else 'FAIL'}")
     del base, opt, x, y_auto, y_dir
@@ -329,13 +388,128 @@ def check_row14_accuracy():
     return False
 
 
+# --------------------------------------------------------------------------
+# 6. row-14 golden: the current iteration IS the benchmark
+# --------------------------------------------------------------------------
+def _reduce_tiled(y, tile=2048):
+    """(per-batch sums, per-batch abs-sums, max|y|, all-finite), tiled.
+
+    torch.sum(y, dtype=torch.float64) on [32,100000,1024] upcasts the whole
+    tensor first -- 24.4 GB, an instant OOM on a 23.5 GB card. sum|y| is kept
+    alongside the plain sum because the latter nearly cancels to zero.
+    """
+    bn, sn, _ = y.shape
+    sums = torch.zeros(bn, dtype=torch.float64, device=y.device)
+    abs_sums = torch.zeros(bn, dtype=torch.float64, device=y.device)
+    ymax, finite = 0.0, True
+    for c0 in range(0, sn, tile):
+        blk = y[:, c0:min(c0 + tile, sn)].float()
+        sums += blk.sum(dim=(1, 2), dtype=torch.float64)
+        ablk = blk.abs()
+        abs_sums += ablk.sum(dim=(1, 2), dtype=torch.float64)
+        ymax = max(ymax, float(ablk.max()))
+        finite = finite and bool(torch.isfinite(blk).all())
+        del blk, ablk
+    return sums.cpu().tolist(), abs_sums.cpu().tolist(), ymax, finite
+
+
+@torch.no_grad()
+def check_row14_golden():
+    """Row 14 is unscorable by the frozen harness (its FP32 reference OOMs),
+    so the committed fingerprint of the CURRENT implementation is the only
+    benchmark that exists. Every optimization step must reproduce it under the
+    official abs<0.002 OR rel<0.02 budget.
+
+    Checks 4 and 5 do not cover this: check 4 asserts only finite+shape at the
+    real shape, and check 5's accuracy anchor runs at B=4, so a kernel change
+    that alters the answer only at B=32 would otherwise ship undetected.
+    """
+    print("\n== 6. row14_golden ==", flush=True)
+    if not os.path.exists(GOLDEN_PATH):
+        print(f"  SKIP: {GOLDEN_PATH} not present "
+              f"(generate with infra/slurm/g7_1_gate_calibration.sbatch)")
+        return True
+    with open(GOLDEN_PATH) as fh:
+        g = json.load(fh)
+    c, fp = g["config"], g["fingerprint"]
+    print(f"  reference: commit {g['provenance']['commit']} "
+          f"job {g['provenance']['job_id']}  "
+          f"({fp['n_samples']} samples over {fp['numel']:,} elements)")
+    try:
+        _, base, opt = build_models(c["bs"], c["sl"], c["dm"], c["nh"],
+                                    c["ff"], c["nl"])
+        del base
+        mask = torch.ones(c["bs"], c["sl"], dtype=torch.bool, device=DEV)
+        # ONE forward over a FRESH input: _chunked_forward_causal mutates x in
+        # place and returns it, so re-running on the same buffer would compose.
+        x = make_input_fp16(c["bs"], c["sl"], c["dm"], seed=c["seed"])
+        torch.cuda.reset_peak_memory_stats()
+        t0 = time.perf_counter()
+        y = opt(x, mask)
+        torch.cuda.synchronize()
+        ms = (time.perf_counter() - t0) * 1e3
+        peak = torch.cuda.max_memory_allocated()
+
+        idx = torch.tensor(fp["sample_indices"], dtype=torch.int64, device=DEV)
+        got = y.reshape(-1)[idx].float()
+        ref = torch.tensor(fp["sample_values"], dtype=torch.float32, device=DEV)
+        r = B.compare_outputs(ref, got, RTOL, ATOL)
+        sums, abs_sums, ymax, finite = _reduce_tiled(y)
+        del x, y, opt, mask, idx, got, ref
+        torch.cuda.empty_cache()
+
+        # sum|y| is the meaningful bulk invariant -- the plain sum cancels to
+        # ~1e0 over 1e8 elements, so its relative drift is not informative.
+        ref_abs = fp.get("batch_abs_sums_fp64")
+        if ref_abs:
+            abs_rel = max(abs(a - b) / max(abs(b), 1e-12)
+                          for a, b in zip(abs_sums, ref_abs))
+        else:
+            abs_rel = float("nan")
+        max_sum_abs = max(abs(a - b) for a, b in zip(sums,
+                                                     fp["batch_sums_fp64"]))
+        bulk_ok = not (abs_rel == abs_rel) or abs_rel <= 1e-3
+        p = r.failed_elements == 0 and finite and bulk_ok
+        print(f"  sampled values vs golden: max_abs={r.max_abs_error:.3e} "
+              f"max_rel={r.max_relative_error:.3e} "
+              f"failed={r.failed_elements}/{r.total_elements}  "
+              f"{'PASS' if r.failed_elements == 0 else 'FAIL'}")
+        print(f"  per-batch sum|y| drift: worst relative {abs_rel:.3e} "
+              f"(gate 1e-3)  {'PASS' if bulk_ok else 'FAIL'}")
+        print(f"  per-batch signed sums: worst absolute drift "
+              f"{max_sum_abs:.3e} over {len(sums)} batches (diagnostic)")
+        print(f"  max|y| {ymax:.6f} vs golden {fp['max_abs']:.6f}   "
+              f"finite={finite}")
+
+        pin = g["perf_pin"]
+        base_ms = pin["job198_shipped_ms"]
+        base_gb = pin["job198_peak_gb"]
+        dms = 100.0 * (ms - base_ms) / base_ms
+        print(f"  perf vs pin: {ms:.1f} ms ({dms:+.1f}% vs {base_ms} ms pinned)"
+              f"   peak {peak / 1024 ** 3:.2f} GB (pinned {base_gb} GB)")
+        if dms > 10.0:
+            print(f"  WARNING: latency regressed >10% against the pin")
+        if peak / 1024 ** 3 > base_gb + 0.5:
+            print(f"  WARNING: peak grew >0.5 GB against the pin")
+        CANON["golden"] = "PASS" if p else "FAIL"
+        CANON["golden_max_abs"] = r.max_abs_error
+        return p
+    except RuntimeError as e:
+        print(f"  FAIL: {str(e)[:160]}")
+        torch.cuda.empty_cache()
+        return False
+
+
 def main():
     print(f"torch {torch.__version__}  device {torch.cuda.get_device_name(0)}")
     free, total = torch.cuda.mem_get_info()
     print(f"VRAM free {gb(free):.2f} / {gb(total):.2f} GB  "
           f"alloc_conf={os.environ.get('PYTORCH_CUDA_ALLOC_CONF', '<unset>')}")
-    print(f"gate threshold CHUNK_ACT_ELEMS={B._CHUNK_ACT_ELEMS:,}  "
-          f"CHUNK_MIN_SEQ={B._CHUNK_MIN_SEQ}  CHUNK_Q={B._CHUNK_Q}  "
+    print(f"gate: CHUNK_ACT_ELEMS={B._CHUNK_ACT_ELEMS} (0 = byte model)  "
+          f"CHUNK_OOM_FRAC={B._CHUNK_OOM_FRAC}  bytes = "
+          f"{B._CHUNK_BYTES_FIXED / 2 ** 20:.0f}MiB + "
+          f"tok*({B._CHUNK_BYTES_PER_D}*d + {B._CHUNK_BYTES_PER_FFN}*ffn)")
+    print(f"CHUNK_MIN_SEQ={B._CHUNK_MIN_SEQ}  CHUNK_Q={B._CHUNK_Q}  "
           f"CHUNK_RESERVE_GB={B._CHUNK_RESERVE_GB}")
 
     check_sdpa_prefix_causal()                       # sys.exit(1) on failure
@@ -344,6 +518,7 @@ def main():
         "equivalence": check_equivalence(),
         "oversize_capability": check_oversize_capability(),
         "row14_accuracy": check_row14_accuracy(),
+        "row14_golden": check_row14_golden(),
     }
     print("\n== SUMMARY ==")
     for k, v in results.items():
@@ -361,6 +536,7 @@ def main():
           f"acc_b={CANON.get('acc_b', 'NA')} "
           f"acc_max_abs={CANON.get('acc_max_abs', float('nan')):.3e} "
           f"acc_failed={CANON.get('acc_failed', 'NA')} "
+          f"golden={CANON.get('golden', 'NA')} "
           f"result={'supported' if cap else 'FAIL'}", flush=True)
     return 0 if ok else 1
 
