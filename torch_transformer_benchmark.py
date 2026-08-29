@@ -392,6 +392,31 @@ _FFN_CFG = int(os.environ.get("G4_7_FFN_CFG", "58"))
 _FFN_MIN_TOKENS = int(os.environ.get("G4_7_FFN_MIN_TOKENS", "8192"))
 _FFN_OP_READY = False
 
+# G7.0: sequence-chunked causal forward for shapes whose activation set does
+# not fit the 24 GB card. Official row 14 (B=32, S=100000, d=1024, causal) is
+# the motivating case: a single [32,100000,1024] fp32 activation is 12.2 GiB,
+# so the FROZEN harness itself OOMs (generate_random_case's `x*input_scale`,
+# then baseline's [B,H,S,S] scores) and emits no number for it -- but the
+# shipped model must still be able to execute the shape. _would_oom_causal
+# gates the compiled causal path onto _chunked_forward_causal, an eager
+# per-query-chunk forward that never materialises a full-S activation or an
+# [B,H,S,S] score tile. Env-overridable so experiments/g7_0_chunked_oversize.py
+# can exercise the gate + the chunked kernel on small shapes.
+#   CHUNK_ACT_ELEMS  -- B*S*d threshold; peak activations ~= B*S*d*25 bytes,
+#                       8e8 ~= 20 GB (largest official row 1-13 is 1.64e8).
+#   CHUNK_MIN_SEQ    -- below this seq_len, sequence chunking cannot help
+#                       (the footprint is batch-driven) -> NotImplementedError.
+#   CHUNK_Q          -- fixed query-chunk row count; 0 = adaptive from free VRAM.
+#   CHUNK_RESERVE_GB -- VRAM held back from the adaptive sizer for per-chunk
+#                       transients + CUDA context + allocator fragmentation.
+#   CHUNK_COMPILE    -- 1 = torch.compile the position-wise pre/post halves of
+#                       the chunk body (the SDPA-over-growing-prefix stays eager).
+_CHUNK_ACT_ELEMS = int(os.environ.get("CHUNK_ACT_ELEMS", "800000000"))
+_CHUNK_MIN_SEQ = int(os.environ.get("CHUNK_MIN_SEQ", "2048"))
+_CHUNK_Q = int(os.environ.get("CHUNK_Q", "0"))
+_CHUNK_RESERVE_GB = float(os.environ.get("CHUNK_RESERVE_GB", "3.0"))
+_CHUNK_COMPILE = os.environ.get("CHUNK_COMPILE", "0") == "1"
+
 
 def _ws_ext():
     """Build/load the G4.3 warp-spec GEMM extension once. None = unavailable."""
@@ -962,6 +987,18 @@ class UserOptimizedTransformer(BaselineTransformer):
             self._mask_cache[key] = hit
         return hit
 
+    @staticmethod
+    def _would_oom_causal(batch: int, seq_len: int, d_model: int) -> bool:
+        # G7.0: True when the compiled causal path's live activation set would
+        # not fit the 24 GB card. That path (_optimized_forward_causal, under
+        # torch.compile(reduce-overhead)) pins, all at once in the CUDA-graph
+        # pool: the fused qkv [B,S,3d] fp16, the residual stream, and a few
+        # [B,S,d]/[B,S,ffn] fp32 activation buffers -- empirically peak ~=
+        # B*S*d*25 bytes. _CHUNK_ACT_ELEMS expresses that budget in elements
+        # (default 8e8 ~= 20 GB, leaving headroom for context + fragmentation).
+        # Pure function of the shape -- no input, output, or data_ptr.
+        return batch * seq_len * d_model >= _CHUNK_ACT_ELEMS
+
     def forward(
         self,
         x: torch.Tensor,
@@ -1023,6 +1060,28 @@ class UserOptimizedTransformer(BaselineTransformer):
             # this hardware (CLAUDE.md's own table), so once FP16-FFN exists
             # as the other option, cuBLASLt-TF32 loses here even though it
             # still beats plain F.linear. See docs/CAUSAL_LEDGER.md.
+
+            # G7.0: memory-feasibility gate. Above ~20 GB of live activations
+            # (_would_oom_causal) the compiled path's CUDA graph cannot be
+            # captured on this card at all -- official row 14
+            # (B=32, S=100000, d=1024) and anything larger. Route those to an
+            # eager, sequence-chunked forward that streams one query chunk at a
+            # time against an incrementally filled K/V buffer, so no full-S
+            # activation or [B,H,S,S] score tile is ever materialised. Never
+            # fires for official rows 1-13 (largest B*S*d there is 1.64e8,
+            # ~5x under the 8e8 threshold). See experiments/g7_0_chunked_oversize.py.
+            if (no_pad_causal and x.is_cuda
+                    and self._would_oom_causal(x.shape[0], x.shape[1],
+                                               self.config.d_model)):
+                if x.shape[1] < _CHUNK_MIN_SEQ:
+                    raise NotImplementedError(
+                        f"causal shape B={x.shape[0]} S={x.shape[1]} "
+                        f"d={self.config.d_model}: activation footprint exceeds "
+                        f"the 24 GB card and S<{_CHUNK_MIN_SEQ}, so sequence "
+                        f"chunking cannot bring it down (would need batch "
+                        f"chunking or multi-GPU)")
+                return self._chunked_forward_causal(x, valid_token_mask)
+
             if self._compiled_causal is None:
                 self._compiled_causal = torch.compile(
                     self._optimized_forward_causal, mode="reduce-overhead"
@@ -1188,6 +1247,182 @@ class UserOptimizedTransformer(BaselineTransformer):
         x = self.final_norm(x)
         if not no_pad:
             x = x.masked_fill(~valid_token_mask[..., None], 0)
+        return x
+
+    def _chunked_forward_causal(
+        self,
+        x: torch.Tensor,
+        valid_token_mask: Optional[torch.Tensor],
+        *,
+        store: torch.dtype = torch.float16,
+    ) -> torch.Tensor:
+        """G7.0: eager, sequence-chunked causal forward for shapes the compiled
+        path cannot fit on a 24 GB card (official row 14 and larger; see
+        _would_oom_causal and forward()'s gate).
+
+        Same math as _optimized_forward_causal -- folded QKV / out_proj /
+        ffn_in weights (norm1 & norm2 affine + the attention scale absorbed),
+        fp16 GEMM storage with fp32 accumulate, exact-erf GELU in fp32 -- with
+        two deviations forced by the memory budget:
+
+          * the residual stream ``x`` is held in ``store`` (fp16 by default,
+            not fp32) and is **mutated in place**: each query chunk's result is
+            written back into the caller's buffer. The caller must pass a
+            tensor it can afford to lose (the probe clones). At row-14 size a
+            fp16 [B,S,d] residual (6.55 GB) plus a fp16 [B,H,S,hd] K/V cache
+            (13.1 GB) is already ~20 GB -- an fp32 residual would not fit.
+          * attention runs one query chunk at a time against a K/V buffer that
+            is filled incrementally, so no [B,H,S,S] score tile is ever
+            allocated. F.scaled_dot_product_attention with is_causal=True and a
+            query shorter than the key length uses bottom-right alignment:
+            query row c0+j attends keys 0..c0+j -- exactly the causal prefix
+            (verified in experiments/g7_0_chunked_oversize.py). The backend is
+            pinned to FLASH / EFFICIENT so a silent fall to the math backend
+            (which *would* build the [B,H,chunk,c1] tile) cannot happen.
+
+        ``store=torch.float32`` turns this into its own accuracy reference --
+        residual, K/V and the folded weights all widened, SDPA pinned to
+        EFFICIENT (the only fp32-capable memory-lean backend) -- so the
+        fp16-storage penalty can be measured without a baseline that OOMs.
+        (fp64 is not available: no fp32+ flash/efficient kernel exists at this
+        seq_len, and the math backend OOMs.)
+
+        Optimisations: query-chunk size adapts to free VRAM (K/V bytes and
+        CHUNK_RESERVE_GB held back); the K/V buffer is allocated once and
+        refilled per layer; per-chunk transients are dropped each iteration;
+        CHUNK_COMPILE=1 wraps the two position-wise halves of the chunk body
+        (everything except the SDPA-over-growing-prefix) in torch.compile.
+
+        no-pad only -- a padded oversize shape OOMs the same way and is out of
+        scope.
+        """
+        from torch.nn.attention import SDPBackend, sdpa_kernel
+
+        if valid_token_mask is not None and not self._mask_is_all_ones(
+                valid_token_mask):
+            raise NotImplementedError(
+                "_chunked_forward_causal: padded (non-all-ones mask) oversize "
+                "causal shapes are not supported")
+        if store not in (torch.float16, torch.float32):
+            raise ValueError(f"_chunked_forward_causal: store must be float16 "
+                             f"or float32, got {store}")
+        wide = store != torch.float16
+        dev = x.device
+        B, S, d = x.shape
+        if x.dtype != store:
+            x = x.to(store)
+
+        attn0 = self.layers[0].attention
+        H, hd = attn0.num_heads, attn0.head_dim
+        ffn_dim = self.config.ffn_dim
+        store_itemsize = torch.empty((), dtype=store).element_size()
+        kv_bytes = 2 * B * H * S * hd * store_itemsize
+
+        # --- adaptive query-chunk size ----------------------------------
+        if _CHUNK_Q > 0:
+            chunk_q = _CHUNK_Q
+            free_gb = float("nan")
+        else:
+            torch.cuda.empty_cache()
+            free, _total = torch.cuda.mem_get_info(dev)
+            free_gb = free / 1024 ** 3
+            # bytes of per-sequence-position transient live at once, x B:
+            #   qkv fp16 (3d elems, 2 B/elem)             -> 6d
+            #   n1 + n2 widened to fp32 (d elems, 4 B/elem, x2) -> 8d
+            #   ffn hidden fp16 (ffn elems, 2 B/elem)     -> 2*ffn
+            #   gelu act + ffn_out fp32 (ffn elems, 4 B/elem, x2) -> 8*ffn
+            per_row = B * (6 * d + 8 * d + 2 * ffn_dim + 8 * ffn_dim)
+            reserve = int(_CHUNK_RESERVE_GB * (1024 ** 3))
+            avail = free - kv_bytes - reserve
+            cq = avail // max(per_row, 1)
+            chunk_q = int(max(512, min(8192, (cq // 128) * 128)))
+        chunk_q = min(chunk_q, S)
+        n_chunks = (S + chunk_q - 1) // chunk_q
+        print(f"[g7.0] chunked causal  B={B} S={S} d={d} H={H} ffn={ffn_dim} "
+              f"store={str(store).split('.')[-1]}  chunk_q={chunk_q} "
+              f"n_chunks={n_chunks}  kv_cache={kv_bytes / 1024 ** 3:.2f}GB "
+              f"free={free_gb:.2f}GB  compile={_CHUNK_COMPILE}", flush=True)
+
+        # --- K/V cache: allocated once, overwritten per layer ----------
+        kbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
+        vbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
+
+        gemm_dtype = store if wide else torch.float16
+        sdpa_backends = ([SDPBackend.EFFICIENT_ATTENTION] if wide
+                         else [SDPBackend.FLASH_ATTENTION,
+                               SDPBackend.EFFICIENT_ATTENTION])
+        norm_shape = self.layers[0].norm1.normalized_shape
+        n1_eps = self.layers[0].norm1.eps
+        n2_eps = self.layers[0].norm2.eps
+
+        # Position-wise halves of the chunk body -- weights passed as args (so
+        # one compiled graph serves every layer; only the last, short chunk is
+        # a second shape). The SDPA-over-growing-prefix in between stays eager.
+        def pre(xc, qkv_w, qkv_b):
+            ln_in = xc if wide else xc.float()
+            n1 = F.layer_norm(ln_in, norm_shape, eps=n1_eps)
+            return F.linear(n1.to(gemm_dtype), qkv_w, qkv_b)
+
+        def post(xc, ctx, op_w, op_b, fi_w, fi_b, fo_w, fo_b):
+            ctx = ctx.transpose(1, 2).contiguous().view(
+                xc.shape[0], xc.shape[1], d)
+            ao = F.linear(ctx, op_w, op_b)
+            h1 = xc + ao.to(store)
+            ln2_in = h1 if wide else h1.float()
+            n2 = F.layer_norm(ln2_in, norm_shape, eps=n2_eps)
+            hidden = F.linear(n2.to(gemm_dtype), fi_w, fi_b)
+            act = F.gelu(hidden if wide else hidden.float(), approximate="none")
+            ffn = F.linear(act, fo_w, fo_b)
+            return h1 + ffn.to(store)
+
+        if _CHUNK_COMPILE:
+            pre = torch.compile(pre, dynamic=False)
+            post = torch.compile(post, dynamic=False)
+
+        for layer in self.layers:
+            self._build_ffn_in_fold(layer, dev, torch.float32)
+            self._build_qkv_fold(layer.attention, layer.norm1, dev,
+                                 torch.float32)
+            self._build_attn_fp16_fold(layer.attention, dev)
+            attn = layer.attention
+            if wide:
+                qkv_w = attn._qkv_weight.to(store)
+                qkv_b = attn._qkv_bias.to(store)
+                op_w = attn.out_proj.weight.to(store)
+                op_b = attn.out_proj.bias.to(store)
+                fi_w = layer._ffn_in_weight.to(store)
+                fi_b = layer._ffn_in_bias.to(store)
+                fo_w = layer.ffn_out.weight.to(store)
+                fo_b = layer.ffn_out.bias.to(store)
+            else:
+                qkv_w, qkv_b = attn._qkv_weight_fp16, attn._qkv_bias_fp16
+                op_w, op_b = attn._out_proj_weight_fp16, attn._out_proj_bias_fp16
+                fi_w, fi_b = layer._ffn_in_weight_fp16, layer._ffn_in_bias_fp16
+                fo_w, fo_b = layer.ffn_out.weight, layer.ffn_out.bias
+
+            with sdpa_kernel(sdpa_backends):
+                for c0 in range(0, S, chunk_q):
+                    c1 = min(c0 + chunk_q, S)
+                    xc = x[:, c0:c1]
+                    qkv = pre(xc, qkv_w, qkv_b)
+                    q, k, v = qkv.split(d, dim=-1)
+                    q = self._split_heads_view(q, H, hd)
+                    k = self._split_heads_view(k, H, hd)
+                    v = self._split_heads_view(v, H, hd)
+                    kbuf[:, :, c0:c1] = k
+                    vbuf[:, :, c0:c1] = v
+                    ctx = F.scaled_dot_product_attention(
+                        q, kbuf[:, :, :c1], vbuf[:, :, :c1],
+                        attn_mask=None, is_causal=True, scale=1.0)
+                    x[:, c0:c1] = post(xc, ctx, op_w, op_b, fi_w, fi_b,
+                                       fo_w, fo_b)
+                    del qkv, q, k, v, ctx
+
+        # --- final norm, chunked in place -----------------------------
+        for c0 in range(0, S, chunk_q):
+            c1 = min(c0 + chunk_q, S)
+            x[:, c0:c1] = self.final_norm(x[:, c0:c1].float()).to(store)
+        del kbuf, vbuf
         return x
 
     def _optimized_forward(
