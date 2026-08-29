@@ -124,44 +124,10 @@ shape.
 
 ## Optimizations, Accepted and Rejected
 
-### Shape Arbitration
-The artefact is a **dispatcher, not one kernel**. Every forward is arbitrated on
-shape alone — no input values are ever inspected — and each branch ends in a
-different set of optimizations, because each branch has a different binding
-wall. The [combined dispatch and datapath figure](#the-full-path-a-batch-takes)
-below traces it end to end.
+### The Full Path a Batch Takes
 
-### Accepted Optimizations
-All applied optimizations are exact or precision-neutral, with the exception of two FP16-storage casts. These casts are strictly gated by an `atol = 0.002` budget and a fixed `allow_fp16_reduced_precision_reduction = False` (which forces FP32 GEMM reduction, entirely avoiding the FP16-accumulate tier). 
-
-Because the tightest accuracy margin on the baseline stack sits at `max_abs = 0.00195` (97.5% of budget) and `0.00211` (which clears via the relative tolerance arm), the accept/reject rules for these implementations are exceptionally strict.
-
-| ID | Optimization | Precision Class |
-|---|---|---|
-| **G0.1c** | SDPA replaces the manual `matmul→mask→softmax→matmul` loop (`is_causal=True`) | Exact | 
-| **G0.2c** | Fused QKV: one `[d, 3d]` GEMM for three `[d, d]` | Exact | 
-| **G0.3** | Strided head views into SDPA — no `.contiguous()` copy | Exact |
-| **G0.5** | All-ones-mask fast path — skips no-op `masked_fill` passes | Exact |
-| **G1.1c** | LayerNorm affine folded into consumer GEMM weights; LN becomes pure reduction | Exact (bit-identical) |
-| **G1.2** | Attention scale `head_dim^-0.5 = 2^-3` folded into `W_Q` | Exact (power-of-two) |
-| **G6.4bc** | FP16 storage for Q/K/V/out_proj around SDPA; unlocks automatic flash/mem-efficient dispatch | precision-reducing (FP32 accum) |
-| **G6.4a_v2c**| FP16 storage for the `ffn_in` GEMM; casts back to FP32 immediately | Precision-reducing |
-| **G2.4(b)**| `torch.compile(mode="reduce-overhead")` → CUDA-graph replay | Exact (no value change)|
-| **G4.7c** | Fused `ffn_in` GEMM + exact-erf GELU epilogue on warp-specialised `mma.sync` kernel | Precision-neutral |
-| **G4.3** | Warp-specialised `mma.sync` GEMM + CUTLASS-grade epilogue for attention projections | FP32-accumulate |
-| **G6.6** | cuBLASLt explicit algorithm search + fused bias epilogue for FFN GEMMs | N/A |
-| **G7.0** | Sequence-chunked causal forward — query chunks vs an incremental K/V cache; makes `S = 100000` runnable at all | Exact (chunking drops no term) |
-| **G7.1** | Chunking gate restated in bytes against real VRAM, replacing a fixed `B·S·d` element proxy | Exact (routing only) |
-| **G7.4** | One bottom-right-causal `_flash_attention_forward` call per chunk — deletes the two-block split, the FP32 LSE merge and the `.contiguous()` transpose copy | Precision-neutral (accuracy improved) |
-| **G7.5** | LayerNorm applied directly to the FP16 residual — CUDA already accumulates in FP32 for half input | Exact (bit-identical) |
-| **G7.6** | `torch.compile` on the chunk body (`CHUNK_COMPILE` default on) | Exact (no value change) |
-
-#### The Full Path a Batch Takes
-
-Dispatch and datapath in one picture: how a shape is routed, then what actually
-happens to the tensor inside every layer. Every branch is chosen from the shape
-alone — no input values are ever inspected. Hand-written kernels are outlined in
-**amber**, each labelled with the shapes it gets selected for.
+>Every branch is chosen from the shape alone no input values are ever inspected. Hand-written kernels are outlined in
+> **amber**, each labelled with the shapes it gets selected for.
 
 ```mermaid
 flowchart TD
@@ -205,13 +171,34 @@ flowchart TD
     class CAUSAL,FIT decision
 ```
 
-> Drawing note: the mask check and the weight folds are drawn once at the top
-> because that reads as one pipeline. In the code each branch does its own,
-> lazily, on first use.
-
 After the layer loop: `final_norm` (not folded — it has no consumer). The
 FP32 residual stream is never downcast, both LayerNorms do only the mean/var
 reduction, `ffn_out` deliberately stays at ≈FP32 (TF32x3).
+
+### Accepted Optimizations
+All applied optimizations are exact or precision-neutral, with the exception of two FP16-storage casts. These casts are strictly gated by an `atol = 0.002` budget and a fixed `allow_fp16_reduced_precision_reduction = False` (which forces FP32 GEMM reduction, entirely avoiding the FP16-accumulate tier). 
+
+Because the tightest accuracy margin on the baseline stack sits at `max_abs = 0.00195` (97.5% of budget) and `0.00211` (which clears via the relative tolerance arm), the accept/reject rules for these implementations are exceptionally strict.
+
+| ID | Optimization | Precision Class |
+|---|---|---|
+| **G0.1c** | SDPA replaces the manual `matmul→mask→softmax→matmul` loop (`is_causal=True`) | Exact | 
+| **G0.2c** | Fused QKV: one `[d, 3d]` GEMM for three `[d, d]` | Exact | 
+| **G0.3** | Strided head views into SDPA — no `.contiguous()` copy | Exact |
+| **G0.5** | All-ones-mask fast path — skips no-op `masked_fill` passes | Exact |
+| **G1.1c** | LayerNorm affine folded into consumer GEMM weights; LN becomes pure reduction | Exact (bit-identical) |
+| **G1.2** | Attention scale `head_dim^-0.5 = 2^-3` folded into `W_Q` | Exact (power-of-two) |
+| **G6.4bc** | FP16 storage for Q/K/V/out_proj around SDPA; unlocks automatic flash/mem-efficient dispatch | precision-reducing (FP32 accum) |
+| **G6.4a_v2c**| FP16 storage for the `ffn_in` GEMM; casts back to FP32 immediately | Precision-reducing |
+| **G2.4(b)**| `torch.compile(mode="reduce-overhead")` → CUDA-graph replay | Exact (no value change)|
+| **G4.7c** | Fused `ffn_in` GEMM + exact-erf GELU epilogue on warp-specialised `mma.sync` kernel | Precision-neutral |
+| **G4.3** | Warp-specialised `mma.sync` GEMM + CUTLASS-grade epilogue for attention projections | FP32-accumulate |
+| **G6.6** | cuBLASLt explicit algorithm search + fused bias epilogue for FFN GEMMs | N/A |
+| **G7.0** | Sequence-chunked causal forward — query chunks vs an incremental K/V cache; makes `S = 100000` runnable at all | Exact (chunking drops no term) |
+| **G7.1** | Chunking gate restated in bytes against real VRAM, replacing a fixed `B·S·d` element proxy | Exact (routing only) |
+| **G7.4** | One bottom-right-causal `_flash_attention_forward` call per chunk — deletes the two-block split, the FP32 LSE merge and the `.contiguous()` transpose copy | Precision-neutral (accuracy improved) |
+| **G7.5** | LayerNorm applied directly to the FP16 residual — CUDA already accumulates in FP32 for half input | Exact (bit-identical) |
+| **G7.6** | `torch.compile` on the chunk body (`CHUNK_COMPILE` default on) | Exact (no value change) |
 
 ### Hardware Limit Reached
 The accuracy-legal roofline is `12·M·d²·L / 165.2e12` (GEMM FLOPs at the
