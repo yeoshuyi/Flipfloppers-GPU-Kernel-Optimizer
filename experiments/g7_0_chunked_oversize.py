@@ -31,6 +31,10 @@ Checks (a compact report, PASS/FAIL per check + OVERALL):
      cannot score row 14, so the current implementation is the benchmark;
      this is what catches an optimization silently changing the answer at
      B=32 (check 4 only asserts finite+shape, check 5 runs at B=4).
+  8. row14_full_accuracy  -- the FULL B=32 shape against an FP32-store
+     reference assembled from exact B=4 batch slices (a transformer forward is
+     batch-independent), so all 3.28e9 elements are checked, not check 5's
+     reduced-batch proxy.
   7. splice_identity      -- the GENERATED torch_transformer_benchmark.py (the
      file the judges run, and now the file the official sweep scores) carries
      the same gate, the same _CHUNK_* knobs and the same chunked kernel
@@ -556,6 +560,85 @@ def check_splice_identity():
     return good
 
 
+# --------------------------------------------------------------------------
+# 8. row-14 accuracy at the FULL B=32 shape
+# --------------------------------------------------------------------------
+@torch.no_grad()
+def check_row14_full_accuracy(slice_b=4):
+    """Accuracy of the shipped Row-14 output at the REAL batch size.
+
+    Check 5 prices FP16 storage at B=4 because an FP32-store reference does not
+    fit at B=32. But a transformer forward is completely independent across the
+    batch -- attention is within-sequence, LayerNorm and the FFN are per-token,
+    and nothing in _chunked_forward_causal couples batch rows (kbuf/vbuf are
+    per-b). So the FP32 reference for B=32 can be assembled from 8 exact B=4
+    slices and compared slice-by-slice against the one true B=32 forward. That
+    turns check 5's proxy into a full-shape measurement over all 3.28e9
+    elements.
+
+    The reference also runs at a DIFFERENT chunk_q than the B=32 run (the
+    adaptive sizer picks a larger one at B=4). That is deliberate: chunking is
+    exact (check 1), so agreement across two different chunkings is stronger
+    evidence than agreement under one.
+    """
+    print("\n== 8. row14_full_accuracy (B=32, all 3.28e9 elements) ==",
+          flush=True)
+    p = dict(bs=32, sl=100000, dm=1024, nh=16, ff=1024, nl=2, seed=1234)
+    try:
+        _, base, opt = build_models(p["bs"], p["sl"], p["dm"], p["nh"],
+                                    p["ff"], p["nl"])
+        del base
+        # The input is the single source of truth for BOTH arms, so keep it on
+        # the host: _chunked_forward_causal mutates x in place, and the seeded
+        # generator CANNOT be replayed for a batch slice -- make_input_fp16
+        # fills a strided view x[:, c0:c1], and drawing the same count into a
+        # contiguous temp maps the values to different elements. A first
+        # attempt did exactly that and the two arms came out statistically
+        # independent (mean_abs 1.122 ~= 2/sqrt(pi) = 1.128, job 219).
+        x32 = make_input_fp16(p["bs"], p["sl"], p["dm"], seed=p["seed"])
+        x_cpu = x32.to("cpu")                       # 6.55 GB host
+        mask32 = torch.ones(p["bs"], p["sl"], dtype=torch.bool, device=DEV)
+        ours = opt(x32, mask32)                     # in place -> ours is x32
+        torch.cuda.synchronize()
+        del mask32
+        torch.cuda.empty_cache()
+
+        mask_s = torch.ones(slice_b, p["sl"], dtype=torch.bool, device=DEV)
+        tot_failed = tot_elems = 0
+        worst_abs = worst_rel = sum_abs = 0.0
+        for b0 in range(0, p["bs"], slice_b):
+            b1 = b0 + slice_b
+            xs = x_cpu[b0:b1].to(DEV)               # byte-exact same input
+            ref = opt._chunked_forward_causal(xs.float(), mask_s,
+                                              store=torch.float32)
+            r = B.compare_outputs(ref, ours[b0:b1].contiguous(), RTOL, ATOL)
+            tot_failed += r.failed_elements
+            tot_elems += r.total_elements
+            worst_abs = max(worst_abs, r.max_abs_error)
+            worst_rel = max(worst_rel, r.max_relative_error)
+            sum_abs += r.mean_abs_error * r.total_elements
+            print(f"    rows {b0:2d}-{b1 - 1:2d}: max_abs={r.max_abs_error:.3e} "
+                  f"mean_abs={r.mean_abs_error:.3e} "
+                  f"failed={r.failed_elements}/{r.total_elements}", flush=True)
+            del xs, ref, r
+            torch.cuda.empty_cache()
+
+        ok = tot_failed == 0 and tot_elems == p["bs"] * p["sl"] * p["dm"]
+        print(f"  FULL B=32: max_abs={worst_abs:.3e} max_rel={worst_rel:.3e} "
+              f"mean_abs={sum_abs / max(tot_elems, 1):.3e}  "
+              f"failed={tot_failed}/{tot_elems}  {'PASS' if ok else 'FAIL'}")
+        CANON["full_failed"] = tot_failed
+        CANON["full_max_abs"] = worst_abs
+        CANON["full_elems"] = tot_elems
+        del ours, x32, x_cpu, opt, mask_s
+        torch.cuda.empty_cache()
+        return ok
+    except RuntimeError as e:
+        print(f"  FAIL: {str(e)[:200]}")
+        torch.cuda.empty_cache()
+        return False
+
+
 def main():
     print(f"torch {torch.__version__}  device {torch.cuda.get_device_name(0)}")
     free, total = torch.cuda.mem_get_info()
@@ -576,6 +659,7 @@ def main():
         "row14_accuracy": check_row14_accuracy(),
         "row14_golden": check_row14_golden(),
         "splice_identity": check_splice_identity(),
+        "row14_full_accuracy": check_row14_full_accuracy(),
     }
     print("\n== SUMMARY ==")
     for k, v in results.items():
@@ -593,6 +677,7 @@ def main():
           f"acc_b={CANON.get('acc_b', 'NA')} "
           f"acc_max_abs={CANON.get('acc_max_abs', float('nan')):.3e} "
           f"acc_failed={CANON.get('acc_failed', 'NA')} "
+          f"full_failed={CANON.get('full_failed', 'NA')}/{CANON.get('full_elems', 'NA')} "
           f"golden={CANON.get('golden', 'NA')} "
           f"result={'supported' if cap else 'FAIL'}", flush=True)
     return 0 if ok else 1
