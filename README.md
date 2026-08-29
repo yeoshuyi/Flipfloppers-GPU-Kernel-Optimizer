@@ -27,13 +27,13 @@
 > * SASS-level rewrite attempt via `CuAssmbler`
 
 
-5. **Shape Based Strategy Arbiter**. Shapes are dynamically dispatched to different optimization strategies based on the per-shape benchmarking done at each validation round. This ensures that the best optimization techniques are used for each shape. The Arbiter conditions are **fine tuned accurately to the break-even point** (where we see performance gain).
+5. **Shape Based Strategy Arbiter**. Shapes are dynamically dispatched to different optimization strategies based on the per-shape benchmarking done at each validation round. This ensures that the best optimization techniques are used for each shape. The Arbiter conditions are **fine tuned accurately to the break-even point** (where we see performance gain). See [Shape Arbitration](#shape-arbitration) for the full dispatch, including the memory gate that routes `S = 100000` onto the chunked path.
 
 
 ## Results
-Evaluated on the official test harness `torch_transformer_benchmark.py`, injected with the fully-causal test shapes with accuracy requirements `atol = 0.002`, `rtol = 0.02`. All 13 scorable test shapes pass the accuracy gate. Row 14 (`S = 100000`) cannot be scored by the harness at all — its FP32 reference OOMs a 24 GB card before our model runs — but the shipped model still executes it.
+Evaluated by running the generated judge drop-in `torch_transformer_benchmark.py` — the same file a grader executes — on the fully-causal test shapes at `atol = 0.002`, `rtol = 0.02`. All 13 scorable test shapes pass the accuracy gate. Row 14 (`S = 100000`) cannot be scored by the harness at all — its FP32 reference OOMs a 24 GB card before our model is ever called — but the shipped model still executes it.
 
->Row 14 (`S = 100000`) physically OOMs the GPU on the test harness due to GPU memory limitations (a single `[32, 100000, 1024]` FP32 activation is 12.2 GiB, and the baseline's `[B, H, S, S]` scores are ~9 TB). The shipped model runs it anyway on one 24 GB RTX 4090 via **sequence chunking** (`benchmark.py` → `_chunked_forward_causal`): streaming query chunks against an incrementally-filled FP16 K/V cache, no full-`S` score tile. Measured in `experiments/g7_0_chunked_oversize.py` (job 198): **13.0 s**, **20.8 GB peak**, output within the `atol 0.002 / rtol 0.02` gate (`failed = 0 / 4.1e8`, mean abs error `3.4e-4`) against a higher-precision chunked reference. Any causal shape above the memory limit routes through the same path.
+>**Row 14 has no "before".** It physically OOMs the GPU on the test harness (a single `[32, 100000, 1024]` FP32 activation is 12.2 GiB, and the baseline's `[B, H, S, S]` scores are ~9 TB), so the reference dies first and the harness emits no number to speed up. The shipped model runs it anyway on one 24 GB RTX 4090 via **sequence chunking** (`benchmark.py` → `_chunked_forward_causal`): streaming query chunks against an incrementally-filled FP16 K/V cache, so no full-`S` activation and no `[B, H, S, S]` score tile is ever materialised. Measured in `experiments/g7_0_chunked_oversize.py` (job 211): **9.95 s**, **19.55 GB peak** — down from 13.0 s / 20.8 GB when the capability first landed. Any causal shape above the memory limit routes through the same path.
 
 ![per-shape speedup](assets/results_speedup.svg)
 
@@ -42,21 +42,78 @@ Evaluated on the official test harness `torch_transformer_benchmark.py`, injecte
 
 | # | B | d | H | S | baseline | **shipped** | speedup | max_abs |
 |--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| 1 | 64 | 128 | 4 | 128 | 1.0465 ms | **0.2109 ms** | 4.96× | 0.00137 |
-| 2 | 1 | 128 | 4 | 128 | 1.0618 ms | **0.0778 ms** | 13.64× | 0.00137 |
-| 3 | 4 | 128 | 4 | 128 | 1.0426 ms | **0.0881 ms** | 11.84× | 0.00137 |
-| 4 | 16 | 128 | 4 | 128 | 1.0466 ms | **0.1116 ms** | 9.38× | 0.00137 |
-| 5 | 128 | 128 | 4 | 128 | 1.7039 ms | **0.3727 ms** | 4.57× | 0.00137 |
-| 6 | 10000 | 128 | 4 | 128 | 290.55 ms | **52.486 ms** | 5.54× | 0.00195 |
-| 7 | 64 | 32 | 4 | 128 | 1.0209 ms | **0.1034 ms** | 9.87× | 0.00211 |
-| 8 | 64 | 1024 | 4 | 128 | 8.3611 ms | **4.3271 ms** | 1.93× | 0.00141 |
-| 9 | 64 | 128 | 1 | 128 | 0.9688 ms | **0.2099 ms** | 4.62× | 0.00145 |
-| 10 | 64 | 128 | 2 | 128 | 1.0473 ms | **0.2130 ms** | 4.92× | 0.00138 |
+| 1 | 64 | 128 | 4 | 128 | 1.0445 ms | **0.2120 ms** | 4.93× | 0.00137 |
+| 2 | 1 | 128 | 4 | 128 | 1.0846 ms | **0.0778 ms** | 13.94× | 0.00137 |
+| 3 | 4 | 128 | 4 | 128 | 1.0496 ms | **0.0881 ms** | 11.92× | 0.00137 |
+| 4 | 16 | 128 | 4 | 128 | 1.0434 ms | **0.1116 ms** | 9.35× | 0.00137 |
+| 5 | 128 | 128 | 4 | 128 | 1.7050 ms | **0.3727 ms** | 4.57× | 0.00137 |
+| 6 | 10000 | 128 | 4 | 128 | 290.53 ms | **52.484 ms** | 5.54× | 0.00195 |
+| 7 | 64 | 32 | 4 | 128 | 1.0391 ms | **0.1034 ms** | 10.05× | 0.00211 |
+| 8 | 64 | 1024 | 4 | 128 | 8.3681 ms | **4.3333 ms** | 1.93× | 0.00141 |
+| 9 | 64 | 128 | 1 | 128 | 0.9572 ms | **0.2099 ms** | 4.56× | 0.00145 |
+| 10 | 64 | 128 | 2 | 128 | 1.0453 ms | **0.2130 ms** | 4.91× | 0.00138 |
 | 11 | 64 | 128 | 16 | 128 | 4.3858 ms | **0.2857 ms** | 15.35× | 0.00137 |
-| 12 | 64 | 128 | 4 | 32 | 1.0376 ms | **0.1229 ms** | 8.44× | 0.00141 |
-| 13 | 64 | 128 | 4 | 1024 | 70.153 ms | **2.2088 ms** | 31.76× | 0.00137 |
+| 12 | 64 | 128 | 4 | 32 | 1.0363 ms | **0.1229 ms** | 8.43× | 0.00141 |
+| 13 | 64 | 128 | 4 | 1024 | 70.153 ms | **2.2108 ms** | 31.73× | 0.00137 |
+| **14** | 32 | 1024 | 16 | 100000 | **OOM** | **9952.6 ms** | n/a | 0.00785 † |
+
+All 13 scorable rows from one run of the generated judge drop-in
+(`results/logs/official_causal_sweep_run216.log`, `python3
+torch_transformer_benchmark.py --causal ...`). `max_abs` is **byte-identical to
+`run168`** on every row — the entry-point switch changed no arithmetic — and no
+row moved more than `+0.52%` in latency.
+
+† Row 14 is **not** a harness result. Its baseline cell is `OOM` because the
+FP32 reference cannot be constructed at all, so there is no speedup to quote;
+`9952.6 ms` / `19.55 GB peak` and the `max_abs` are from
+`experiments/g7_0_chunked_oversize.py` (job 211) against an FP32-store chunked
+reference at `B = 4` — see [How Row 14 is benchmarked and
+accuracy-checked](#how-row-14-is-benchmarked-and-accuracy-checked).
 
 </details>
+
+### How Row 14 is benchmarked and accuracy-checked
+
+Row 14 is unscorable, so every number for it comes from our own driver
+(`experiments/g7_0_chunked_oversize.py`) rather than the harness. That driver is
+the harness **extended**, not replaced: same model, same weights, same
+`compare_outputs`, same disjunctive `abs < 0.002 OR rel < 0.02` criterion. The
+claim that its numbers are as trustworthy as a scored row rests on three
+measured legs, not on assertion.
+
+**1 — the chunking is algebraically exact, not an approximation.** Splitting the
+sequence changes *when* work happens, not *what* is computed: query rows
+`[c0:c1]` attend keys `[0:c1]`, which is precisely the causal prefix. Check 1
+verifies this against a dense full-attention reference before anything else
+runs, and fails the whole probe if it does not hold. No term is dropped, no
+window is truncated, nothing is approximated away — so chunking itself spends
+**zero** accuracy budget.
+
+**2 — where the real baseline fits, the chunked path matches it.** Check 3 runs
+`B=2 S=4096 d=256`, a shape small enough that the frozen FP32
+`BaselineTransformer` *can* execute, and compares the chunked output against
+that genuine reference: `failed = 0 / 2,097,152`. This is the bridge that makes
+the own-benchmark credible — the same code that produces the Row-14 number is
+shown to agree with the official baseline wherever the official baseline is
+runnable at all.
+
+**3 — the only precision spend is FP16 storage, and it is measured against a
+higher-precision twin.** At Row-14 dimensions the residual and K/V cache are
+held in FP16 because FP32 would not fit. To price that, the driver runs the same
+chunked kernel a second time with `store=torch.float32` — residual, K/V and
+folded weights all widened — and compares: `failed = 0 / 4.096e8`,
+`max_abs = 7.847e-03`, `mean_abs = 3.410e-04`. This runs at **`B = 4`**, not
+`B = 32`, because the FP32-store reference is itself too large at full batch;
+the FP16-vs-FP32 ratio is a per-element property, so the reduced batch measures
+it faithfully, but the number is honestly a `B = 4` measurement.
+
+> **The answer is also pinned.** `experiments/g7_0_row14_golden.json` is a
+> committed fingerprint of the Row-14 output at the true `B = 32` shape, taken
+> *before* the optimization arc: 8192 values at a fixed seeded index set plus
+> per-batch `sum` and `sum|y|` over all 3.28e9 elements (the tensor itself is
+> 6.55 GB and cannot be stored). Check 6 re-derives it every run. It is what
+> proved the flash-kernel swap did not change the answer — no other check covers
+> the real batch size.
 
 ### Latency breakdown
 > Different shapes are bounded by different limitations (compute / memory / accuracy). The graph below shows the breakdown of latency budget across all 13 test shapes.
@@ -93,6 +150,42 @@ Evaluated on the official test harness `torch_transformer_benchmark.py`, injecte
 
 ## Optimizations, Accepted and Rejected
 
+### Shape Arbitration
+The artefact is a **dispatcher, not one kernel**. Every forward is arbitrated on
+shape alone — no input values are inspected — and each branch ends in a
+different set of optimizations, because each branch has a different binding
+wall. The gates below are the real conditions in `benchmark.py`'s `forward()`.
+
+```mermaid
+flowchart TD
+    IN["forward(x, valid_token_mask)"] --> CAUSAL{"config.causal ?"}
+
+    CAUSAL -->|no| NP["_mask_is_all_ones -&gt; no_pad  (G0.5)<br/>_ensure_folded_weights  (G1.1 / G1.2 folds)<br/>_ensure_lt_plan   gate: tok &le; 127  (G6.6)<br/>_ensure_ws_plan   gate: FP16-accum legal  (G4.3)"]
+    NP --> NCOMP["torch.compile(reduce-overhead)<br/>_optimized_forward"]
+
+    CAUSAL -->|yes| MASK["_mask_is_all_ones -&gt; no_pad_causal  (G0.5)<br/>_ensure_ffn_plan<br/>gate: d_model &ge; 512 and ffn_dim &ge; 2048 and tok &ge; 8192  (G4.7)"]
+    MASK --> OOM{"_would_oom_causal   (G7.1)<br/>128 MiB + tok x (28 d_model + 8 ffn_dim)<br/>&gt; 80% of device VRAM ?"}
+
+    OOM -->|"no — the compiled path fits"| CCOMP["torch.compile(reduce-overhead)<br/>_optimized_forward_causal<br/>OFFICIAL ROWS 1-13"]
+    OOM -->|"yes — it would OOM"| CHUNK["_chunked_forward_causal   (G7.0)<br/>query chunks vs an incremental K/V cache<br/>ROW 14 AND LARGER"]
+
+    CCOMP --> REG{"regime<br/>CLAUDE.md dispatch table"}
+    REG -->|"tok &le; 16k and S &lt; 1024<br/>rows 1-5, 7-12"| DEF["DEFAULT / TINY — launch and compute bound<br/>CUDA graphs (G2.4b), fused QKV (G0.2c),<br/>FP16 attention (G6.4bc), cuBLASLt FFN at tok &le; 127 (G6.6)"]
+    REG -->|"S &ge; 1024<br/>row 13"| LS["LONG-SEQ — attention is O(S^2)<br/>FP16 storage unlocks flash dispatch (G6.4bc)<br/>31.7x, the largest win on the board"]
+    REG -->|"tok &gt; 16k<br/>row 6"| LB["LARGE-BATCH — GEMM and DRAM bound<br/>tensor-core occupancy, FP16 storage<br/>elementwise path at the bandwidth roofline"]
+
+    CHUNK --> STORE{"store dtype"}
+    STORE -->|"fp16 — shipped"| FLASH["ONE bottom-right-causal flash call per chunk<br/>_flash_attention_forward, BSHD K/V cache<br/>no LSE merge, no transpose copy  (G7.4)<br/>LayerNorm on fp16 (G7.5) · compiled body (G7.6)"]
+    STORE -->|"fp32 — accuracy reference only"| EFF["two-block mem-efficient split + FP32 LSE merge<br/>no FP32 flash kernel exists on this stack,<br/>so the reference path keeps the G7.0 structure"]
+```
+
+> The arbiter conditions are tuned to the **break-even point**, not to a round
+> number. `_would_oom_causal` is a byte estimate calibrated over 24 shapes
+> (`results/logs/g7_1_gate_calibration_run202.log`) and deliberately
+> over-predicts: rows 1-13 clear it with a 3.35x margin at worst (row 6), while
+> Row 14 is 5.85x over. Chunking is strictly slower per FLOP than the compiled
+> path, so a gate that fired early would silently tax a scorable row.
+
 ### Accepted Optimizations
 All applied optimizations are exact or precision-neutral, with the exception of two FP16-storage casts. These casts are strictly gated by an `atol = 0.002` budget and a fixed `allow_fp16_reduced_precision_reduction = False` (which forces FP32 GEMM reduction, entirely avoiding the FP16-accumulate tier). 
 
@@ -112,6 +205,11 @@ Because the tightest accuracy margin on the baseline stack sits at `max_abs = 0.
 | **G4.7c** | Fused `ffn_in` GEMM + exact-erf GELU epilogue on warp-specialised `mma.sync` kernel | Precision-neutral |
 | **G4.3** | Warp-specialised `mma.sync` GEMM + CUTLASS-grade epilogue for attention projections | FP32-accumulate |
 | **G6.6** | cuBLASLt explicit algorithm search + fused bias epilogue for FFN GEMMs | N/A |
+| **G7.0** | Sequence-chunked causal forward — query chunks vs an incremental K/V cache; makes `S = 100000` runnable at all | Exact (chunking drops no term) |
+| **G7.1** | Chunking gate restated in bytes against real VRAM, replacing a fixed `B·S·d` element proxy | Exact (routing only) |
+| **G7.4** | One bottom-right-causal `_flash_attention_forward` call per chunk — deletes the two-block split, the FP32 LSE merge and the `.contiguous()` transpose copy | Precision-neutral (accuracy improved) |
+| **G7.5** | LayerNorm applied directly to the FP16 residual — CUDA already accumulates in FP32 for half input | Exact (bit-identical) |
+| **G7.6** | `torch.compile` on the chunk body (`CHUNK_COMPILE` default on) | Exact (no value change) |
 
 > The graph below depicts the optimizations as part of the datapath
 
@@ -139,6 +237,38 @@ flowchart TD
 After the layer loop: `final_norm` (not folded — it has no consumer). The
 FP32 residual stream is never downcast, both LayerNorms do only the mean/var
 reduction, `ffn_out` deliberately stays at ≈FP32 (TF32x3).
+
+#### The Row-14 arc — 13.0 s → 9.95 s
+
+Profiling the chunked path first (`results/logs/g7_2_row14_profile_run207.log`)
+changed the plan. The forward was **98% GPU-busy and 86% attention**, and the
+attention kernel was the *mem-efficient* one at **119.7 TFLOP/s — 73% of the
+roofline** — chosen only because the two-block split needed its returned
+log-sum-exp. Everything else together was worth under 0.6 s, so there was
+exactly one lever.
+
+| # | Change | Row 14 |
+|---|---|---|
+| **G7.4** | one bottom-right flash call per chunk, replacing the past block + diagonal block + FP32 LSE merge + widening + transpose copy | 13043 → **10306 ms** (−21.0%) |
+| **G7.5** | LayerNorm straight on FP16 — the golden fingerprint came back *bit-identical*, proving the FP32 round-trip was pure traffic | → **10098 ms** (−2.0%) |
+| **G7.6** | `torch.compile` on the chunk body | → **9952.6 ms** (−1.4%) |
+
+The enabling discovery was an asymmetry in PyTorch's own API: `is_causal=True`
+with `Lq < Lk` is **top-left** aligned through
+`F.scaled_dot_product_attention` — which is what forced the two-block split in
+the first place — but **bottom-right** aligned through the raw
+`torch.ops.aten._flash_attention_forward`. Bottom-right *is* prefix-causal, so
+one call now does what three kernels and a merge did before
+(`max|out − BR ref| = 9.1e-04` vs `4.5e+00` for top-left,
+`results/logs/g7_3_flash_probe_run208.log`). Attention now runs at
+**150.6 TFLOP/s — 91% of the roofline**, and accuracy *improved*
+(`max_abs 8.132e-03 → 7.847e-03`).
+
+> **Two more were closed by measurement, not suspicion.** Retuning `chunk_q` is
+> worthless — 1024 / 2048 / 3072 give 9653 / 9655 / 9627 ms, flat to 0.3%, so
+> the loop was never chunk-count-bound. And a second CUDA stream has nothing to
+> overlap at ~97% GPU-busy, so it was closed without being built. What remains
+> is ~1.5 s against a ~8.4 s hard floor.
 
 ### Hardware Limit Reached
 The accuracy-legal roofline is `12·M·d²·L / 165.2e12` (GEMM FLOPs at the
@@ -176,6 +306,8 @@ Most optimizations failed either because they did not meet the accuracy requirem
 | **Split-precision FP8** | Ootomo-style mixed FP8 precision. | **Arithmetic ceiling.** Passes accuracy at `k=4`, but yields no speed win. A 4-GEMM kernel's ideal 82.6 TFLOP/s matches TF32's existing peak. |
 | **`torch.compile(max-autotune)`** | Automated graph compilation and tuning. | **Accuracy (~2.2–2.4× over budget).** Compilation incorrectly picks Triton software-TF32 over cuBLAS native. |
 | **Degree-7 minimax GELU polynomial** | Polynomial approximation for GELU activation. | **Accuracy (~84× over budget).** The catalogued ~1e-6 estimate was wrong by 5 orders of magnitude (caught without a GPU). |
+| **Row-14 `chunk_q` retune** (G7 step 5) | Re-deriving the adaptive query-chunk sizer to use the memory freed by G7.4. | **No prize.** 1024 / 2048 / 3072 measure 9653 / 9655 / 9627 ms — flat to 0.3%. The chunk loop was never chunk-count-bound. |
+| **Second CUDA stream for chunk overlap** (G7 step 7) | Overlapping chunk *i+1*'s projections with chunk *i*'s attention. | **Nothing to overlap.** The path is ~97% GPU-busy in steady state; closed on the profile without being built. |
 
 > The chart below depicts the accuracy vs performance tradeoff of our various optimizations.
 
@@ -250,7 +382,14 @@ zero budget**, and is accepted whenever it provides a performance gain.
 
 ### Run
 
-> The evaluation runs on the official test harness provided by TikTok TechJam
+> The evaluation runs the **generated judge drop-in**
+> `torch_transformer_benchmark.py` — the official harness with our
+> `UserOptimizedTransformer` spliced in place of the stub — so what is scored is
+> exactly what a grader executes. `tools/sync_entrypoint.py` builds it from
+> `benchmark.py`, and both `run_eval.sh` and the Slurm sweep refuse to run
+> against a stale splice (`sync_entrypoint.py --check`). The harness half is
+> byte-for-byte the reference; `tools/verify_baseline.py` asserts that over 20
+> frozen symbols on every build.
 
 ```bash
 # 1. Build the reproducible image  (-> /scratch/kernel.sif; ~10 min)
@@ -289,7 +428,8 @@ make entrypoint                     # -> torch_transformer_benchmark.py
 ├── run_eval.sh · Makefile           Standardized eval
 ├── csrc/                            Hand-written CUDA / C++ / inline-PTX (csrc/README.md — 3 files build at eval)
 ├── tools/                           verify_baseline · sync_entrypoint · check_validity · archive · make_figures · parse_ncu · slurm
-├── experiments/                     64 g0-g6 investigation drivers (experiments/README.md)
+├── experiments/                     70+ g0-g7 investigation drivers (experiments/README.md)
+│   └── g7_0_row14_golden.json       Committed Row-14 reference fingerprint (B=32) — check 6
 ├── infra/
 │   ├── apptainer/                   kernel.def + build.sh — Reproducible image
 │   ├── slurm/                       *.sbatch — Batch scripts
@@ -299,7 +439,7 @@ make entrypoint                     # -> torch_transformer_benchmark.py
 │   └── artifacts/                   NCU JSON summaries, ground_truth.csv
 ├── archive/                         MAP-Elites elite-config store (archive/README.md)
 ├── assets/                          README figures (Generated via make figures)
-├── docs/                            ARCHITECTURE · PROGRESS (52-step log) · DOCUMENTATION · FINAL_SCORECARD
+├── docs/                            ARCHITECTURE · PROGRESS (55-step log) · DOCUMENTATION · FINAL_SCORECARD
 │                                    · PARETO_FRONTIER_ANALYSIS · ACCURACY_BUDGET · SETUP · CATALOGUE · AGENTS · ...
 └── CLAUDE.md                        The agent's operating manual
 ```
@@ -314,9 +454,12 @@ make entrypoint                     # -> torch_transformer_benchmark.py
   manual attention needs an `[S, S]`-per-head score tensor no 24 GB card can
   hold, so the *reference* OOMs before our model runs and the harness emits no
   number. The **shipped model does run it** on one 24 GB card via sequence
-  chunking (`_chunked_forward_causal`, 13.0 s / 20.8 GB peak,
-  `experiments/g7_0_chunked_oversize.py`); a chunked *baseline* for a scored
-  comparison, or multi-GPU sharding for speed, is still future work.
+  chunking (`_chunked_forward_causal`, **9.95 s / 19.55 GB peak**, down from
+  13.0 s / 20.8 GB; `experiments/g7_0_chunked_oversize.py`). Its accuracy is
+  therefore measured against our own FP32-store chunked reference at `B = 4`,
+  not against the frozen baseline at `B = 32` — a chunked *baseline* for a
+  genuinely scored comparison, or multi-GPU sharding for speed, is still future
+  work.
 - **Ada-specific.** The precision choices, tile sizes, and the "no megakernel"
   conclusion are calibrated to `sm_89`; a Hopper port would reopen TMA +
   `wgmma` + a persistent fused kernel and change the answer.
@@ -334,6 +477,6 @@ Built with [Claude Code](https://claude.com/claude-code). Frozen baseline and
 evaluation harness per the TikTok TechJam problem statement (Problem 3 —
 *Implement a GPU Kernel for a Transformer Layer*). Devpost write-up:
 [`docs/DEVPOST.md`](docs/DEVPOST.md). Full engineering log:
-[`docs/PROGRESS.md`](docs/PROGRESS.md) (52 steps) ·
+[`docs/PROGRESS.md`](docs/PROGRESS.md) (55 steps) ·
 [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) (every optimization,
 shipped/closed, with measured numbers).
