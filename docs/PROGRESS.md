@@ -3621,3 +3621,77 @@ into stages, add the theoretical roofline and its bound. `docs/FINAL_SCORECARD.m
   job 169 (UnboundLocalError from a local `import torch._dynamo` — fixed);
   job 170 (clean walls but LN-fused Triton kernels misbucketed as GEMM via
   "addmm" token — fixed); job 171 (correct). benchmark.py untouched throughout.
+
+---
+
+### 53. G7.0 — Row 14 (`S=100000`) supported via sequence chunking
+
+User request: the shipped model must *execute* Row 14
+(`B=32 d=1024 H=16 S=100000 L=2 ffn=1024`, causal) even though it OOMs the
+baseline — leave baseline as OOM, add a chunked path; then: route *any*
+causal shape above the 24 GB limit through it, and optimise it.
+
+**Why the harness can't score it.** `generate_random_case` does
+`x = x * input_scale` (2 × 12.2 GiB FP32) then `reference = baseline(x)`
+builds `[32,16,100000,100000]` scores (~9 TB); `run_accuracy_tests` has no
+`try/except`, so the process aborts before `UserOptimizedTransformer` is ever
+called. `--benchmark-on-failure` only catches a numeric fail, not an
+exception. There is no harness number for Row 14 and there cannot be one.
+
+**Shipped path** (`benchmark.py`):
+- `_would_oom_causal(B,S,d) = B·S·d ≥ _CHUNK_ACT_ELEMS` (8e8 ≈ 20 GB of live
+  compiled-path activations). `forward()`'s causal branch routes on
+  `no_pad ∧ x.is_cuda ∧ causal ∧ _would_oom_causal`; if over-budget but
+  `S < _CHUNK_MIN_SEQ` (2048) it raises `NotImplementedError` (S-chunking
+  can't help a batch-driven footprint). Largest `B·S·d` on official rows
+  1–13 is 1.64e8 (row 6) — 4.9× under the threshold, so the gate never
+  misfires on a scored shape.
+- `_chunked_forward_causal`: eager, no-pad only. Residual stream held in
+  **FP16 and mutated in place**; `[B,H,S,hd]` FP16 K/V cache allocated once
+  and refilled per layer. Per query chunk: folded-FP16 LN→QKV→write K/V
+  slice→attention→out_proj→residual→LN2→ffn_in→exact-erf GELU (FP32)→
+  ffn_out→residual; final norm chunked in place. Same fold/precision policy
+  as `_optimized_forward_causal`.
+- **Attention.** `SDPA(is_causal=True)` with `q_len ≠ kv_len` is **top-left**
+  aligned in current PyTorch on *every* backend (job 197 check 1: MATH gave
+  `max|part − full[c0:c1]| = 5.07`), not the bottom-right prefix mask first
+  assumed. Fix: split each query chunk `[c0:c1]` attending keys `[0:c1]` into
+  a strictly-past non-causal block `[0:c0]` and a square-causal diagonal
+  block `[c0:c1]`, merge flash-style by log-sum-exp
+  (`torch.ops.aten._scaled_dot_product_efficient_attention` returns the LSE).
+  No `[chunk,c1]` mask is ever built; the mem-efficient op keeps the past
+  block off the `[B,H,chunk,c1]` footprint.
+- **Optimisation.** Query-chunk size adapts to free VRAM
+  (`mem_get_info` − K/V bytes − `_CHUNK_RESERVE_GB`); K/V buffers reused
+  across layers; per-chunk transients `del`'d; `CHUNK_COMPILE=1` wraps the
+  two position-wise halves of the chunk body in `torch.compile` (SDPA stays
+  eager) — measured +2.2 % on Row 14, so default off.
+
+**Verification** — `experiments/g7_0_chunked_oversize.py`, job 198,
+`results/logs/g7_0_chunked_oversize_run198.log`, `OVERALL: PASS`:
+1. prefix-causal split+LSE merge vs full causal attention: FP32 1.7e-6,
+   FP16 1.9e-3.
+2. gate: `_would_oom_causal` False for all 13 official rows; `forward()`
+   auto-route bit-identical to a direct `_chunked_forward_causal` call.
+3. equivalence (B=2 S=4096 d=256 L=2): FP16 chunked vs frozen baseline
+   `failed = 0`; FP32 chunked vs baseline `max_abs = 5.1e-4`.
+4. oversize capability, three synthetic >24 GB shapes:
+   Row 14 **13.0 s / 20.80 GB peak** (chunk_q 2048, 49 chunks);
+   `(8,200000,1024)` 12.1 s / 11.6 GB; `(64,50000,1024)` 7.5 s / 20.8 GB —
+   all finite, right shape.
+5. Row-14 accuracy (B=4, FP16-store vs FP32-store chunked):
+   `failed 0 / 4.096e8`, `max_abs 8.1e-3`, **`mean_abs 3.4e-4`** — passes the
+   disjunctive `abs<0.002 ∨ rel<0.02` gate. The step-plan contingency
+   (FP32 residual + hand-rolled block-flash) is **not** needed.
+
+**Regression** — `infra/slurm/official_causal_sweep.sbatch`, job 199,
+`results/logs/official_causal_sweep_run199.log`: 13/13 PASS, `max_abs`
+byte-identical to run 168 on every row, speedups within run-to-run jitter
+(row 8, the most stable, 1.933× vs 1.932×). The gate does not fire and the
+compiled path for rows 1–13 is unchanged.
+
+`run_eval.sh` `RUN_ROW14=1` now runs the probe (never the OOMing harness
+row) and synthesises one summary line. `torch_transformer_benchmark.py`
+regenerated; `verify_baseline` (20 frozen symbols) + `check_validity` green.
+Commits: `b751393` (kernel), `e6c6c21` (probe), `2b45c0c` (top-left fix),
+`4d30211` (run_eval), `<docs>`.

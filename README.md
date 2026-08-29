@@ -31,9 +31,9 @@
 
 
 ## Results
-Evaluated on the official test harness `torch_transformer_benchmark.py`, injected with the fully-causal test shapes with accuracy requirements `atol = 0.002`, `rtol = 0.02`. All test shapes passes the accuracy gate except Row 14.
+Evaluated on the official test harness `torch_transformer_benchmark.py`, injected with the fully-causal test shapes with accuracy requirements `atol = 0.002`, `rtol = 0.02`. All 13 scorable test shapes pass the accuracy gate. Row 14 (`S = 100000`) cannot be scored by the harness at all — its FP32 reference OOMs a 24 GB card before our model runs — but the shipped model still executes it.
 
->Row 14 (`S = 100000`) physically OOMs the GPU on the test harness due to GPU memory limitations. However, an alternate long sequence test was performed.
+>Row 14 (`S = 100000`) physically OOMs the GPU on the test harness due to GPU memory limitations (a single `[32, 100000, 1024]` FP32 activation is 12.2 GiB, and the baseline's `[B, H, S, S]` scores are ~9 TB). The shipped model runs it anyway on one 24 GB RTX 4090 via **sequence chunking** (`benchmark.py` → `_chunked_forward_causal`): streaming query chunks against an incrementally-filled FP16 K/V cache, no full-`S` score tile. Measured in `experiments/g7_0_chunked_oversize.py` (job 198): **13.0 s**, **20.8 GB peak**, output within the `atol 0.002 / rtol 0.02` gate (`failed = 0 / 4.1e8`, mean abs error `3.4e-4`) against a higher-precision chunked reference. Any causal shape above the memory limit routes through the same path.
 
 ![per-shape speedup](assets/results_speedup.svg)
 
@@ -256,11 +256,11 @@ zero budget**, and is accepted whenever it provides a performance gain.
 # 1. Build the reproducible image  (-> /scratch/kernel.sif; ~10 min)
 bash infra/apptainer/build.sh
 
-# 2. Run the official evaluation  (rows 1-13; row 14 OOMs the baseline)
+# 2. Run the official evaluation  (rows 1-13; row 14 is unscorable by the harness)
 ./run_eval.sh                       # or: make eval
 #    per-row logs + a summary table land in results/logs/
 #    override the entry point:      ENTRY=benchmark.py ./run_eval.sh
-#    attempt row 14 anyway:         RUN_ROW14=1 ./run_eval.sh
+#    + row-14 chunked-capability probe:  RUN_ROW14=1 ./run_eval.sh
 
 # 3. Regenerate the README figures
 make figures                        # tools/make_figures.py -> assets/*.svg
@@ -309,10 +309,14 @@ make entrypoint                     # -> torch_transformer_benchmark.py
 ## Limitations and Future Works
 
 - **Forward pass only.** No backward / training path.
-- **Row 14 (`S = 100000`) is unscorable here**. A single `[32, 100000, 1024]`
-  FP32 activation is 12.2 GiB, and the FP32 baseline's manual attention needs
-  an `[S, S]`-per-head score tensor no 24 GB card can hold. It needs multi-GPU
-  sharding or a chunked baseline.
+- **Row 14 (`S = 100000`) is unscorable by the harness** — a single
+  `[32, 100000, 1024]` FP32 activation is 12.2 GiB and the FP32 baseline's
+  manual attention needs an `[S, S]`-per-head score tensor no 24 GB card can
+  hold, so the *reference* OOMs before our model runs and the harness emits no
+  number. The **shipped model does run it** on one 24 GB card via sequence
+  chunking (`_chunked_forward_causal`, 13.0 s / 20.8 GB peak,
+  `experiments/g7_0_chunked_oversize.py`); a chunked *baseline* for a scored
+  comparison, or multi-GPU sharding for speed, is still future work.
 - **Ada-specific.** The precision choices, tile sizes, and the "no megakernel"
   conclusion are calibrated to `sm_89`; a Hopper port would reopen TMA +
   `wgmma` + a persistent fused kernel and change the answer.

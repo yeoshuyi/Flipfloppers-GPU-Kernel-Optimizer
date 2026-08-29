@@ -2,7 +2,8 @@
 
 RTX 4090 (Ada, sm_89), CUDA 13.0 / PyTorch 2.13. Budget `atol 0.002 / rtol
 0.02`, gate `failed == 0`. Row 14 (`S=100000`) OOMs the FP32 baseline — no
-end-to-end path; 13 rows scored.
+*scored* end-to-end path; 13 rows scored. The shipped model does execute Row 14
+via sequence chunking (§Row 14 below).
 
 - **Before/after + speedup + accuracy:** `benchmark.py` per row, fresh process,
   `results/official_causal_sweep_run168.log` (job 168).
@@ -109,3 +110,33 @@ measured flash time (already accuracy-legal precision). `mem floor =
   runs against L2 near its rate.
 
 Full derivation and the "why not faster" argument: `docs/PARETO_FRONTIER_ANALYSIS.md`.
+
+## Row 14 — `B=32 d=1024 H=16 S=100000 L=2 ffn=1024`, causal
+
+Not on the scored table: the frozen harness OOMs before our model is reached.
+`generate_random_case` allocates `x` then `x * input_scale` (2 × 12.2 GiB
+FP32), and even past that `reference = baseline(x)` builds `[32,16,100000,
+100000]` scores (~9 TB); `run_accuracy_tests` has no `try/except`, so the run
+aborts. There is no harness number to report and there cannot be one.
+
+The **shipped model executes it anyway** — `benchmark.py` →
+`_would_oom_causal` gate → `_chunked_forward_causal`: the residual stream is
+held in FP16 and mutated in place, the `[B,H,S,hd]` K/V cache (FP16, 12.2 GB)
+is filled incrementally, and attention runs one query chunk at a time
+(adaptive size, 2048 rows here) against the growing K/V prefix — split into a
+strictly-past non-causal block and a square-causal diagonal block, merged by
+log-sum-exp. No `[B,H,S,S]` tile is ever materialised.
+
+| metric | value | source |
+|---|---|---|
+| latency, shipped chunked forward | **13.0 s** (median of 3) | job 198 |
+| peak VRAM | **20.80 GB** / 23.52 GiB usable | `torch.cuda.max_memory_allocated` |
+| adaptive query-chunk / #chunks | 2048 / 49 | probe log |
+| `CHUNK_COMPILE=1` A/B | 13.08 s → 12.79 s (+2.2 %) | job 198 — default off |
+| accuracy, B=4, FP16-store vs FP32-store chunked | `failed 0 / 4.096e8`, max_abs 8.1e-3, **mean_abs 3.4e-4**, passes `abs<0.002 ∨ rel<0.02` | job 198 |
+| small-shape check: FP16 chunked vs frozen baseline | `failed 0` | job 198 |
+
+The same gate routes `(8, 200000, 1024)` (12.1 s, 11.6 GB) and
+`(64, 50000, 1024)` (7.5 s, 20.8 GB) — it is a general memory-feasibility
+gate, not a Row-14 special case. Proof: `experiments/g7_0_chunked_oversize.py`,
+`results/logs/g7_0_chunked_oversize_run198.log`.

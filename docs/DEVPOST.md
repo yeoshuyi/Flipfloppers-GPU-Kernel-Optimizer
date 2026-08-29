@@ -62,7 +62,10 @@ tested shape.
 
 Result: **Σ 383.4 ms → 60.8 ms (6.3×)** over the 14-row official matrix,
 **geomean 7.7×**, per-shape **1.9×–31.8×**, **13 / 13 within budget**
-(`failed == 0`; the 14th shape OOMs the FP32 reference on 24 GB).
+(`failed == 0`). The 14th shape (`S = 100000`) OOMs the FP32 *reference* on
+24 GB so the harness can't score it — but the shipped model still **executes
+it** on one card via sequence chunking (13.0 s, 20.8 GB peak, output inside
+the accuracy gate).
 
 ---
 
@@ -97,6 +100,12 @@ CUTLASS · Nsight Compute.
   (long-sequence) per shape.
 - **13 / 13 shapes pass** `rel < 0.02 / abs < 0.002`; tightest margin
   `max_abs = 0.00195` (97.5 % of budget).
+- **Row 14 (`S = 100000`), which the harness cannot score, runs anyway** — a
+  memory-feasibility gate routes it (and any larger causal shape) to a
+  sequence-chunked forward: FP16 residual mutated in place, an incrementally
+  filled K/V cache, per-chunk attention split into a past block + a
+  square-causal block merged by log-sum-exp. **13.0 s, 20.8 GB peak** on one
+  RTX 4090; `failed == 0 / 4.1e8` vs a higher-precision chunked reference.
 - Compute-bound (row 8): shipped GEMMs at **94–96 % of the accuracy-legal
   165.2 TFLOP/s roofline** in isolation.
 - Memory-bound (row 6): the elementwise path moves **22.7 GB/forward against a
@@ -152,8 +161,9 @@ unreachable.
 
 - A **Hopper backend** — TMA + `wgmma` unlock the persistent fused megakernel
   Ada cannot run.
-- INT8 with proper outlier handling; autotuned launch configs; a backward pass;
-  multi-GPU for the `S = 100000` shape.
+- INT8 with proper outlier handling; autotuned launch configs; a backward pass.
+- For `S = 100000`: a *chunked baseline* so the harness can score it, and
+  multi-GPU sharding to bring the 13 s single-card chunked forward down.
 - Publish the accuracy-legal kernels + the negatives ledger, so the next team
   doesn't re-spend the budget on the same dead ends.
 

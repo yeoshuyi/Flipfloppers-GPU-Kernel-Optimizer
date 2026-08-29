@@ -16,9 +16,9 @@ Plan: `/home/techjam2/.claude/plans/crispy-cooking-pine.md` (approved).
 | P2 `experiments/g7_0_chunked_oversize.py` + `infra/slurm/g7_0_chunked_oversize.sbatch` | DONE — commit pending |
 | P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | DONE — commit `4d30211` |
 | P4 sbatch the probe → real numbers | **DONE — job 198 OVERALL: PASS**, `results/logs/g7_0_chunked_oversize_run198.log` |
-| P5 regression: rows 1-13 vs `official_causal_sweep_run168.log` (gate must NOT fire) | **IN FLIGHT — job 199** |
-| P6 docs: README row-14 lines + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | in progress |
-| P7 `make package` + `bash infra/verify_submission.sh` | not started |
+| P5 regression: rows 1-13 vs run168 (gate must NOT fire) | **DONE — job 199: 13/13 PASS, max_abs byte-identical to run168, speedups within jitter** |
+| P6 docs: README + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | DONE — commit pending |
+| P7 `make package` + `bash infra/verify_submission.sh` | in progress |
 
 ## Job 198 results (all PASS) — `results/logs/g7_0_chunked_oversize_run198.log`
 

@@ -100,7 +100,11 @@ which is already at its accuracy‑legal precision — see §3.3):
 
 Rows 2–5, 9–12 differ from row 1 only in `B` (1–128) or `H` (1–16) or `S`
 (32); all share row 1's regime. Row 14 (`S=100 000`, `d=1024`) OOMs the
-FP32 baseline and therefore has no scored end‑to‑end result.
+FP32 baseline and therefore has no scored end‑to‑end result — but the shipped
+model *does* run it, on one 24 GB card, via the `_chunked_forward_causal`
+sequence-chunked path (13.0 s, 20.8 GB peak, output inside the accuracy gate;
+`docs/FINAL_SCORECARD.md` §Row 14, job 198). That path is a memory-feasibility
+fallback, off the scored Pareto frontier by construction.
 
 Sources: `results/g4_9_official_profile_run145.log` (buckets, kernel
 counts, measured BW), `results/g5_4_t3b_ship_verify_run155.log` (shipped &

@@ -17,9 +17,10 @@ Line numbers are approximate anchors into `benchmark.py` at the time of writing;
 | **Optimized model** | `class UserOptimizedTransformer(BaselineTransformer)` (L536) … up to `def copy_model_weights` (L1309) | this span is what `tools/sync_entrypoint.py` splices into the judge drop-in (text markers: `class UserOptimizedTransformer` → `def copy_model_weights`) |
 | **Custom-op dispatch** | `_lt_ext()` (L104), `_ws_ext()` (L244), `_ffn_register_op()` (L319) | JIT-load the pybind extensions from `csrc/`; register `torch.ops.g43.*` / `g66.*`; each guards its source path with `os.path.exists` → `None` on miss (silent eager fallback) |
 | **Env gates** | `_LT_MAX_TOKENS` (L97), `_FFN_CFG` = `G4_7_FFN_CFG` (L239), `_FFN_MIN_TOKENS` = `G4_7_FFN_MIN_TOKENS` (L240) | compile-time constants baked into the traced region |
-| **Regime gating** | `forward` (L959) dispatches to `_optimized_forward_causal` (L1073) or `_optimized_forward` (L1187) | `tok = batch·seq` → tiny / default / long-seq / large-batch / padded; the eager `_ensure_*` plan pickers run here, **outside** the compiled region |
-| **G1 precompute** | inside `UserOptimizedTransformer.__init__` (within L536–L1073) | LayerNorm-affine fold, QKV fuse, attention-scale fold into `W_Q` (all exact), FP16 weight copies |
-| **CUDA-graph capture** | `_compiled_causal` / `_compiled_impl` via `torch.compile(mode="reduce-overhead")` (L1021, L1068) | lazy; per-instance |
+| **Regime gating** | `forward` dispatches to `_optimized_forward_causal` or `_optimized_forward` | `tok = batch·seq` → tiny / default / long-seq / large-batch / padded; the eager `_ensure_*` plan pickers run here, **outside** the compiled region |
+| **Memory-feasibility gate (G7.0)** | `forward` causal branch → `_would_oom_causal(B,S,d)` → `_chunked_forward_causal` | `B·S·d ≥ _CHUNK_ACT_ELEMS` (8e8 ≈ 20 GB) ∧ no-pad ∧ `S ≥ _CHUNK_MIN_SEQ` → eager sequence-chunked forward (FP16 residual mutated in place, incremental K/V cache, per-chunk past-block + square-causal-block attention merged by log-sum-exp). Off the scored path — never trips on official rows 1–13 (max `B·S·d` = 1.64e8). Env: `CHUNK_ACT_ELEMS/MIN_SEQ/Q/RESERVE_GB/COMPILE`. Proof: `experiments/g7_0_chunked_oversize.py` |
+| **G1 precompute** | inside `UserOptimizedTransformer.__init__` | LayerNorm-affine fold, QKV fuse, attention-scale fold into `W_Q` (all exact), FP16 weight copies |
+| **CUDA-graph capture** | `_compiled_causal` / `_compiled_impl` via `torch.compile(mode="reduce-overhead")` | lazy; per-instance |
 
 ## What runs on the official 14-row matrix
 
