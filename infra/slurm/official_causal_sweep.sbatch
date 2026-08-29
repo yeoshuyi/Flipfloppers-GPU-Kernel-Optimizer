@@ -6,7 +6,11 @@
 # compaction) and substituted the project's own standard causal shapes for
 # the rest.
 #
-# Column mapping to benchmark.py flags:
+# Runs the GENERATED drop-in torch_transformer_benchmark.py -- the file the
+# judges execute -- not the hand-edited benchmark.py. The two are kept identical
+# by tools/sync_entrypoint.py, asserted by the --check guard below.
+#
+# Column mapping to the harness flags:
 #   Batch Size -> --batch-size   QKV Dim -> --d-model   Heads -> --heads
 #   Seq Len    -> --seq-len      Layers  -> --layers     FFN Dim -> --ffn-dim
 #   Causal is TRUE for all 14 rows -> --causal always passed.
@@ -28,13 +32,23 @@
 
 set -uo pipefail
 
+# The judges run torch_transformer_benchmark.py, so the standing gate does too.
+# It is GENERATED from benchmark.py by tools/sync_entrypoint.py, so a stale
+# splice would silently score the wrong model -- fail loudly instead. Same
+# guard run_eval.sh applies at its line 37.
+python3 /scratch/work/tools/sync_entrypoint.py --check || {
+    echo "official_causal_sweep: torch_transformer_benchmark.py is STALE -- "\
+         "run tools/sync_entrypoint.py and resubmit" >&2
+    exit 1
+}
+
 run() {
     local name="$1"; shift
     echo "=== SHAPE: $name ==="
     apptainer exec --nv --cleanenv \
         --bind /scratch/work:/work \
         /scratch/kernel.sif \
-        python3 /work/benchmark.py --causal "$@" || true
+        python3 /work/torch_transformer_benchmark.py --causal "$@" || true
     echo
 }
 

@@ -31,6 +31,11 @@ Checks (a compact report, PASS/FAIL per check + OVERALL):
      cannot score row 14, so the current implementation is the benchmark;
      this is what catches an optimization silently changing the answer at
      B=32 (check 4 only asserts finite+shape, check 5 runs at B=4).
+  7. splice_identity      -- the GENERATED torch_transformer_benchmark.py (the
+     file the judges run, and now the file the official sweep scores) carries
+     the same gate, the same _CHUNK_* knobs and the same chunked kernel
+     bytecode as benchmark.py. The sweep cannot reach Row 14, so this is the
+     only check that covers the splice on the chunked path.
 
 Run via infra/slurm/g7_0_chunked_oversize.sbatch (needs
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True for the tight Row-14 budget).
@@ -500,6 +505,57 @@ def check_row14_golden():
         return False
 
 
+# --------------------------------------------------------------------------
+# 7. splice identity: the generated drop-in IS this model
+# --------------------------------------------------------------------------
+def check_splice_identity():
+    """torch_transformer_benchmark.py is GENERATED from benchmark.py by
+    tools/sync_entrypoint.py, and it is the file the judges run. The official
+    sweep now scores it directly, but the sweep cannot reach Row 14 (its FP32
+    reference OOMs), so nothing else would catch a stale or drifted splice on
+    the chunked path. Assert the two modules agree on the gate and on every
+    knob that path reads."""
+    print("\n== 7. splice_identity ==", flush=True)
+    try:
+        import torch_transformer_benchmark as TB
+    except Exception as e:
+        print(f"  FAIL: cannot import the generated drop-in: {str(e)[:150]}")
+        return False
+
+    good = True
+    knobs = ("_CHUNK_ACT_ELEMS", "_CHUNK_OOM_FRAC", "_CHUNK_BYTES_PER_D",
+             "_CHUNK_BYTES_PER_FFN", "_CHUNK_BYTES_FIXED", "_CHUNK_MIN_SEQ",
+             "_CHUNK_Q", "_CHUNK_RESERVE_GB", "_CHUNK_COMPILE", "_CHUNK_FLASH")
+    for k in knobs:
+        a, b = getattr(B, k, "<missing>"), getattr(TB, k, "<missing>")
+        if a != b:
+            good = False
+            print(f"  {k}: benchmark.py={a!r} drop-in={b!r}  MISMATCH")
+    print(f"  {len(knobs)} _CHUNK_* knobs agree: {good}")
+
+    # the gate must route identically on both, including Row 14
+    dev = torch.device("cuda", torch.cuda.current_device())
+    shapes = [(b, s_, d, f) for (b, s_, d, f) in OFFICIAL_BSD]
+    shapes.append((32, 100000, 1024, 1024))
+    routes_ok = True
+    for (b, s_, d, f) in shapes:
+        if (B.UserOptimizedTransformer._would_oom_causal(b, s_, d, f, dev)
+                != TB.UserOptimizedTransformer._would_oom_causal(b, s_, d, f, dev)):
+            routes_ok = False
+            print(f"  gate disagrees at B={b} S={s_} d={d} ffn={f}")
+    print(f"  gate routes identically on all {len(shapes)} shapes "
+          f"(13 official + row 14): {routes_ok}")
+    good &= routes_ok
+
+    # and the chunked kernel itself must be the same code object
+    same = (B.UserOptimizedTransformer._chunked_forward_causal.__code__.co_code
+            == TB.UserOptimizedTransformer._chunked_forward_causal.__code__.co_code)
+    print(f"  _chunked_forward_causal bytecode identical: {same}")
+    good &= same
+    print(f"  {'PASS' if good else 'FAIL'}")
+    return good
+
+
 def main():
     print(f"torch {torch.__version__}  device {torch.cuda.get_device_name(0)}")
     free, total = torch.cuda.mem_get_info()
@@ -519,6 +575,7 @@ def main():
         "oversize_capability": check_oversize_capability(),
         "row14_accuracy": check_row14_accuracy(),
         "row14_golden": check_row14_golden(),
+        "splice_identity": check_splice_identity(),
     }
     print("\n== SUMMARY ==")
     for k, v in results.items():
