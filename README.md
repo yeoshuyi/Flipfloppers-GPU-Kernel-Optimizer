@@ -35,6 +35,11 @@ Evaluated on the official test harness `torch_transformer_benchmark.py`, injecte
 
 >Row 14 (`S = 100000`) physically OOMs the GPU on the test harness due to GPU memory limitations. However, an alternate long sequence test was performed.
 
+![per-shape speedup](assets/results_speedup.svg)
+
+<details>
+<summary>Full results table — 13 shapes, exact numbers</summary>
+
 | # | B | d | H | S | baseline | **shipped** | speedup | max_abs |
 |--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | 1 | 64 | 128 | 4 | 128 | 1.0465 ms | **0.2109 ms** | 4.96× | 0.00137 |
@@ -50,6 +55,8 @@ Evaluated on the official test harness `torch_transformer_benchmark.py`, injecte
 | 11 | 64 | 128 | 16 | 128 | 4.3858 ms | **0.2857 ms** | 15.35× | 0.00137 |
 | 12 | 64 | 128 | 4 | 32 | 1.0376 ms | **0.1229 ms** | 8.44× | 0.00141 |
 | 13 | 64 | 128 | 4 | 1024 | 70.153 ms | **2.2088 ms** | 31.76× | 0.00137 |
+
+</details>
 
 ### Latency breakdown
 > Different shapes are bounded by different limitations (compute / memory / accuracy). The graph below shows the breakdown of latency budget across all 13 test shapes.

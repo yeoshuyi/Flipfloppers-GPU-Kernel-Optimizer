@@ -6,6 +6,7 @@ step 52); each block cites the results log it came from.
     python3 tools/make_figures.py        # writes assets/*.svg
 
 Charts:
+  assets/results_speedup.svg    per-shape speedup bars over the reference forward
   assets/latency_breakdown.svg  per-shape stage split (SDPA / GEMM / GELU / LN+res)
   assets/pareto_accuracy.svg    whole-model speedup vs accuracy-budget usage,
                                 with the rejected precision tiers past the wall
@@ -54,6 +55,77 @@ def svg(w, h, body, title):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" '
             f'width="{w}" height="{h}" role="img" aria-label="{esc(title)}">'
             f'{R(0,0,w,h,BG)}{body}</svg>\n')
+
+
+# ===========================================================================
+# 0. per-shape speedup  --  results/logs/official_causal_sweep_run168.log
+#    (median of 300 timed calls, fp32 baseline -> optimized; all within atol 0.002)
+# ===========================================================================
+# row, shape_tag, baseline_ms, shipped_ms, speedup
+SPD = [
+    (1,  "",         1.0465,  0.2109,  4.96),
+    (2,  "B=1",      1.0618,  0.0778, 13.64),
+    (3,  "B=4",      1.0426,  0.0881, 11.84),
+    (4,  "B=16",     1.0466,  0.1116,  9.38),
+    (5,  "B=128",    1.7039,  0.3727,  4.57),
+    (6,  "B=10000",  290.55,  52.486,  5.54),
+    (7,  "d=32",     1.0209,  0.1034,  9.87),
+    (8,  "d=1024",   8.3611,  4.3271,  1.93),
+    (9,  "H=1",      0.9688,  0.2099,  4.62),
+    (10, "H=2",      1.0473,  0.2130,  4.92),
+    (11, "H=16",     4.3858,  0.2857, 15.35),
+    (12, "S=32",     1.0376,  0.1229,  8.44),
+    (13, "S=1024",   70.153,  2.2088, 31.76),
+]
+GEOMEAN = 7.71
+
+
+def fig_speedup():
+    W = 900
+    x0, x1 = 178, 700          # bar track (linear, 0 -> smax)
+    top, rowh = 118, 30
+    smax = 33.0
+    bottom = top + len(SPD) * rowh
+    H = bottom + 44
+
+    def sx(s):
+        return x0 + (x1 - x0) * s / smax
+
+    b = []
+    b.append(T(36, 40, "Per-shape speedup over the reference forward", 18, INK, weight="600"))
+    b.append(T(36, 61, "official causal matrix · fp32 baseline "
+                       "(torch_transformer_benchmark.py) → optimized · "
+                       "median of 300 timed calls", 12, SUB))
+    b.append(T(36, 88, "1.93×–31.76× per shape      geomean 7.71×      "
+                       "Σ 383.4 → 60.8 ms (6.3×)      13/13 within atol 0.002",
+              12.5, C_OK, weight="600"))
+
+    # x gridlines + labels
+    for s in (5, 10, 15, 20, 25, 30):
+        gx = sx(s)
+        b.append(LN_(gx, top - 8, gx, bottom, GRID, 1))
+        b.append(T(gx, bottom + 16, f"{s}×", 10, SUB, anchor="middle", mono=True))
+    b.append(LN_(x0, top - 8, x0, bottom, GRID, 1))
+
+    # geomean reference
+    gx = sx(GEOMEAN)
+    b.append(LN_(gx, top - 8, gx, bottom, SUB, 1, dash="4 3"))
+    b.append(T(gx + 5, top - 12, f"geomean {GEOMEAN:.2f}×", 10, SUB, weight="600"))
+
+    for i, (row, tag, base, ship, sp) in enumerate(SPD):
+        y = top + i * rowh
+        b.append(T(x0 - 62, y + 15, f"row {row}", 12, INK, anchor="end", mono=True))
+        if tag:
+            b.append(T(x0 - 8, y + 15, tag, 10.5, SUB, anchor="end", mono=True))
+        be = sx(sp)
+        b.append(R(x0, y + 4, be - x0, 17, C_OK, rx=2))
+        b.append(T(be + 8, y + 17, f"×{sp:.2f}", 12, INK, weight="600", mono=True))
+        b.append(T(W - 20, y + 17, f"{base:g} → {ship:g} ms", 10, SUB,
+                   anchor="end", mono=True))
+
+    b.append(T(36, H - 14, "source: results/logs/official_causal_sweep_run168.log",
+              10, SUB, mono=True))
+    return svg(W, H, "".join(b), "per-shape speedup")
 
 
 # ===========================================================================
@@ -224,7 +296,8 @@ def fig_roofline():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for name, fn in [("latency_breakdown", fig_latency),
+    for name, fn in [("results_speedup", fig_speedup),
+                     ("latency_breakdown", fig_latency),
                      ("pareto_accuracy", fig_pareto),
                      ("roofline", fig_roofline)]:
         p = os.path.join(OUT, name + ".svg")
