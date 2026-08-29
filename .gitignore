@@ -36,4 +36,4 @@ venv/
 .DS_Store
 
 # resume
-.RESUME.md
+RESUME.md
