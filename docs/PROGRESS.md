@@ -3695,3 +3695,77 @@ row) and synthesises one summary line. `torch_transformer_benchmark.py`
 regenerated; `verify_baseline` (20 frozen symbols) + `check_validity` green.
 Commits: `b751393` (kernel), `e6c6c21` (probe), `2b45c0c` (top-left fix),
 `4d30211` (run_eval), `<docs>`.
+
+### 54. G7.1 — chunking gate restated in bytes; Row-14 golden pinned
+
+Two prerequisites for the Row-14 optimization arc, neither of which held.
+
+**(a) The entry condition was a proxy, not a memory fact.**
+`_would_oom_causal` was `B*S*d >= 8e8` — an element count encoding an
+undocumented "~25 bytes/elem" model, blind to `ffn_dim` and hardcoding the
+card size. Chunking must fire *only* when the compiled path genuinely will
+not fit; anything else routes a shape that would have run fast onto the
+slow eager path.
+
+Calibrated in job 200 over 24 shapes spanning tokens, `d_model`, `ffn_dim`
+and `num_layers` (`results/logs/g7_1_gate_calibration_run200.log`):
+
+- The warmed-up cudagraph **replay allocates ~nothing** (≤2 MB delta on
+  every shape) — it reuses the static pool. The **capture** pass is what has
+  to fit, and is what the gate now predicts. This matches the original
+  rationale ("the CUDA graph cannot be captured at all").
+- `bytes ≈ FIXED + tokens*(C_d*d_model + C_ffn*ffn_dim)`; measured
+  `C_d` 12.7–18.1, `C_ffn` 5.4–6.0, plus a ~86 MB shape-independent term.
+- Peak is **~flat in `num_layers`** — L=2/4/8 measured 0.445/0.690/0.631 GB
+  at one shape, non-monotonic — set by the widest single-layer live set plus
+  the residual. So there is deliberately no layer term.
+
+Shipped `C_d=28` (24, plus 4 B/elem for the fp32 input, which is live when
+the gate is consulted), `C_ffn=8`, `FIXED=128 MiB`. Predicted ≥ measured on
+all 24 shapes with **≥1.40× headroom** (job 202 worst: 1.425× at
+`d=128/ffn=4096`). Over-prediction is the safe direction: per the owner's
+decision there is **no OOM-retry fallback**, so the model must never
+under-predict. `g7_1_gate_calibration.py` is now a permanent validator of
+this, not a one-off fit.
+
+Behaviour on a 23.52 GB card (budget = 80% = 18.81 GB): rows 1–13 all
+compiled, row 14 chunked. **Row 6** — the largest scored row, 1.28e6 tokens
+— estimates 5.62 GB, a **3.35× margin**, and is the binding constraint.
+Row 14 estimates 110 GB, 5.85× over. A `d=128/ffn=32768` shape that the old
+`B*S*d` proxy waved through estimates 253 GB and now correctly chunks.
+
+**Hot-path cost was the real trap.** The gate runs on *every* causal forward
+and row 2 has a ~78 µs optimized median, so a `cudaMemGetInfo`-class driver
+call there would be a double-digit-percent regression. The device query is
+memoized per device behind a *sound* `tokens*max(d,ffn) < skip`
+short-circuit (sound because `C_d*d + C_ffn*ffn <= (C_d+C_ffn)*max(d,ffn)`)
+that every official row takes. The memo dict lives in the **class** body,
+not module scope — `check_validity` flags module-level dict literals.
+`CHUNK_ACT_ELEMS` is kept as a legacy override (0 = byte model, >0 = old
+fixed threshold) so the probe can still force the gate on a small shape.
+
+**(b) Nothing pinned Row 14's answer.** The frozen harness cannot score row
+14, check 4 asserted only `finite`+`shape_ok` at the real shape, and check
+5's accuracy anchor runs at `B=4` — so a kernel swap changing results only
+at `B=32` (exactly what A1/A2 will do) would have shipped undetected.
+
+`experiments/g7_0_row14_golden.json` (job 202, commit `741f5fd`) is now the
+benchmark: 8192 values at a fixed seeded index set plus two per-batch bulk
+invariants over all 3.28e9 elements (the tensor itself is 6.55 GB and cannot
+be stored). Both `sum` and `sum|y|` are kept — the signed sum cancels to
+~1e0 over 1e8 roughly zero-mean elements, so `sum|y|` (~8.17e7/batch) is the
+one that detects bulk drift; new **check 6** gates on it at 1e-3 and reports
+the signed sum as a diagnostic. The reference is **one** forward over a
+**fresh** input: `_chunked_forward_causal` mutates `x` in place and returns
+it, so check 4's timing loop actually composes the model with itself four
+times. Reproducibility across jobs 201/202: 12679.8 vs 12678.9 ms, identical
+`max|y|`.
+
+**Verification.** g7_0 job 203 `OVERALL: PASS` — check 2 now prints per-row
+estimates and margins, asserts row 14 and the ffn-heavy shape fire, and
+bisects the trip point (flips at 544,333 tokens, `est` straddling the
+18.813 GB budget exactly); check 6 bit-exact (`max_abs 0.000e+00`).
+Official sweep job 204: 13/13 PASS, `max_abs` **byte-identical to run 168**
+on every row, and **no row slower** — row 2 unchanged at 0.0778 ms, row 6 at
+52.4841 ms, largest move +0.05%. Commits `741f5fd` (gate), `8604192`
+(golden + probe), `<docs>`.

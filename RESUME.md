@@ -10,6 +10,13 @@ and is committed (`b751393..659bb5b` on `main`, verified job 198
   `results/logs/g7_0_chunked_oversize_run198.log`), Row 14 =
   `B=32 d=1024 H=16 hd=64 S=100000 L=2 ffn=1024` causal, `chunk_q=2048`
   → 49 chunks × 2 layers, K/V cache 12.21 GB fp16.
+- **The answer is now PINNED** (G7.1, job 202):
+  `experiments/g7_0_row14_golden.json` is the benchmark — the frozen harness
+  cannot score row 14, so every step must reproduce this fingerprint under
+  `abs<0.002 ∨ rel<0.02` (probe **check 6**). Reference = ONE forward over a
+  FRESH input (`_chunked_forward_causal` mutates `x` in place and returns
+  it). Re-baseline it ONLY deliberately, by re-running
+  `infra/slurm/g7_1_gate_calibration.sbatch`.
 - **Objective:** latency. **Hard gates:** correctness (`failed==0` on the
   disjunctive `abs<0.002 ∨ rel<0.02`) + peak ≤ ~22 GB on the 24 GB card.
 - **Ideal floor:** attention is O(S²) ≈ 1.31e15 FLOPs ≈ 7.9 s at the
@@ -24,6 +31,7 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 | phase | status |
 |---|---|
 | Row-14 chunking *capability* (prior arc) | ✅ DONE — `b751393..659bb5b`, job 198 PASS, job 199 regression 13/13 |
+| **G7.1 gate in bytes + Row-14 golden** | ✅ DONE — `741f5fd`, `8604192`, jobs 200/201/202 calibrate+pin, **job 203 g7_0 OVERALL PASS**, **job 204 sweep 13/13 byte-identical to run168, no row slower** |
 | Row-14 *optimization* (this arc) | **NOT STARTED** — start at Step 0 |
 
 ## Code anchors (`benchmark.py`)
@@ -38,7 +46,8 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 | separate final-norm streamed pass | 1430–1432 |
 | `_CHUNK_*` env knobs | 262–266 |
 | `_split_heads_view` (SHARED with rows 1–13 — do NOT edit) | 959 |
-| `_would_oom_causal` + `forward()` gate (out of scope) | 985 / ~1067 |
+| `_would_oom_causal` (G7.1 byte gate) + `forward()` call site | 985 / ~1090 |
+| `_causal_vram_budget` / `_causal_capture_bytes` (G7.1) | ~992 / ~1020 |
 
 ## How it works now
 
@@ -75,10 +84,32 @@ python3 tools/check_validity.py benchmark.py
 sbatch infra/slurm/g7_0_chunked_oversize.sbatch      # OVERALL: PASS
 #   check 1 prefix-causal vs full attn ; check 3 vs frozen baseline failed==0 ;
 #   check 4 Row14 + (8,200000,1024) + (64,50000,1024): finite, peak <= ~22 GB, latency ;
-#   check 5 Row14 B=4 fp16-store vs fp32-store: failed==0, max_abs not worse than ~8.1e-3
+#   check 5 Row14 B=4 fp16-store vs fp32-store: failed==0, max_abs not worse than ~8.1e-3 ;
+#   check 6 Row14 B=32 vs experiments/g7_0_row14_golden.json: failed==0 AND
+#           per-batch sum|y| drift <= 1e-3  <-- THE regression gate for this arc
 sbatch infra/slurm/official_causal_sweep.sbatch      # 13/13 PASS, max_abs BYTE-IDENTICAL to
-#   results/logs/official_causal_sweep_run168.log  (== run199.log)
+#   results/logs/official_causal_sweep_run168.log  (== run199.log == run204.log)
+sbatch infra/slurm/g7_1_gate_calibration.sbatch      # only if the COMPILED path's
+#   activation set changed -- re-validates the byte model + regenerates the golden
 ```
+
+**Latency guard (rows 1-13 must not get slower).** The accuracy gate above is
+not enough: diff per-row `optimized: median=` against
+`results/logs/official_causal_sweep_run204.log` and flag any row regressing
+>3%. Row 2 (0.0778 ms) is the sentinel for per-call CPU overhead — it is the
+row that would catch an accidental driver call in `_would_oom_causal`. Row 6
+(52.4841 ms) is the largest scored shape and the tightest gate margin (3.35x).
+
+## Gate knobs changed by G7.1 (read before touching the gate)
+
+`CHUNK_ACT_ELEMS` **changed meaning**: `0` (new default) = use the byte
+model; `>0` = the OLD fixed `B*S*d >=` threshold, kept only so the probe can
+force the gate on a small shape. New knobs: `CHUNK_OOM_FRAC` (0.80),
+`CHUNK_BYTES_PER_D` (28), `CHUNK_BYTES_PER_FFN` (8), `CHUNK_BYTES_FIXED`
+(128 MiB). The model predicts the **capture** pass (the warmed cudagraph
+replay allocates ~nothing) and must **never under-predict** — there is no
+OOM fallback. `g7_1_gate_calibration.sbatch` re-validates ≥1.25x headroom on
+24 shapes; re-run it if the compiled path's activation set ever changes.
 
 ## Constraints
 
@@ -120,8 +151,10 @@ bottom-right for `Lq<Lk`) removes the split entirely.
 
 ## Env knobs (`benchmark.py:262-266`)
 
-`CHUNK_ACT_ELEMS` (8e8, gate — out of scope) · `CHUNK_MIN_SEQ` (2048) ·
-`CHUNK_Q` (0=adaptive) · `CHUNK_RESERVE_GB` (3.0) · `CHUNK_COMPILE` (0).
+`CHUNK_ACT_ELEMS` (0 = byte model; >0 = legacy override) · `CHUNK_OOM_FRAC`
+(0.80) · `CHUNK_BYTES_PER_D` (28) · `CHUNK_BYTES_PER_FFN` (8) ·
+`CHUNK_BYTES_FIXED` (128 MiB) · `CHUNK_MIN_SEQ` (2048) · `CHUNK_Q`
+(0=adaptive) · `CHUNK_RESERVE_GB` (3.0) · `CHUNK_COMPILE` (0).
 Add `CHUNK_FLASH` (A/B the flash path) if useful.
 
 ## Discipline
