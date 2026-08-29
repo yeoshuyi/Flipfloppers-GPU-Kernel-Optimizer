@@ -266,6 +266,10 @@ _FFN_OP_READY = False
 #                       transients + CUDA context + allocator fragmentation.
 #   CHUNK_COMPILE    -- 1 = torch.compile the position-wise pre/post halves of
 #                       the chunk body (the SDPA-over-growing-prefix stays eager).
+#   CHUNK_FLASH      -- 1 (default) = G7.4's single bottom-right flash call per
+#                       chunk. 0 = the G7.0 two-block mem-efficient split + LSE
+#                       merge. fp32 store always uses the latter (no fp32 flash
+#                       kernel exists on this stack).
 _CHUNK_ACT_ELEMS = int(os.environ.get("CHUNK_ACT_ELEMS", "0"))
 _CHUNK_OOM_FRAC = float(os.environ.get("CHUNK_OOM_FRAC", "0.80"))
 _CHUNK_BYTES_PER_D = int(os.environ.get("CHUNK_BYTES_PER_D", "28"))
@@ -275,6 +279,7 @@ _CHUNK_MIN_SEQ = int(os.environ.get("CHUNK_MIN_SEQ", "2048"))
 _CHUNK_Q = int(os.environ.get("CHUNK_Q", "0"))
 _CHUNK_RESERVE_GB = float(os.environ.get("CHUNK_RESERVE_GB", "3.0"))
 _CHUNK_COMPILE = os.environ.get("CHUNK_COMPILE", "0") == "1"
+_CHUNK_FLASH = os.environ.get("CHUNK_FLASH", "1") == "1"
 
 
 def _ws_ext():
@@ -976,6 +981,19 @@ class UserOptimizedTransformer(BaselineTransformer):
         batch, seq_len, _ = x.shape
         return x.view(batch, seq_len, num_heads, head_dim).transpose(1, 2)
 
+    @staticmethod
+    def _split_heads_bshd(x: torch.Tensor, num_heads: int,
+                          head_dim: int) -> torch.Tensor:
+        # G7.4: [B,L,d] -> [B,L,H,hd], NO transpose. The raw flash op
+        # (_flash_attention_forward) takes BSHD natively, so this is the
+        # layout the K/V cache is held in and the layout attention returns --
+        # which is why the chunked path no longer needs the
+        # .transpose(1,2).contiguous() copy that BHSD forced.
+        # Deliberately separate from _split_heads_view: that one is shared
+        # with the rows 1-13 compiled path and must not change.
+        batch, seq_len, _ = x.shape
+        return x.view(batch, seq_len, num_heads, head_dim)
+
     def _mask_is_all_ones(self, m: Optional[torch.Tensor]) -> bool:
         # G0.5: caches a PROPERTY of the mask (is it all-ones?), never the
         # output -- the one data_ptr() use CLAUDE.md sanctions. The harness
@@ -1432,12 +1450,36 @@ class UserOptimizedTransformer(BaselineTransformer):
               f"n_chunks={n_chunks}  kv_cache={kv_bytes / 1024 ** 3:.2f}GB "
               f"free={free_gb:.2f}GB  compile={_CHUNK_COMPILE}", flush=True)
 
+        # G7.4: one bottom-right-causal flash call per chunk replaces the
+        # two-block mem-efficient split. Requires fp16 (no fp32 flash kernel on
+        # this stack -- verified in experiments/g7_3_flash_probe.py), so the
+        # fp32-store reference path keeps the G7.0 split.
+        use_flash = (not wide) and _CHUNK_FLASH
+
         # --- K/V cache: allocated once, overwritten per layer ----------
-        kbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
-        vbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
+        # BSHD for flash (its native layout, and what it returns), BHSD for the
+        # mem-efficient op.
+        if use_flash:
+            kbuf = torch.empty(B, S, H, hd, dtype=store, device=dev)
+            vbuf = torch.empty(B, S, H, hd, dtype=store, device=dev)
+        else:
+            kbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
+            vbuf = torch.empty(B, H, S, hd, dtype=store, device=dev)
 
         gemm_dtype = store if wide else torch.float16
         eff_attn = torch.ops.aten._scaled_dot_product_efficient_attention
+        flash_fwd = torch.ops.aten._flash_attention_forward
+
+        def prefix_causal_attn_flash(q, kfull, vfull, c1):
+            # q [B,L,H,hd]; k/v [B,c1,H,hd]. is_causal with Lq < Lk is
+            # BOTTOM-RIGHT aligned for the RAW op -- i.e. exactly prefix-causal:
+            # query row c0+i sees keys 0..c0+i. (F.scaled_dot_product_attention
+            # is TOP-LEFT for the same argument, which is what forced G7.0's
+            # two-block split; job 197 caught that, job 208 verified the raw
+            # op's bottom-right alignment at 9.1e-04 vs 4.5e+00 for top-left.)
+            # One call, no LSE merge, no fp32 widening, output already BSHD.
+            return flash_fwd(q, kfull, vfull, None, None, q.shape[1], c1,
+                             0.0, True, False, scale=1.0)[0]
 
         def prefix_causal_attn(q, kfull, vfull, c0):
             # q: [B,H,L,hd]; attend keys [0:c0+L] with query row c0+i seeing
@@ -1471,8 +1513,14 @@ class UserOptimizedTransformer(BaselineTransformer):
             return F.linear(n1.to(gemm_dtype), qkv_w, qkv_b)
 
         def post(xc, ctx, op_w, op_b, fi_w, fi_b, fo_w, fo_b):
-            ctx = ctx.transpose(1, 2).contiguous().view(
-                xc.shape[0], xc.shape[1], d)
+            # G7.4: flash returns [B,L,H,hd] contiguous, so the merge back to
+            # [B,L,d] is a free reshape. The mem-efficient path returns
+            # [B,H,L,hd] and still needs the transpose + hot copy.
+            if ctx.dim() == 4 and ctx.shape[1] == xc.shape[1]:
+                ctx = ctx.reshape(xc.shape[0], xc.shape[1], d)
+            else:
+                ctx = ctx.transpose(1, 2).contiguous().view(
+                    xc.shape[0], xc.shape[1], d)
             ao = F.linear(ctx, op_w, op_b)
             h1 = xc + ao.to(store)
             ln2_in = h1 if wide else h1.float()
@@ -1512,12 +1560,18 @@ class UserOptimizedTransformer(BaselineTransformer):
                 xc = x[:, c0:c1]
                 qkv = pre(xc, qkv_w, qkv_b)
                 q, k, v = qkv.split(d, dim=-1)
-                q = self._split_heads_view(q, H, hd)
-                k = self._split_heads_view(k, H, hd)
-                v = self._split_heads_view(v, H, hd)
-                kbuf[:, :, c0:c1] = k
-                vbuf[:, :, c0:c1] = v
-                ctx = prefix_causal_attn(q, kbuf[:, :, :c1], vbuf[:, :, :c1], c0)
+                if use_flash:
+                    q = self._split_heads_bshd(q, H, hd)
+                    kbuf[:, c0:c1] = self._split_heads_bshd(k, H, hd)
+                    vbuf[:, c0:c1] = self._split_heads_bshd(v, H, hd)
+                    ctx = prefix_causal_attn_flash(q, kbuf[:, :c1],
+                                                   vbuf[:, :c1], c1)
+                else:
+                    q = self._split_heads_view(q, H, hd)
+                    kbuf[:, :, c0:c1] = self._split_heads_view(k, H, hd)
+                    vbuf[:, :, c0:c1] = self._split_heads_view(v, H, hd)
+                    ctx = prefix_causal_attn(q, kbuf[:, :, :c1],
+                                             vbuf[:, :, :c1], c0)
                 x[:, c0:c1] = post(xc, ctx.to(gemm_dtype), op_w, op_b,
                                    fi_w, fi_b, fo_w, fo_b)
                 del qkv, q, k, v, ctx

@@ -1,0 +1,66 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+VRAM 23.13/23.52 GB  alloc_conf=expandable_segments:True
+
+== Step 0: kernel census, Row 14 ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2176 n_chunks=46  kv_cache=12.21GB free=16.83GB  compile=False
+  warmup forward: 12886.5 ms
+USDT:2026-08-29 07:18:37 255902:255902 SyncActivityProfilerHandler.cpp:52] profiler_start
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=False
+USDT:2026-08-29 07:19:03 255902:255902 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+  total DEVICE time 12680.5 ms/iter over 5,290 kernels/iter   (wall 12887 ms -> 98% of wall is GPU-busy)
+
+  phase                   ms/iter   % device  calls/iter
+  SDPA.past               10701.2      84.4%          94
+  GEMM                      632.9       5.0%         392
+  cast/copy                 555.3       4.4%       2,895
+  merge/elementwise         342.4       2.7%       1,466
+  SDPA.diag                 248.3       2.0%         100
+  layer_norm                143.0       1.1%         245
+  gelu                       57.3       0.5%          98
+
+  top kernels by device time
+  fmha_cutlassF_f16_aligned_64x64_rf_sm80(PyTorchMemEffAttenti   10949.5
+  ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1     265.5
+  void at::native::vectorized_elementwise_kernel<4, at::native     190.8
+  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_128x256_     185.5
+  ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn              182.0
+  void at::native::unrolled_elementwise_kernel<at::native::dir     165.1
+  void at::native::(anonymous namespace)::vectorized_layer_nor     143.0
+  void at::native::elementwise_kernel<128, 4, at::native::gpu_     135.6
+  void at::native::elementwise_kernel<128, 2, at::native::gpu_     113.3
+  void at::native::vectorized_elementwise_kernel<4, at::native      86.0
+  void at::native::elementwise_kernel<128, 4, at::native::gpu_      63.8
+  void at::native::vectorized_elementwise_kernel<4, at::native      57.3
+
+  SDPA.past vs prefix length (47 distinct k_len)
+    k_len=  4,096      17.5 ms
+    k_len=  6,144      26.2 ms
+    k_len= 51,200     229.8 ms
+    k_len= 96,256     435.7 ms
+    k_len= 98,304     376.7 ms
+
+  -- roofline --
+  attention 1.311e+15 FLOP in  10949.5 ms ->   119.7 TFLOP/s (73% of peak); ideal 7944 ms
+  GEMMs     8.053e+13 FLOP in    632.9 ms ->   127.2 TFLOP/s (77% of peak); ideal 488 ms
+
+  attention 86% of device time | GEMMs 5% | everything else 1098 ms (9%)
+  SDPA.diag    248.3 ms (100 calls)   SDPA.past  10701.2 ms (94 calls)
+  step 1/3 (flash) headroom inside attention: 3006 ms to the roofline
+  steps 4/6 (casts, LN, compile) contend for 1098 ms total
+
+== chunk_q sweep (step 5, asked early) ==
+   chunk_q  n_chunks         ms   peak GB
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=False
+      1024        98    12854.6     19.61
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=False
+      2048        49    12744.4     20.79
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=False
+      3072        33    12702.7     21.98
+
+G7_2_DONE

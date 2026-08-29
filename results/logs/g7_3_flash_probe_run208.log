@@ -1,0 +1,51 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+
+== C. backend availability ==
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: Memory efficient kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1104.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: Memory Efficient attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:571.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: Flash attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1106.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: Expected query, key and value to all be of dtype: {Half, BFloat16}. Got Query dtype: float, Key dtype: float, and Value dtype: float instead. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/sdp_utils_cpp.h:91.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: cuDNN attention kernel not used because: (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:1108.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+/work/experiments/g7_3_flash_probe.py:180: UserWarning: cuDNN attention has been runtime disabled. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp:831.)
+  F.scaled_dot_product_attention(q, k, v, is_causal=False,
+  float16  FLASH      available
+  float16  EFFICIENT  available
+  float32  FLASH      unavailable (RuntimeError)
+  float32  EFFICIENT  available
+
+== B. raw _flash_attention_forward alignment for Lq < Lk ==
+  shapes q=(1, 4, 2, 64) k=(1, 10, 2, 64) (BSHD), Lq=4 Lk=10
+  schema: {'': aten::_flash_attention_forward(Tensor query, Tensor key, Tensor value, Tensor? cum_seq_q, Tensor? cum_seq_k, SymInt max_q, SymInt max_k, float dropout_p, bool is_causal, bool return_debug_mask, *, float? scale=None,
+  out shape (1, 4, 2, 64)   lse shape (1, 2, 4)
+  max|out - TOP-LEFT ref|     = 4.456e+00
+  max|out - BOTTOM-RIGHT ref| = 9.058e-04
+  VERDICT: BOTTOM-RIGHT (A2 is possible)
+
+== A. per-chunk attention: mem-efficient vs flash ==
+  Row 14 chunking: 49 chunks of q=2048, B=32 H=16 hd=64
+
+        c0    k_len  mem-eff ms   flash ms  flash/eff
+     2,048    2,048        4.38       3.64      0.830
+    12,288   12,288       26.31      21.55      0.819
+    24,576   24,576       52.50      43.08      0.821
+    36,864   36,864       78.80      64.64      0.820
+    49,152   49,152      105.34      86.19      0.818
+    61,440   61,440      132.04     107.70      0.816
+    73,728   73,728      158.54     129.21      0.815
+    86,016   86,016      188.52     150.75      0.800
+    98,304   98,304      218.86     172.29      0.787
+
+  sampled 9/48 past-blocks; scaling by 5.42 to the full sweep, x2 layers:
+    mem-efficient      10462 ms   (job 207 measured SDPA.past = 10701 ms)
+    flash               8444 ms   -> +19.3% vs mem-efficient
+
+== VERDICT ==
+  A2 (single bottom-right flash call): GO
+
+G7_3_DONE

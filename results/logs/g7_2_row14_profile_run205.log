@@ -1,0 +1,82 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+VRAM 23.13/23.52 GB  alloc_conf=expandable_segments:True
+
+== Step 0: kernel census, Row 14 ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2176 n_chunks=46  kv_cache=12.21GB free=16.83GB  compile=False
+  warmup forward: 12888.6 ms
+USDT:2026-08-29 07:13:49 254958:254958 SyncActivityProfilerHandler.cpp:52] profiler_start
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=False
+USDT:2026-08-29 07:14:15 254958:254958 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  profiled forward: 13723.1 ms/iter (profiler overhead included)
+
+  total device time 37105.1 ms/iter over 14,171 kernel-ops/iter
+
+  phase                   ms/iter   % total  calls/iter
+  GEMM                    12828.0     34.6%       4,638
+  SDPA.diag               10951.3     29.5%         194
+  SDPA.?                  10951.3     29.5%         194
+  cast/copy                1110.4      3.0%       4,316
+  merge/elementwise         684.9      1.8%       2,634
+  layer_norm                286.1      0.8%         490
+  other                     178.5      0.5%       1,509
+  gelu                      114.6      0.3%         196
+
+  top ops by device time
+  op                                                      ms/iter     calls
+  Command Buffer Full                                     11562.7     3,854
+  aten::_efficient_attention_forward                      10951.3       194
+  fmha_cutlassF_f16_aligned_64x64_rf_sm80(PyTorchMemEf    10951.3       194
+  aten::addmm                                               632.7       392
+  aten::copy_                                               555.2     1,421
+  ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_sta      265.4        98
+  void at::native::vectorized_elementwise_kernel<4, at      190.8       445
+  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_      185.3        98
+  ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn       181.9       196
+  aten::add                                                 171.3       392
+  void at::native::unrolled_elementwise_kernel<at::nat      165.0       390
+  cuMemRelease                                              155.1       750
+  aten::native_layer_norm                                   143.1       245
+  void at::native::(anonymous namespace)::vectorized_l      143.1       245
+  void at::native::elementwise_kernel<128, 4, at::nati      135.6     1,468
+  aten::mul                                                 113.3       196
+  void at::native::elementwise_kernel<128, 2, at::nati      113.3       196
+  void at::native::vectorized_elementwise_kernel<4, at       86.0       388
+
+  -- roofline --
+  attention 1.311e+15 FLOP in  10951.3 ms ->   119.7 TFLOP/s (73% of peak); ideal 7944 ms
+  GEMMs     8.053e+13 FLOP in  12828.0 ms ->     6.3 TFLOP/s (4% of peak); ideal 488 ms
+  everything else 13325.8 ms (36% of device time) -- this is what steps 3/4 target
+
+  -- step 3 (A2: one flash call per chunk) prize --
+  SDPA.diag  10951.3 ms   SDPA.past      0.0 ms   (A2 fuses these into one call)
+  LSE merge + fp32 widening 684.9 ms, cast/copy 1110.4 ms -> 4.8% of device time
+
+== chunk_q sweep (step 5 asked early) ==
+   chunk_q  n_chunks         ms   peak GB
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=False
+      1024        98    12850.6     19.61
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=False
+      2048        49    12742.7     20.79
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=False
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=False
+      3072        33    12709.5     21.98
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=4096 n_chunks=25  kv_cache=12.21GB free=nanGB  compile=False
+[W829 07:15:37.334798018 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+[W829 07:15:37.338099209 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+      4096              OOM/err  CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has 
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=6144 n_chunks=17  kv_cache=12.21GB free=nanGB  compile=False
+[W829 07:15:37.443232193 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+[W829 07:15:37.496206239 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+[W829 07:15:37.498077462 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+      6144              OOM/err  CUDA out of memory. Tried to allocate 384.00 MiB. GPU 0 has 
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=8192 n_chunks=13  kv_cache=12.21GB free=nanGB  compile=False
+[W829 07:15:37.580626567 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 12320768, total: 25250627584).
+[W829 07:15:38.631642246 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+[W829 07:15:38.644069541 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+      8192              OOM/err  CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has
+
+G7_2_DONE
