@@ -63,21 +63,21 @@ def svg(w, h, body, title):
 # ===========================================================================
 # row, shape_tag, baseline_ms, shipped_ms, speedup
 SPD = [
-    (1,  "",         1.0465,  0.2109,  4.96),
-    (2,  "B=1",      1.0618,  0.0778, 13.64),
-    (3,  "B=4",      1.0426,  0.0881, 11.84),
-    (4,  "B=16",     1.0466,  0.1116,  9.38),
-    (5,  "B=128",    1.7039,  0.3727,  4.57),
-    (6,  "B=10000",  290.55,  52.486,  5.54),
-    (7,  "d=32",     1.0209,  0.1034,  9.87),
-    (8,  "d=1024",   8.3611,  4.3271,  1.93),
-    (9,  "H=1",      0.9688,  0.2099,  4.62),
-    (10, "H=2",      1.0473,  0.2130,  4.92),
+    (1,  "",         1.0445,  0.2120,  4.93),
+    (2,  "B=1",      1.0846,  0.0778, 13.94),
+    (3,  "B=4",      1.0496,  0.0881, 11.92),
+    (4,  "B=16",     1.0434,  0.1116,  9.35),
+    (5,  "B=128",    1.7050,  0.3727,  4.57),
+    (6,  "B=10000",  290.53,  52.484,  5.54),
+    (7,  "d=32",     1.0391,  0.1034, 10.05),
+    (8,  "d=1024",   8.3681,  4.3333,  1.93),
+    (9,  "H=1",      0.9572,  0.2099,  4.56),
+    (10, "H=2",      1.0453,  0.2130,  4.91),
     (11, "H=16",     4.3858,  0.2857, 15.35),
-    (12, "S=32",     1.0376,  0.1229,  8.44),
-    (13, "S=1024",   70.153,  2.2088, 31.76),
+    (12, "S=32",     1.0363,  0.1229,  8.43),
+    (13, "S=1024",   70.153,  2.2108, 31.73),
 ]
-GEOMEAN = 7.71
+GEOMEAN = 7.72
 
 
 def fig_speedup():
@@ -96,7 +96,7 @@ def fig_speedup():
     b.append(T(36, 61, "official causal matrix · fp32 baseline "
                        "(torch_transformer_benchmark.py) → optimized · "
                        "median of 300 timed calls", 12, SUB))
-    b.append(T(36, 88, "1.93×–31.76× per shape      geomean 7.71×      "
+    b.append(T(36, 88, "1.93×–31.73× per shape      geomean 7.72×      "
                        "Σ 383.4 → 60.8 ms (6.3×)      13/13 within atol 0.002",
               12.5, C_OK, weight="600"))
 
@@ -123,7 +123,8 @@ def fig_speedup():
         b.append(T(W - 20, y + 17, f"{base:g} → {ship:g} ms", 10, SUB,
                    anchor="end", mono=True))
 
-    b.append(T(36, H - 14, "source: results/logs/official_causal_sweep_run168.log",
+    b.append(T(36, H - 14, "source: results/logs/official_causal_sweep_run216.log "
+                       "(run through the generated judge drop-in)",
               10, SUB, mono=True))
     return svg(W, H, "".join(b), "per-shape speedup")
 
@@ -150,7 +151,9 @@ LAT = [
 
 
 def fig_latency():
-    W, H = 900, 560
+    # W was 900: the longest bound-by string ("compute -- 165 TFLOP/s
+    # roofline") ran to x=920 and was clipped by the viewBox.
+    W, H = 960, 560
     x0, x1 = 200, 640          # bar track
     top, rowh = 96, 30
     b = []
@@ -186,17 +189,17 @@ def fig_latency():
 # ===========================================================================
 # row, max_abs, speedup
 SHIP = [
-    (1, 0.00137, 4.96), (2, 0.00137, 13.64), (3, 0.00137, 11.84), (4, 0.00137, 9.38),
-    (5, 0.00137, 4.57), (6, 0.00195, 5.54), (7, 0.00211, 9.87), (8, 0.00141, 1.93),
-    (9, 0.00145, 4.62), (10, 0.00138, 4.92), (11, 0.00137, 15.35), (12, 0.00141, 8.44),
-    (13, 0.00137, 31.76),
+    (1, 0.00137, 4.93), (2, 0.00137, 13.94), (3, 0.00137, 11.92), (4, 0.00137, 9.35),
+    (5, 0.00137, 4.57), (6, 0.00195, 5.54), (7, 0.00211, 10.05), (8, 0.00141, 1.93),
+    (9, 0.00145, 4.56), (10, 0.00138, 4.91), (11, 0.00137, 15.35), (12, 0.00141, 8.43),
+    (13, 0.00137, 31.73),
 ]
 BUDGET = 0.002
 # rejected tier, xmult (max_abs / 0.002), label
 REJECT = [
-    (1.95, "FP16-accumulate GEMM, K=128"),
+    (1.95, "FP16-accum GEMM K=128"),
     (5.5,  "BF16 whole model"),
-    (10.5, "FP16-accumulate GEMM, K=1024"),
+    (10.5, "FP16-accum GEMM K=1024"),
     (15.0, "INT8 FFN"),
     (33.0, "FP8 FFN"),
 ]
@@ -204,10 +207,18 @@ import math
 
 
 def fig_pareto():
-    W, H = 900, 520
-    L, Rr, Tp, Bt = 70, 40, 70, 70
+    # Layout note: four label collisions were fixed here (found by walking the
+    # emitted <text> boxes, not by eye) --
+    #   * the x-axis title sat 8 px above the source line and ran through it,
+    #   * "13/13 shipped shapes" ran through the "atol budget (100%)" callout,
+    #   * the rejected-tier labels are long and collided with each other,
+    #   * shapes sharing max_abs stack at one x, so their row labels merged.
+    # Hence: a taller bottom margin, the wall callouts moved down, the rejected
+    # labels staggered across two rows with leaders, and a declutter pass that
+    # pushes stacked point labels apart and draws a leader when it moves one.
+    W, H = 900, 560
+    L, Rr, Tp, Bt = 70, 40, 70, 96
     pw, ph = W - L - Rr, H - Tp - Bt
-    # x: log10 of (% of budget), from 40% to 6000%
     xmin, xmax = math.log10(40), math.log10(6000)
     ymin, ymax = 0, 34
 
@@ -224,8 +235,10 @@ def fig_pareto():
     # forbidden band
     b.append(R(px(100), Tp, (L + pw) - px(100), ph, C_WALL, opacity=0.06))
     b.append(LN_(px(100), Tp, px(100), Tp + ph, C_WALL, 2, dash="5 4"))
-    b.append(T(px(100) + 6, Tp + 14, "atol budget (100%)", 11, C_WALL, weight="600"))
-    b.append(T(px(100) + 6, Tp + 30, "gate is failed==0, not max_abs", 10, SUB))
+    # wall callouts pushed well below the top so they clear the shipped-cloud
+    # annotation on the left
+    b.append(T(px(100) + 6, Tp + 54, "atol budget (100%)", 11, C_WALL, weight="600"))
+    b.append(T(px(100) + 6, Tp + 70, "gate is failed==0, not max_abs", 10, SUB))
     # x gridlines
     for pct in (50, 100, 200, 500, 1000, 3000):
         gx = px(pct)
@@ -235,21 +248,39 @@ def fig_pareto():
         gy = py(v)
         b.append(LN_(L, gy, L + pw, gy, GRID, 1))
         b.append(T(L - 10, gy + 4, f"{v}x", 11, SUB, anchor="end", mono=True))
-    b.append(T(L + pw / 2, H - 22, "worst-element error, % of the 0.002 budget (log scale)",
+    b.append(T(L + pw / 2, Tp + ph + 46,
+              "worst-element error, % of the 0.002 budget (log scale)",
               12, SUB, anchor="middle"))
-    b.append(T(20, Tp + ph / 2, "speedup", 12, SUB, anchor="middle"))
-    # shipped points
-    for row, ma, sp in SHIP:
-        cx, cy = px(ma / BUDGET * 100), py(sp)
+    # was x=20 -> the centred caption started at x=-3, outside the viewBox
+    b.append(T(32, Tp + ph / 2, "speedup", 12, SUB, anchor="middle"))
+
+    # shipped points, with a vertical declutter on the labels: eight shapes
+    # share max_abs = 0.00137 and so stack on one x
+    b.append(T(L + 6, Tp + 14, "13/13 shipped shapes  (pass: failed==0)",
+              12, C_OK, weight="600"))
+    pts = sorted(((px(ma / BUDGET * 100), py(sp), row) for row, ma, sp in SHIP),
+                 key=lambda t: (round(t[0], 1), t[1]))
+    last_x, last_ly = None, -1e9
+    for cx, cy, row in pts:
+        if last_x is None or abs(cx - last_x) > 2:
+            last_ly = -1e9
+        ly = cy + 4 if cy + 4 >= last_ly + 11 else last_ly + 11
         b.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="5" fill="{C_OK}"/>')
-        b.append(T(cx + 8, cy + 4, f"{row}", 10, C_OK, mono=True))
-    b.append(T(px(70), py(33), "13/13 shipped shapes  (pass: failed==0)", 12, C_OK, weight="600"))
-    # rejected tiers
-    for xm, lab in REJECT:
+        if ly - (cy + 4) > 3:                      # label moved -> draw a leader
+            b.append(LN_(cx + 6, cy, cx + 10, ly - 4, C_OK, 1))
+        b.append(T(cx + 12, ly, f"{row}", 10, C_OK, mono=True))
+        last_x, last_ly = cx, ly
+
+    # rejected tiers -- staggered over two rows so the long labels never touch
+    for i, (xm, lab) in enumerate(REJECT):
         cx = px(xm * 100)
+        ty = py(2) - (14 if i % 2 == 0 else 32)
         b.append(f'<path d="M {cx-5:.1f} {py(2)-5:.1f} l 10 0 l -5 9 z" fill="{C_WALL}"/>')
-        b.append(T(cx, py(2) - 12, lab, 10, C_WALL, anchor="middle"))
-    b.append(T(36, H - 14, "source: results/logs/official_causal_sweep_run168.log ; "
+        if i % 2:
+            b.append(LN_(cx, py(2) - 8, cx, ty + 4, C_WALL, 1))
+        b.append(T(cx, ty, lab, 10, C_WALL, anchor="middle"))
+
+    b.append(T(36, H - 14, "source: results/logs/official_causal_sweep_run216.log ; "
                            "rejected tiers: docs/DOCUMENTATION.md 4 (BF16/FP8/INT8 20-seed probes)",
               10, SUB, mono=True))
     return svg(W, H, "".join(b), "speed vs accuracy pareto")
