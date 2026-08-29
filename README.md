@@ -159,10 +159,9 @@ Because the tightest accuracy margin on the baseline stack sits at `max_abs = 0.
 #### The Full Path a Batch Takes
 
 Dispatch and datapath in one picture: how a shape is routed, then what actually
-happens to the tensor inside every layer. Hand-written kernels are outlined in
-**amber** — each one names the shapes it engages on, because none of them fire
-on the official causal matrix (the fused FFN kernel needs `ffn_dim ≥ 2048`; the
-widest official row is 1024).
+happens to the tensor inside every layer. Every branch is chosen from the shape
+alone — no input values are ever inspected. Hand-written kernels are outlined in
+**amber**, each labelled with the shapes it gets selected for.
 
 ```mermaid
 flowchart TD
@@ -170,12 +169,12 @@ flowchart TD
     MASK --> FOLD["Pre-Fold the Normalisation Scale and Bias,<br/>and the Attention Scale, into the GEMM Weights<br/>Exact, and Free at Runtime"]
     FOLD --> CAUSAL{"Causal Attention?"}
 
-    CAUSAL -->|"No"| NCK["Search cuBLASLt for the Fastest FFN Algorithm<br/>Tiny Batches Only"]
-    NCK --> NCW["Hand-Written Warp-Specialised GEMM<br/>for the Attention Projections<br/>Non-Causal Shapes Only"]
+    CAUSAL -->|"No"| NCK["Search cuBLASLt for the Fastest FFN Algorithm<br/>Chosen for Tiny Batches"]
+    NCK --> NCW["Hand-Written Warp-Specialised GEMM<br/>for the Attention Projections<br/>Chosen for Non-Causal Shapes"]
 
     CAUSAL -->|"Yes"| FIT{"Does the Whole Forward<br/>Fit in VRAM?"}
-    FIT -->|"Yes · Official Rows 1-13"| GRAPH["Capture the Forward as a CUDA Graph<br/>One Replay per Call, Near-Zero Launch Overhead"]
-    FIT -->|"No · Row 14, 3.2M Tokens"| CHUNK["Stream the Sequence in Query Chunks<br/>Against a Growing Key/Value Cache<br/>No Full-Length Score Matrix Ever Exists"]
+    FIT -->|"Yes"| GRAPH["Capture the Forward as a CUDA Graph<br/>One Replay per Call, Near-Zero Launch Overhead"]
+    FIT -->|"No · Very Long Sequences"| CHUNK["Stream the Sequence in Query Chunks<br/>Against a Growing Key/Value Cache<br/>No Full-Length Score Matrix Ever Exists"]
 
     subgraph LAYER["Inside Every Layer"]
         L1["Normalise the Activations<br/>Scale and Bias Already Folded Away"]
@@ -194,7 +193,7 @@ flowchart TD
     GRAPH --> L1
     CHUNK -->|"Same Layer Body, Three Changes:<br/>FP16 Residual · One Flash Call per Chunk<br/>Normalise Directly in FP16"| L1
 
-    PTX["Hand-Written Inline-PTX Warp-Specialised Kernel<br/>Fuses the Expansion and the Exact GELU into One Pass<br/>Engages on Wider Feed-Forward Layers"]
+    PTX["Hand-Written Inline-PTX Warp-Specialised Kernel<br/>Fuses the Expansion and the Exact GELU into One Pass<br/>Chosen for Wider Feed-Forward Layers"]
     PTX -.-> L8
     PTX -.-> L9
 
