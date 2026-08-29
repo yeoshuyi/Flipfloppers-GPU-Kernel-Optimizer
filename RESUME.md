@@ -14,24 +14,36 @@ Plan: `/home/techjam2/.claude/plans/crispy-cooking-pine.md` (approved).
 |---|---|
 | P1 `benchmark.py`: `_CHUNK_*` consts + `_would_oom_causal` + `forward()` gate + `_chunked_forward_causal` | DONE — commit `b751393` |
 | P2 `experiments/g7_0_chunked_oversize.py` + `infra/slurm/g7_0_chunked_oversize.sbatch` | DONE — commit pending |
-| P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | DONE — commit pending |
-| P4 sbatch the probe → real numbers in `results/logs/g7_0_chunked_oversize_run<J>.log` | **IN FLIGHT — job 198 (R)** |
-| P5 regression: rows 1/8/13 vs `official_causal_sweep_run168.log` (gate must NOT fire) | not started |
-| P6 docs: README row-14 lines + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | not started |
+| P3 `run_eval.sh` `RUN_ROW14=1` → run the probe | DONE — commit `4d30211` |
+| P4 sbatch the probe → real numbers | **DONE — job 198 OVERALL: PASS**, `results/logs/g7_0_chunked_oversize_run198.log` |
+| P5 regression: rows 1-13 vs `official_causal_sweep_run168.log` (gate must NOT fire) | **IN FLIGHT — job 199** |
+| P6 docs: README row-14 lines + `docs/{FINAL_SCORECARD,PARETO_FRONTIER_ANALYSIS,DEVPOST,ARCHITECTURE,PROGRESS}.md` (step 53) | in progress |
 | P7 `make package` + `bash infra/verify_submission.sh` | not started |
+
+## Job 198 results (all PASS) — `results/logs/g7_0_chunked_oversize_run198.log`
+
+- **Row 14** (B=32 S=100000 d=1024 H=16 L=2 ffn=1024 causal): shipped chunked
+  forward **13018 ms**, **peak 20.80 GB** / 24 GB card, output finite + right
+  shape. adaptive chunk_q=2048, 49 chunks, KV cache 12.21 GB.
+- Also ran (B=8 S=200000): 12055 ms, 11.64 GB. (B=64 S=50000): 7546 ms, 20.80 GB.
+- **CHUNK_COMPILE** A/B on Row 14: 13079 → 12793 ms (**+2.2%**), default stays off.
+- **Row-14 accuracy** (B=4, fp16-store vs fp32-store chunked): max_abs 8.13e-3,
+  **mean_abs 3.41e-4**, **failed 0 / 409,600,000** — passes the disjunctive
+  `abs<0.002 OR rel<0.02` gate. Contingency (fp32 residual + block-flash) NOT
+  needed.
+- Equivalence (small): fp16 chunked vs frozen baseline `failed=0`; fp32 chunked
+  vs baseline max_abs 5.10e-4. Gate never trips on the 13 official rows;
+  auto-route bit-identical to a direct `_chunked_forward_causal` call.
+- Fix along the way (commit `2b45c0c`): `SDPA(is_causal=True)` with q_len≠kv_len
+  is **top-left** aligned (every backend), so per-chunk attention is a
+  past-block + square-causal-block split merged by LSE via
+  `torch.ops.aten._scaled_dot_product_efficient_attention`.
 
 ## In flight
 
-- **Slurm job 198** `g7_0_chunked_oversize.sbatch` → `results/logs/g7_0_chunked_oversize_run198.log`
-  - job 197: check 1 FAILED — `SDPA(is_causal=True)` with q_len≠kv_len is
-    **top-left** aligned (every backend), not bottom-right. FIXED in commit
-    `<prefix-causal split+LSE merge>`: split each query chunk into a
-    strictly-past non-causal block + a square causal block, merge by LSE via
-    `torch.ops.aten._scaled_dot_product_efficient_attention`.
-  - job 198 partial (as of this note): `1. prefix_causal_attn PASS`
-    (fp32 1.7e-6, fp16 1.9e-3) · `2. gate PASS` (auto-route bit-identical) ·
-    `3. equivalence PASS` (fp16 chunked vs baseline `failed=0`, max_abs 5.1e-3
-    passes on rel; fp32 chunked max_abs 5.1e-4) · `4./5.` running.
+- **Slurm job 199** `official_causal_sweep.sbatch` → regression, rows 1-13.
+  Expect speedups + max_abs to match `results/logs/official_causal_sweep_run168.log`
+  (the G7.0 gate must NOT fire for any of them).
 
 ## Design (locked)
 
