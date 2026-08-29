@@ -1,0 +1,120 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  device NVIDIA GeForce RTX 4090
+VRAM free 23.13 / 23.52 GB  total_memory=23.516 GB  alloc_conf=expandable_segments:True
+current gate: CHUNK_ACT_ELEMS=800,000,000
+
+==========================================================================
+(a) CALIBRATION -- compiled causal path activation footprint
+==========================================================================
+
+-- official rows 1-13 (all have ffn_dim == d_model) --
+  row01            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3826.2 std=   210.2  finite=True
+  row02            tok=      128 d=128   ffn=128   L=4  floor= 0.002  capture=  0.010 GB  steady=  0.002 GB  B/tok: cap= 82592.0 std= 13456.0  finite=True
+  row03            tok=      512 d=128   ffn=128   L=4  floor= 0.002  capture=  0.011 GB  steady=  0.002 GB  B/tok: cap= 22580.0 std=  3364.0  finite=True
+  row04            tok=    2,048 d=128   ffn=128   L=4  floor= 0.002  capture=  0.014 GB  steady=  0.002 GB  B/tok: cap=  7577.0 std=   841.0  finite=True
+  row05            tok=   16,384 d=128   ffn=128   L=4  floor= 0.009  capture=  0.049 GB  steady=  0.002 GB  B/tok: cap=  3201.1 std=   105.1  finite=True
+  row06            tok=1,280,000 d=128   ffn=128   L=4  floor= 0.613  capture=  3.080 GB  steady=  0.002 GB  B/tok: cap=  2584.0 std=     1.3  finite=True
+  row07            tok=    8,192 d=32    ffn=32    L=4  floor= 0.001  capture=  0.013 GB  steady=  0.000 GB  B/tok: cap=  1710.5 std=    14.5  finite=True
+  row08            tok=    8,192 d=1024  ffn=1024  L=4  floor= 0.125  capture=  0.266 GB  steady=  0.102 GB  B/tok: cap= 34861.2 std= 13325.2  finite=True
+  row09            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3814.2 std=   210.2  finite=True
+  row10            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.029 GB  steady=  0.002 GB  B/tok: cap=  3818.2 std=   210.2  finite=True
+  row11            tok=    8,192 d=128   ffn=128   L=4  floor= 0.005  capture=  0.030 GB  steady=  0.002 GB  B/tok: cap=  3874.2 std=   210.2  finite=True
+  row12            tok=    2,048 d=128   ffn=128   L=4  floor= 0.002  capture=  0.014 GB  steady=  0.002 GB  B/tok: cap=  7577.0 std=   841.0  finite=True
+  row13            tok=   65,536 d=128   ffn=128   L=4  floor= 0.033  capture=  0.167 GB  steady=  0.002 GB  B/tok: cap=  2732.3 std=    26.3  finite=True
+
+-- synthetic: d != ffn, token ladder, layer ladder --
+  dneq_d128_f1024  tok=  204,800 d=128   ffn=1024  L=4  floor= 0.103  capture=  1.498 GB  steady=  0.004 GB  B/tok: cap=  7856.2 std=    21.9  finite=True
+  dneq_d128_f4096  tok=  204,800 d=128   ffn=4096  L=4  floor= 0.115  capture=  5.023 GB  steady=  0.013 GB  B/tok: cap= 26334.6 std=    68.4  finite=True
+  dneq_d256_f2048  tok=  204,800 d=256   ffn=2048  L=4  floor= 0.215  capture=  2.927 GB  steady=  0.017 GB  B/tok: cap= 15345.6 std=    87.4  finite=True
+  dneq_d1024_f128  tok=  204,800 d=1024  ffn=128   L=4  floor= 0.848  capture=  3.763 GB  steady=  0.081 GB  B/tok: cap= 19731.0 std=   425.4  finite=True
+  dneq_d1024_f256  tok=  102,400 d=1024  ffn=256   L=4  floor= 0.461  capture=  2.002 GB  steady=  0.084 GB  B/tok: cap= 20996.7 std=   881.5  finite=True
+  tok_b1000        tok=  128,000 d=128   ffn=128   L=4  floor= 0.063  capture=  0.385 GB  steady=  0.002 GB  B/tok: cap=  3229.8 std=    13.5  finite=True
+  tok_b2000        tok=  256,000 d=128   ffn=128   L=4  floor= 0.124  capture=  0.690 GB  steady=  0.002 GB  B/tok: cap=  2894.9 std=     6.7  finite=True
+  tok_b4000        tok=  512,000 d=128   ffn=128   L=4  floor= 0.246  capture=  1.301 GB  steady=  0.002 GB  B/tok: cap=  2727.5 std=     3.4  finite=True
+  tok_b8000        tok=1,024,000 d=128   ffn=128   L=4  floor= 0.491  capture=  2.521 GB  steady=  0.002 GB  B/tok: cap=  2643.7 std=     1.7  finite=True
+  lay_L2           tok=  256,000 d=128   ffn=128   L=2  floor= 0.123  capture=  0.445 GB  steady=  0.001 GB  B/tok: cap=  1867.6 std=     3.4  finite=True
+  lay_L8           tok=  256,000 d=128   ffn=128   L=8  floor= 0.125  capture=  0.631 GB  steady=  0.003 GB  B/tok: cap=  2645.6 std=    13.4  finite=True
+
+--------------------------------------------------------------------------
+
+  -- fit on 'capture':  bytes/token = 25.31*d + 5.89*ffn
+     label              measured  predicted  pred/meas
+     row01                3826.2     3993.6      1.044
+     row02               82592.0     3993.6      0.048  <-- UNDER-PREDICTS
+     row03               22580.0     3993.6      0.177  <-- UNDER-PREDICTS
+     row04                7577.0     3993.6      0.527  <-- UNDER-PREDICTS
+     row05                3201.1     3993.6      1.248
+     row06                2584.0     3993.6      1.546
+     row07                1710.5      998.4      0.584  <-- UNDER-PREDICTS
+     row08               34861.2    31948.7      0.916  <-- UNDER-PREDICTS
+     row09                3814.2     3993.6      1.047
+     row10                3818.2     3993.6      1.046
+     row11                3874.2     3993.6      1.031
+     row12                7577.0     3993.6      0.527  <-- UNDER-PREDICTS
+     row13                2732.3     3993.6      1.462
+     dneq_d128_f1024      7856.2     9274.0      1.180
+     dneq_d128_f4096     26334.6    27378.4      1.040
+     dneq_d256_f2048     15345.6    18548.1      1.209
+     dneq_d1024_f128     19731.0    26668.3      1.352
+     dneq_d1024_f256     20996.7    27422.7      1.306
+     tok_b1000            3229.8     3993.6      1.236
+     tok_b2000            2894.9     3993.6      1.380
+     tok_b4000            2727.5     3993.6      1.464
+     tok_b8000            2643.7     3993.6      1.511
+     lay_L2               1867.6     3993.6      2.138
+     lay_L8               2645.6     3993.6      1.510
+     worst measured/predicted = 20.681 (>1.0 means the fit under-predicts somewhere)
+
+  -- fit on 'steady':  bytes/token = 4.87*d + 0.12*ffn
+     label              measured  predicted  pred/meas
+     row01                 210.2      639.0      3.039
+     row02               13456.0      639.0      0.047  <-- UNDER-PREDICTS
+     row03                3364.0      639.0      0.190  <-- UNDER-PREDICTS
+     row04                 841.0      639.0      0.760  <-- UNDER-PREDICTS
+     row05                 105.1      639.0      6.078
+     row06                   1.3      639.0    474.858
+     row07                  14.5      159.7     11.017
+     row08               13325.2     5111.7      0.384  <-- UNDER-PREDICTS
+     row09                 210.2      639.0      3.039
+     row10                 210.2      639.0      3.039
+     row11                 210.2      639.0      3.039
+     row12                 841.0      639.0      0.760  <-- UNDER-PREDICTS
+     row13                  26.3      639.0     24.313
+     dneq_d128_f1024        21.9      744.8     33.930
+     dneq_d128_f4096        68.4     1107.5     16.194
+     dneq_d256_f2048        87.4     1489.5     17.045
+     dneq_d1024_f128       425.4     5006.0     11.768
+     dneq_d1024_f256       881.5     5021.1      5.696
+     tok_b1000              13.5      639.0     47.486
+     tok_b2000               6.7      639.0     94.972
+     tok_b4000               3.4      639.0    189.943
+     tok_b8000               1.7      639.0    379.886
+     lay_L2                  3.4      639.0    189.717
+     lay_L8                 13.4      639.0     47.514
+     worst measured/predicted = 21.059 (>1.0 means the fit under-predicts somewhere)
+
+  SHIPPED (capture fit x 25.851 for >=1.25x headroom):
+    C_d   = 654.2  -> round up to 655
+    C_ffn = 152.4  -> round up to 153
+  naive live-set upper bound from the source is 36*d + 10*ffn
+
+==========================================================================
+(b) ROW-14 GOLDEN FINGERPRINT
+==========================================================================
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.80GB  compile=False
+[W829 06:47:16.814116798 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 3932160, total: 25250627584).
+[W829 06:47:16.165657516 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 3932160, total: 25250627584).
+Traceback (most recent call last):
+  File "/work/experiments/g7_1_gate_calibration.py", line 384, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/work/experiments/g7_1_gate_calibration.py", line 370, in main
+    golden = capture_golden()
+             ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/experiments/g7_1_gate_calibration.py", line 274, in capture_golden
+    batch_sums = torch.sum(y, dim=(1, 2), dtype=torch.float64).cpu().tolist()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 24.41 GiB. GPU 0 has a total capacity of 23.52 GiB of which 16.80 GiB is free. Including non-PyTorch memory, this process has 6.71 GiB memory in use. Of the allocated memory 6.21 GiB is allocated by PyTorch, and 20.69 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

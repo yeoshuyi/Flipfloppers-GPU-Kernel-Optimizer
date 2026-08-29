@@ -402,8 +402,15 @@ _FFN_OP_READY = False
 # per-query-chunk forward that never materialises a full-S activation or an
 # [B,H,S,S] score tile. Env-overridable so experiments/g7_0_chunked_oversize.py
 # can exercise the gate + the chunked kernel on small shapes.
-#   CHUNK_ACT_ELEMS  -- B*S*d threshold; peak activations ~= B*S*d*25 bytes,
-#                       8e8 ~= 20 GB (largest official row 1-13 is 1.64e8).
+#   CHUNK_ACT_ELEMS  -- LEGACY OVERRIDE. 0 (default) = use the G7.1 byte
+#                       model below. >0 = the old fixed `B*S*d >=
+#                       CHUNK_ACT_ELEMS` element threshold, which is how
+#                       experiments/g7_0_chunked_oversize.py forces the gate
+#                       onto a small shape.
+#   CHUNK_OOM_FRAC   -- fraction of the device's TOTAL VRAM the compiled
+#                       path's capture pass may occupy before we chunk.
+#   CHUNK_BYTES_PER_D / CHUNK_BYTES_PER_FFN / CHUNK_BYTES_FIXED
+#                    -- byte-model coefficients; see _would_oom_causal.
 #   CHUNK_MIN_SEQ    -- below this seq_len, sequence chunking cannot help
 #                       (the footprint is batch-driven) -> NotImplementedError.
 #   CHUNK_Q          -- fixed query-chunk row count; 0 = adaptive from free VRAM.
@@ -411,7 +418,11 @@ _FFN_OP_READY = False
 #                       transients + CUDA context + allocator fragmentation.
 #   CHUNK_COMPILE    -- 1 = torch.compile the position-wise pre/post halves of
 #                       the chunk body (the SDPA-over-growing-prefix stays eager).
-_CHUNK_ACT_ELEMS = int(os.environ.get("CHUNK_ACT_ELEMS", "800000000"))
+_CHUNK_ACT_ELEMS = int(os.environ.get("CHUNK_ACT_ELEMS", "0"))
+_CHUNK_OOM_FRAC = float(os.environ.get("CHUNK_OOM_FRAC", "0.80"))
+_CHUNK_BYTES_PER_D = int(os.environ.get("CHUNK_BYTES_PER_D", "28"))
+_CHUNK_BYTES_PER_FFN = int(os.environ.get("CHUNK_BYTES_PER_FFN", "8"))
+_CHUNK_BYTES_FIXED = int(os.environ.get("CHUNK_BYTES_FIXED", "134217728"))
 _CHUNK_MIN_SEQ = int(os.environ.get("CHUNK_MIN_SEQ", "2048"))
 _CHUNK_Q = int(os.environ.get("CHUNK_Q", "0"))
 _CHUNK_RESERVE_GB = float(os.environ.get("CHUNK_RESERVE_GB", "3.0"))
@@ -987,17 +998,96 @@ class UserOptimizedTransformer(BaselineTransformer):
             self._mask_cache[key] = hit
         return hit
 
+    # G7.1: memoized per-device VRAM budget for _would_oom_causal. Lives in
+    # the CLASS body, not at module level, on purpose: tools/check_validity.py
+    # flags module-level dict/list literals that could cache outputs across
+    # calls. Holds only (budget_bytes, fast_skip_elems) derived from
+    # torch.cuda.get_device_properties -- never a tensor, never anything
+    # derived from an input.
+    _vram_budget_cache: dict = {}
+
+    @classmethod
+    def _causal_vram_budget(cls, dev_index: int):
+        """(budget_bytes, fast_skip_elems) for one device, computed once.
+
+        The device query MUST NOT happen per call: _would_oom_causal runs on
+        every causal forward, and official row 2 (B=1 S=128) has a ~78 us
+        optimized median -- a cudaMemGetInfo-class driver round-trip there
+        would be a double-digit-percent regression. Everything after the
+        first call is a dict lookup.
+        """
+        hit = cls._vram_budget_cache.get(dev_index)
+        if hit is None:
+            total = torch.cuda.get_device_properties(dev_index).total_memory
+            budget = int(total * _CHUNK_OOM_FRAC)
+            # Sound short-circuit bound. Since
+            #   C_d*d + C_ffn*ffn <= (C_d + C_ffn) * max(d, ffn),
+            # any shape with tokens*max(d,ffn) below this cannot reach the
+            # budget, so it can be rejected without the full estimate.
+            skip = max(0, budget - _CHUNK_BYTES_FIXED) // (
+                _CHUNK_BYTES_PER_D + _CHUNK_BYTES_PER_FFN)
+            hit = (budget, skip)
+            cls._vram_budget_cache[dev_index] = hit
+        return hit
+
     @staticmethod
-    def _would_oom_causal(batch: int, seq_len: int, d_model: int) -> bool:
-        # G7.0: True when the compiled causal path's live activation set would
-        # not fit the 24 GB card. That path (_optimized_forward_causal, under
-        # torch.compile(reduce-overhead)) pins, all at once in the CUDA-graph
-        # pool: the fused qkv [B,S,3d] fp16, the residual stream, and a few
-        # [B,S,d]/[B,S,ffn] fp32 activation buffers -- empirically peak ~=
-        # B*S*d*25 bytes. _CHUNK_ACT_ELEMS expresses that budget in elements
-        # (default 8e8 ~= 20 GB, leaving headroom for context + fragmentation).
-        # Pure function of the shape -- no input, output, or data_ptr.
-        return batch * seq_len * d_model >= _CHUNK_ACT_ELEMS
+    def _causal_capture_bytes(batch: int, seq_len: int, d_model: int,
+                              ffn_dim: int) -> int:
+        """Estimated peak bytes of the compiled causal path's CAPTURE pass."""
+        return _CHUNK_BYTES_FIXED + batch * seq_len * (
+            _CHUNK_BYTES_PER_D * d_model + _CHUNK_BYTES_PER_FFN * ffn_dim)
+
+    @classmethod
+    def _would_oom_causal(cls, batch: int, seq_len: int, d_model: int,
+                          ffn_dim: int = None, device=None) -> bool:
+        # G7.1: True when the compiled causal path genuinely will not fit this
+        # device -- stated in BYTES against real capacity, replacing G7.0's
+        # fixed `B*S*d >= 8e8` element proxy (which hardcoded the card size
+        # and silently assumed ffn_dim == d_model).
+        #
+        # What is being predicted: the peak of the CAPTURE pass. Under
+        # torch.compile(reduce-overhead) the warmed-up replay reuses a static
+        # CUDA-graph pool and allocates ~nothing extra (measured: <=2 MB delta
+        # across every shape), so capture is the pass that has to fit.
+        #
+        # Model, calibrated in results/logs/g7_1_gate_calibration_run200.log
+        # over 24 shapes spanning tokens, d_model, ffn_dim and num_layers:
+        #
+        #     bytes ~= FIXED + tokens * (C_d * d_model + C_ffn * ffn_dim)
+        #
+        # Measured slopes were C_d ~= 12.7-18.1 and C_ffn ~= 5.4-6.0 with a
+        # ~86 MB shape-independent term. Shipped values round UP to C_d=28
+        # (24 plus 4 B/elem for the fp32 input itself, which is live when the
+        # gate is consulted), C_ffn=8, FIXED=128 MiB -- predicted >= measured
+        # on all 24 shapes with >=1.40x headroom. Over-prediction is the safe
+        # direction: there is deliberately NO OOM-retry fallback, so the model
+        # must never UNDER-predict.
+        #
+        # Peak is ~flat in num_layers (L=2/4/8 measured 0.445/0.690/0.631 GB
+        # at the same shape -- non-monotonic), set by the widest single-layer
+        # live set plus the residual, so there is no layer term.
+        #
+        # Pure function of the shape and the device's total VRAM -- no input,
+        # no output, no data_ptr.
+        if ffn_dim is None:
+            ffn_dim = d_model
+        if _CHUNK_ACT_ELEMS > 0:
+            # legacy/forced override -- used by the g7_0 probe to trip the
+            # gate on a small shape.
+            return batch * seq_len * d_model >= _CHUNK_ACT_ELEMS
+        if device is not None:
+            dev_index = device.index
+            if dev_index is None:
+                dev_index = torch.cuda.current_device()
+        elif torch.cuda.is_available():
+            dev_index = torch.cuda.current_device()
+        else:
+            return False
+        budget, skip = cls._causal_vram_budget(dev_index)
+        if batch * seq_len * (d_model if d_model > ffn_dim else ffn_dim) < skip:
+            return False
+        return cls._causal_capture_bytes(
+            batch, seq_len, d_model, ffn_dim) > budget
 
     def forward(
         self,
@@ -1061,18 +1151,24 @@ class UserOptimizedTransformer(BaselineTransformer):
             # as the other option, cuBLASLt-TF32 loses here even though it
             # still beats plain F.linear. See docs/CAUSAL_LEDGER.md.
 
-            # G7.0: memory-feasibility gate. Above ~20 GB of live activations
-            # (_would_oom_causal) the compiled path's CUDA graph cannot be
-            # captured on this card at all -- official row 14
-            # (B=32, S=100000, d=1024) and anything larger. Route those to an
-            # eager, sequence-chunked forward that streams one query chunk at a
-            # time against an incrementally filled K/V buffer, so no full-S
-            # activation or [B,H,S,S] score tile is ever materialised. Never
-            # fires for official rows 1-13 (largest B*S*d there is 1.64e8,
-            # ~5x under the 8e8 threshold). See experiments/g7_0_chunked_oversize.py.
+            # G7.0/G7.1: memory-feasibility gate. When the compiled path's
+            # capture pass would not fit this device (_would_oom_causal, now a
+            # byte estimate against real VRAM rather than a fixed element
+            # count) its CUDA graph cannot be captured at all -- official row
+            # 14 (B=32, S=100000, d=1024) and anything larger. Route those to
+            # an eager, sequence-chunked forward that streams one query chunk
+            # at a time against an incrementally filled K/V buffer, so no
+            # full-S activation or [B,H,S,S] score tile is ever materialised.
+            # Never fires for official rows 1-13: the largest of them (row 6,
+            # 1.28e6 tokens) estimates at 5.62 GB against an 18.81 GB budget,
+            # a 3.35x margin, and it short-circuits on the cheap
+            # tokens*max(d,ffn) test before any device lookup.
+            # See experiments/g7_0_chunked_oversize.py.
             if (no_pad_causal and x.is_cuda
                     and self._would_oom_causal(x.shape[0], x.shape[1],
-                                               self.config.d_model)):
+                                               self.config.d_model,
+                                               self.config.ffn_dim,
+                                               x.device)):
                 if x.shape[1] < _CHUNK_MIN_SEQ:
                     raise NotImplementedError(
                         f"causal shape B={x.shape[0]} S={x.shape[1]} "
