@@ -1,0 +1,66 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+VRAM 23.13/23.52 GB  alloc_conf=expandable_segments:True
+
+== Step 0: kernel census, Row 14 ==
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2176 n_chunks=46  kv_cache=12.21GB free=16.83GB  compile=True
+  warmup forward: 14338.9 ms
+USDT:2026-08-29 07:40:39 258489:258489 SyncActivityProfilerHandler.cpp:52] profiler_start
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=16.79GB  compile=True
+USDT:2026-08-29 07:40:59 258489:258489 SyncActivityProfilerHandler.cpp:59] profiler_stop
+
+  total DEVICE time 9653.3 ms/iter over 2,572 kernels/iter   (wall 14339 ms -> 67% of wall is GPU-busy)
+
+  phase                   ms/iter   % device  calls/iter
+  SDPA.past                8701.4      90.1%          96
+  GEMM                      666.1       6.9%         490
+  cast/copy                 142.8       1.5%       1,625
+  layer_norm                 97.8       1.0%         245
+  gelu                       41.1       0.4%          98
+  SDPA.diag                   4.0       0.0%           2
+  merge/elementwise           0.1       0.0%          16
+
+  top kernels by device time
+  void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits    8393.0
+  void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits     312.4
+  ampere_fp16_s1688gemm_fp16_128x128_ldg8_relu_f2f_stages_32x1     251.8
+  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_256x128_     173.1
+  ampere_fp16_s16816gemm_fp16_128x64_ldg8_relu_f2f_tn              171.1
+  void at::native::elementwise_kernel<128, 4, at::native::gpu_     100.1
+  triton_poi_fused__to_copy_add_addmm_view_2                        70.2
+  triton_red_fused__to_copy_add_native_layer_norm_view_0            41.5
+  triton_poi_fused__to_copy_gelu_view_1                             41.1
+  void at::native::(anonymous namespace)::vectorized_layer_nor      28.6
+  triton_red_fused_native_layer_norm_0                              27.7
+  void at::native::elementwise_kernel<128, 4, at::native::gpu_      21.3
+
+  SDPA.past vs prefix length (48 distinct k_len)
+    k_len=  4,096      11.3 ms
+    k_len=  6,144      18.6 ms
+    k_len= 53,248     185.8 ms
+    k_len= 98,304     345.7 ms
+    k_len=100,000     312.4 ms
+
+  -- roofline --
+  attention 1.311e+15 FLOP in   8705.4 ms ->   150.6 TFLOP/s (91% of peak); ideal 7944 ms
+  GEMMs     8.053e+13 FLOP in    666.1 ms ->   120.9 TFLOP/s (73% of peak); ideal 488 ms
+
+  attention 90% of device time | GEMMs 7% | everything else 282 ms (3%)
+  SDPA.diag      4.0 ms (2 calls)   SDPA.past   8701.4 ms (96 calls)
+  step 1/3 (flash) headroom inside attention: 762 ms to the roofline
+  steps 4/6 (casts, LN, compile) contend for 282 ms total
+
+== chunk_q sweep (step 5, asked early) ==
+   chunk_q  n_chunks         ms   peak GB
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=1024 n_chunks=98  kv_cache=12.21GB free=nanGB  compile=True
+      1024        98     9653.0     18.99
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=2048 n_chunks=49  kv_cache=12.21GB free=nanGB  compile=True
+      2048        49     9655.4     19.54
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=True
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=3072 n_chunks=33  kv_cache=12.21GB free=nanGB  compile=True
+      3072        33     9626.6     20.11
+
+G7_2_DONE

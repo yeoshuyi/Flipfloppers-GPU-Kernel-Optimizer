@@ -2,26 +2,45 @@
 
 ## Task: optimize the Row-14 chunked causal forward for latency
 
-`UserOptimizedTransformer._chunked_forward_causal` (`benchmark.py:1246`) works
-and is committed (`b751393..659bb5b` on `main`, verified job 198
-`OVERALL: PASS`). **This arc = make it fast.**
+**ARC LARGELY COMPLETE — 13.0 s -> 9.95 s (-23.7%), 20.8 -> 19.55 GB.**
+Attention is now at **91% of the roofline** (was 73%). Steps 0/2/3/4/6 shipped,
+steps 5 and 7 closed as measured dead ends. See `docs/PROGRESS.md` step 55.
 
-- **Baseline to beat:** **13.0 s / forward, 20.8 GB peak** (job 198,
-  `results/logs/g7_0_chunked_oversize_run198.log`), Row 14 =
-  `B=32 d=1024 H=16 hd=64 S=100000 L=2 ffn=1024` causal, `chunk_q=2048`
-  → 49 chunks × 2 layers, K/V cache 12.21 GB fp16.
-- **The answer is now PINNED** (G7.1, job 202):
-  `experiments/g7_0_row14_golden.json` is the benchmark — the frozen harness
-  cannot score row 14, so every step must reproduce this fingerprint under
-  `abs<0.002 ∨ rel<0.02` (probe **check 6**). Reference = ONE forward over a
-  FRESH input (`_chunked_forward_causal` mutates `x` in place and returns
-  it). Re-baseline it ONLY deliberately, by re-running
-  `infra/slurm/g7_1_gate_calibration.sbatch`.
-- **Objective:** latency. **Hard gates:** correctness (`failed==0` on the
-  disjunctive `abs<0.002 ∨ rel<0.02`) + peak ≤ ~22 GB on the 24 GB card.
-- **Ideal floor:** attention is O(S²) ≈ 1.31e15 FLOPs ≈ 7.9 s at the
-  165 TFLOP/s roofline; the 8 GEMMs ≈ 0.5 s. So ~4.5 s (≈1.5×) is
-  loop / launch / merge / cast / copy overhead. Realistic target ≈ **8–10 s**.
+| shape | before | after |
+|---|---|---|
+| **row 14** | 13043.0 ms / 20.80 GB | **9952.6 ms / 19.55 GB** |
+| `(8,200000,1024)` | 12062.5 ms | 9326.4 ms |
+| `(64,50000,1024)` | 7547.4 ms | 5725.3 ms |
+
+- **The answer stayed pinned throughout.** `experiments/g7_0_row14_golden.json`
+  (job 202, the PRE-optimization implementation) is deliberately **not**
+  rebaselined -- check 6 has passed `failed 0/8192` at every step, which is the
+  evidence that a flash-kernel swap did not change the Row-14 answer. Drift so
+  far: max_abs 2.44e-03 (G7.4/G7.5) -> 3.91e-03 (G7.6). Watch it as more steps
+  land; rebaseline only deliberately, and say so in the commit if you do.
+- Accuracy anchor (check 5, fp16 vs fp32 store) **improved**: 8.132e-03 ->
+  7.847e-03. Rows 1-13 byte-identical to run 168 (job 214).
+
+## What is left (job 213 re-profile, 9653 ms device time)
+
+| slice | ms | note |
+|---|---|---|
+| attention headroom to roofline | 762 | already 91% of peak; hard |
+| GEMM headroom | 178 | 73% of peak, `ffn_out` is fp32 and load-bearing |
+| everything else | 282 | cast/copy 143, layer_norm 98, gelu 41 |
+
+Hard floor is ~8432 ms (7944 attention + 488 GEMM). Remaining ideas are all
+small; the arc is at the point of diminishing returns.
+
+- **D1 (not done)** -- fuse the separate streamed final-norm pass into the last
+  layer's chunk loop. Worth <=1%; it is one extra read+write of the 6.55 GB
+  residual.
+- **Step 5 (chunk_q) CLOSED, dead.** 1024/2048/3072 -> 9653.0/9655.4/9626.6 ms,
+  flat to 0.3%. The loop was never chunk-count-bound. Do not re-litigate.
+- **Step 7 (second stream) CLOSED, dead.** Steady state is ~97% GPU-busy --
+  there is nothing to overlap. Closed without being built.
+- **Step 1 (A1) SKIPPED** -- superseded by A2, which is strictly better (A1 kept
+  the two-block split A2 deletes).
 
 Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 [[kernel_opt_loop_state]].
@@ -32,7 +51,7 @@ Full plan: `~/.claude/plans/crispy-cooking-pine.md`. See [[resume_discipline]],
 |---|---|
 | Row-14 chunking *capability* (prior arc) | ✅ DONE — `b751393..659bb5b`, job 198 PASS, job 199 regression 13/13 |
 | **G7.1 gate in bytes + Row-14 golden** | ✅ DONE — `741f5fd`, `8604192`, jobs 200/201/202 calibrate+pin, **job 203 g7_0 OVERALL PASS**, **job 204 sweep 13/13 byte-identical to run168, no row slower** |
-| Row-14 *optimization* (this arc) | **NOT STARTED** — start at Step 0 |
+| Row-14 *optimization* (this arc) | ✅ **DONE** — `63a9934` (A2 flash, -21.0%), `68b0e6c` (D2 LN casts, -2.0%), `ac0012f` (compile default, -1.4%); jobs 205/207 profile, 208 flash probe, 209/210/211 gates, 213 re-profile, 214 sweep |
 
 ## Code anchors (`benchmark.py`)
 

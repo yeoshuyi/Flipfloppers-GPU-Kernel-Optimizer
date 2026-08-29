@@ -3769,3 +3769,96 @@ Official sweep job 204: 13/13 PASS, `max_abs` **byte-identical to run 168**
 on every row, and **no row slower** — row 2 unchanged at 0.0778 ms, row 6 at
 52.4841 ms, largest move +0.05%. Commits `741f5fd` (gate), `8604192`
 (golden + probe), `<docs>`.
+
+### 55. G7.2–G7.6 — Row-14 optimization arc: 13.0 s → 9.95 s (−23.7%), attention 73% → 91% of roofline
+
+**Step 0 profile (jobs 205/207, `results/logs/g7_2_row14_profile_run207.log`).**
+The first census was wrong and was rerun: `key_averages()` double-counts (the
+aten row and the kernel row each carry `self_device_time`, inflating the total
+~2.9×), bare `"mm"` also matches `"co**mm**and"` so *Command Buffer Full* landed
+in GEMM, and — the one that mattered — `_efficient_attention_forward` takes
+**BSHD**, not the BHSD that `_scaled_dot_product_efficient_attention` presents,
+so a `dims[0][2] vs dims[1][2]` test compared `H` to `H` and labelled every call
+"diag". Rebuilt on the chrome trace with `External id` correlating each kernel to
+its launching CPU op. The corrected profile self-checks: 12680.5 ms device time
+vs 12886.5 ms wall = **98% GPU-busy**.
+
+| phase | ms/iter | % device |
+|---|---|---|
+| **SDPA.past** | **10701.2** (94 calls) | **84.4%** |
+| GEMM | 632.9 | 5.0% |
+| cast/copy | 555.3 | 4.4% |
+| merge/elementwise | 342.4 | 2.7% |
+| SDPA.diag | 248.3 (100 calls) | 2.0% |
+| layer_norm + gelu | 200.3 | 1.6% |
+
+Attention was **86% of device time at 119.7 TFLOP/s = 73%** of the 165 TFLOP/s
+roofline. GEMMs were already at 77% of peak (145 ms of headroom). So the
+attention kernel was the only lever worth more than ~0.6 s, and 98% GPU-busy
+meant there was essentially no launch overhead to reclaim.
+
+**Steps 1+2 probe (job 208, `g7_3_flash_probe_run208.log`).** Two answers:
+flash beats the mem-efficient `fmha_cutlassF` kernel by **18–21% at every
+prefix length** (extrapolated 10462 ms against a measured 10701 — 2.2% model
+error); and `torch.ops.aten._flash_attention_forward` with `Lq < Lk` is
+**bottom-right** aligned — `max|out − BR ref| = 9.1e-04` vs
+`max|out − TL ref| = 4.5e+00` — i.e. exactly prefix-causal. Also confirmed
+fp32 has no flash kernel, so `store=float32` must keep the mem-efficient path.
+
+**G7.4 (step 3, A2) — the headline, commit `63a9934`.** One raw flash call per
+chunk replaced the entire two-block structure: the strictly-past block, the
+square causal diagonal block, the fp32 LSE merge, the fp32 widening of both
+outputs, *and* the `.transpose(1,2).contiguous()` copy — flash takes and
+returns BSHD, so the K/V cache is held `[B,S,H,hd]` and the merge back to
+`[B,L,d]` is a free reshape. New `_split_heads_bshd`; `_split_heads_view`
+(shared with rows 1–13) untouched. **13043.0 → 10305.9 ms (−21.0%)**, peak
+20.80 → 20.55 GB.
+
+**G7.5 (step 4, D2) — commit `68b0e6c`.** Both norms widened the residual to
+fp32 and cast back; CUDA's `layer_norm` already carries fp32 accumulators for
+half input, so it bought nothing. Job 210 proved it: the golden fingerprint came
+back **bit-identical** (max_abs 2.441e-03, `sum|y|` drift 4.311e-08, check 5
+7.847e-03 — every digit unchanged) while latency fell **10305.9 → 10098.0 ms
+(−2.0%)**. The fp32 GELU and fp32 `ffn_out` GEMM were left alone; both are
+load-bearing for the accuracy margin.
+
+**G7.6 (step 6, C) — commit `ac0012f`.** `CHUNK_COMPILE` on by default. The A/B
+was positive in every job that ran it (+2.1%/+2.2%/+3.4%/+1.4%, shrinking as
+G7.5 removed the casts inductor was fusing). **10098.0 → 9952.6 ms (−1.4%)**,
+peak 19.55 GB.
+
+**Steps 5 and 7 CLOSED as dead, on measurement, not suspicion.**
+`chunk_q` ∈ {1024, 2048, 3072} gives 9653.0 / 9655.4 / 9626.6 ms — **flat to
+0.3%** — so the adaptive sizer retune (step 5/B) has no prize; the loop was
+never chunk-count-bound. And the steady-state path is ~97% GPU-busy, so the
+second-stream overlap (step 7/E) has nothing to overlap; it is closed without
+being built.
+
+**Result (job 211, all six checks PASS).**
+
+| shape | before | after | delta |
+|---|---|---|---|
+| **row 14** | 13043.0 ms / 20.80 GB | **9952.6 ms / 19.55 GB** | **−23.7%** |
+| `(8,200000,1024)` | 12062.5 ms | 9326.4 ms | −22.7% |
+| `(64,50000,1024)` | 7547.4 ms | 5725.3 ms | −24.1% |
+
+Re-profile (job 213): attention now **150.6 TFLOP/s = 91% of peak** (was 73%),
+`merge/elementwise` 342.4 → 0.1 ms, `cast/copy` 555.3 → 142.8 ms. What is left
+is 762 ms of attention headroom to the roofline, 178 ms of GEMM headroom and
+282 ms of everything else — against a hard floor of ~8432 ms.
+
+**Accuracy held or improved throughout.** Check 5's fp16-vs-fp32-store anchor
+went 8.132e-03 → **7.847e-03**; check 6 (the golden at the real B=32 shape)
+stayed `failed 0/8192` at every step. Rows 1–13, job 214: 13/13 PASS, `max_abs`
+**byte-identical to run 168**, largest latency move −0.81% (noise).
+
+**Catalogue audit — everything else tried on the other shapes.** Already in the
+chunked path: G0.1, G0.2, G0.5, G1.1, G1.2, G6.4a_v2, G6.4b; G0.3 (no
+`.contiguous()`) became *fully* true only with G7.4. Not applicable: G6.6
+(cuBLASLt, gated `tok<=127`; row 14 has 3.2e6 tokens), G0.4 (no mask is ever
+built), G4.5 (flash owns its softmax), G2.3 (L2 persistence — closed at step 32,
+and the 12 GB K/V cache dwarfs the 49.5 MB persisting partition). Closed on
+accuracy and deliberately not retried: G4.3 FP16-accumulate (step 41 — and this
+path's margin is thinner still), G2.1 BF16, G2.6 FP8, G2.7 INT8. G4.7's fused
+`ffn_in`+GELU is gated `ffn_dim >= 2048` and row 14 is 1024, with GELU at 0.4%
+of device time.
