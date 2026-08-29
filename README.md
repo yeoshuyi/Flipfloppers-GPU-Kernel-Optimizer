@@ -1,7 +1,7 @@
 # GPU Kernel Acceleration of Transformer Algorithm on RTX 4090
 > Submitted for Tiktok TechJam 2026.
 
-> Kernel optimization of a Transformer Algorithm on consummer grade single-node RTX 4090 through an Agentic AI auto-research loop. Achieved performance improvements of **4.96x - 31.76x** over various test shapes, with **geometric-mean speedup ≈ 7.7×**
+> Kernel optimization of a Transformer Algorithm on consumer grade single-node RTX 4090 through an Agentic AI auto-research loop. Achieved performance improvements of **1.93x - 31.76x** over various test shapes, with **geometric-mean speedup ≈ 7.7×**
 
 ![RTX 4090 sm_89](https://img.shields.io/badge/GPU-RTX%204090%20·%20sm__89-2b6cb0)
 ![CUDA 13.1](https://img.shields.io/badge/CUDA-13.1-76b900)
@@ -16,7 +16,7 @@
 
 2. **Built by Agentic Loop**. An agentic system was made to research, implement, verify and gate one diff at a time, with complex heuristics to balance performance and accuracy tradeoff. **Token budget mechanisms** were implemented through model selection and tiered implementation with low cost smoke checks. The agentic system was proficient in optimizing at the **PTX and SASS level with low level, complex toolchains like cuBLAS, CUDA, CUTLASS and CuAssembler.**
 
-3. **Comprehensive Validation Loop**. Each run of validation runs on a pinned `Apptainer` container with `Slurm` used to reserve the **same fixed resouce and persist GPU clock** and audit logging. Fair benchmarking achieved through multiple runs with random seeds, measured against GPU-side elapsed time. **Memory bias** is countered by alternating execution order between models to prevent L2 cache bias. **Anti-Gaming** through `check_validity.py` script to prevent models from bypassing actual computation through pointer manipulation, mandating each trial to test against a freshly computed reference output.
+3. **Comprehensive Validation Loop**. Each run of validation runs on a pinned `Apptainer` container with `Slurm` used to reserve the **same fixed resource and persist GPU clock** and audit logging. Fair benchmarking achieved through multiple runs with random seeds, measured against GPU-side elapsed time. **Memory bias** is countered by alternating execution order between models to prevent L2 cache bias. **Anti-Gaming** through `check_validity.py` script to prevent models from bypassing actual computation through pointer manipulation, mandating each trial to test against a freshly computed reference output.
 
 4. **Low Level Engineering**. Utilised AI-written:
 > * Inline-PTX `mma.sync` GEMM
@@ -168,7 +168,7 @@ Most optimizations failed either because they did not meet the accuracy requirem
 | **INT8 FFN** | Fixed step-size quantization. | **Accuracy (~15× over budget).** Fixed step size cannot auto-range O(1) activations. |
 | **Split-precision FP8** | Ootomo-style mixed FP8 precision. | **Arithmetic ceiling.** Passes accuracy at `k=4`, but yields no speed win. A 4-GEMM kernel's ideal 82.6 TFLOP/s matches TF32's existing peak. |
 | **`torch.compile(max-autotune)`** | Automated graph compilation and tuning. | **Accuracy (~2.2–2.4× over budget).** Compilation incorrectly picks Triton software-TF32 over cuBLAS native. |
-| **Degree-7 minimax GELU polynomial** | Polynomial approximation for GELU activation.
+| **Degree-7 minimax GELU polynomial** | Polynomial approximation for GELU activation. | **Accuracy (~84× over budget).** The catalogued ~1e-6 estimate was wrong by 5 orders of magnitude (caught without a GPU). |
 
 > The chart below depicts the accuracy vs performance tradeoff of our various optimizations.
 
