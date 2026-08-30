@@ -16,7 +16,7 @@
 
 2. **Built by Agentic Loop**. An agentic system was made to research, implement, verify and gate one diff at a time, with complex heuristics to balance performance and accuracy tradeoff. **Token budget mechanisms** were implemented through model selection and tiered implementation with low cost smoke checks. The agentic system was proficient in optimizing at the **PTX and SASS level with low level, complex toolchains like cuBLAS, CUDA, CUTLASS and CuAssembler.**
 
-3. **Comprehensive Validation Loop**. Each run of validation runs on a pinned `Apptainer` container with `Slurm` used to reserve the **same fixed resource and persist GPU clock** and audit logging. Fair benchmarking achieved through multiple runs with random seeds, measured against GPU-side elapsed time. **Memory bias** is countered by alternating execution order between models to prevent L2 cache bias. **Anti-Gaming** through `check_validity.py` script to prevent models from bypassing actual computation through pointer manipulation, mandating each trial to test against a freshly computed reference output.
+3. **Comprehensive Validation Loop**. Each run of validation runs on a pinned `Apptainer` container with `Slurm` used to reserve the **same fixed resource and persist GPU clock** and audit logging. Fair benchmarking achieved through multiple runs with random seeds, measured against GPU-side elapsed time. **Memory bias** is countered by alternating execution order between models to prevent L2 cache bias. **Anti-Gaming** through `check_validity.py` script to prevent models from caching answers from previous runs.
 
 4. **Low Level Engineering**. Utilised AI-written:
 > * Inline-PTX `mma.sync` GEMM
@@ -24,7 +24,6 @@
 > * `CUTLASS` implementation comparison
 > * `Fused Causal MegaKernel` from scratch
 > * `cuBLASLt` algorithm search
-> * SASS-level rewrite attempt via `CuAssmbler`
 
 
 5. **Shape Based Strategy Arbiter**. Shapes are dynamically dispatched to different optimization strategies based on the per-shape benchmarking done at each validation round. This ensures that the best optimization techniques are used for each shape. The Arbiter conditions are **fine tuned accurately to the break-even point** (where we see performance gain). See [Shape Arbitration](#shape-arbitration) for the full dispatch, including the memory gate that routes `S = 100000` onto the chunked path.
@@ -35,7 +34,9 @@ Evaluated by running the generated judge drop-in `torch_transformer_benchmark.py
 
 >**Row 14 is un-runnable on the provided benchmark**. The input tensor physically OOMs the GPU on the provided benchmark script. Our optimized model solves this by **sequence chunking** against an incrementally-filled FP16 cache. However, we are not able to test performance against the benchmark. Thus, we compare performance against a sequence chunked version of the benchmark.
 
-![per-shape speedup](assets/results_speedup.svg)
+> The figure shows **speed increase** compared to the benchmark. The latency is further broken down into the 4 stages: SDPA, GEMM, GELU and LayerNorm.
+
+![per-shape speedup](assets/results.png)
 
 <details>
 <summary>Full results table of the 14 Test Shapes</summary>
@@ -87,12 +88,6 @@ measured legs, not on assertion.
 * 3 — The only precision spend is FP16 storage, and it is priced at the full
 shape.
 
-
-### Latency breakdown
-> Different shapes are bounded by different limitations (compute / memory / accuracy). The graph below shows the breakdown of latency budget across all 13 test shapes.
-
-![latency breakdown](assets/latency_breakdown.svg)
-
 ---
 
 ## Contents
@@ -117,6 +112,7 @@ shape.
 - **No thread-block clusters or distributed shared memory**. Blocks may only cooperate through global memory.
 - **GeForce Ada runs FP32-accumulate GEMMS at half rate**. cuBLAS is architectually capped at FP32 accumulation on this chip, which runs at half rate due to vendor nerfing (sad face).
 - **24Gb RAM**. Extremely long sequenced shapes have to be chunked, leading to significant overhead.
+- **Full Sequence Processing**. Not Autoregressive Generation, so KV cache optimizations like MLA is not applicable here.
 
 > Thus, the problem shifts from cutting-edge optimization on server-grade architectures, to a **resource constrained hack (truly a hackathon!)**. This truly demonstrates the ability of Agentic AI, being able to optimize specific GPU hardware quirks through **auto research and validation** on actual hardware.
 
@@ -129,47 +125,7 @@ shape.
 >Every branch is chosen from the shape alone no input values are ever inspected. Hand-written kernels are outlined in
 > **amber**, each labelled with the shapes it gets selected for.
 
-```mermaid
-flowchart TD
-    IN(["Incoming Batch — FP32"]) --> MASK["Check the Padding Mask Once<br/>An All-Ones Mask Skips Every Masking Pass"]
-    MASK --> FOLD["Pre-Fold the Normalisation Scale and Bias,<br/>and the Attention Scale, into the GEMM Weights<br/>Exact, and Free at Runtime"]
-    FOLD --> CAUSAL{"Causal Attention?"}
-
-    CAUSAL -->|"No"| NCK["Search cuBLASLt for the Fastest FFN Algorithm<br/>Chosen for Tiny Batches"]
-    NCK --> NCW["Hand-Written Warp-Specialised GEMM<br/>for the Attention Projections<br/>Chosen for Non-Causal Shapes"]
-
-    CAUSAL -->|"Yes"| FIT{"Does the Whole Forward<br/>Fit in VRAM?"}
-    FIT -->|"Yes"| GRAPH["Capture the Forward as a CUDA Graph<br/>One Replay per Call, Near-Zero Launch Overhead"]
-    FIT -->|"No · Very Long Sequences"| CHUNK["Stream the Sequence in Query Chunks<br/>Against a Growing Key/Value Cache<br/>No Full-Length Score Matrix Ever Exists"]
-
-    subgraph LAYER["Inside Every Layer"]
-        L1["Normalise the Activations<br/>Scale and Bias Already Folded Away"]
-        L1 --> L2["Cast Tensor Down to FP16"]
-        L2 --> L3["One Fused Query/Key/Value Projection<br/>Replaces Three Separate GEMMs"]
-        L3 --> L4["Reshape into Heads Without Copying a Byte"]
-        L4 --> L5["Flash Attention<br/>FP16 Inputs · Softmax Accumulated in FP32"]
-        L5 --> L6["Project the Heads Back Out,<br/>Cast Up to FP32, Add the Residual"]
-        L6 --> L7["Normalise Again · Cast Down to FP16"]
-        L7 --> L8["Expand Through the Feed-Forward Layer"]
-        L8 --> L9["Exact GELU — Deliberately Kept in FP32"]
-        L9 --> L10["Contract Back Down, Kept Near FP32<br/>for Accuracy, and Add the Residual"]
-    end
-
-    NCW --> L1
-    GRAPH --> L1
-    CHUNK -->|"Same Layer Body, Three Changes:<br/>FP16 Residual · One Flash Call per Chunk<br/>Normalise Directly in FP16"| L1
-
-    PTX["Hand-Written Inline-PTX Warp-Specialised Kernel<br/>Fuses the Expansion and the Exact GELU into One Pass<br/>Chosen for Wider Feed-Forward Layers"]
-    PTX -.-> L8
-    PTX -.-> L9
-
-    L10 --> OUT(["Normalise Once More After the Layer Loop"])
-
-    classDef kernel stroke:#b0762f,stroke-width:3px
-    classDef decision stroke:#3b6ea5,stroke-width:2px
-    class NCK,NCW,PTX kernel
-    class CAUSAL,FIT decision
-```
+![optimization](assets/optimizations.png)
 
 After the layer loop: `final_norm` (not folded — it has no consumer). The
 FP32 residual stream is never downcast, both LayerNorms do only the mean/var
@@ -244,58 +200,33 @@ Most optimizations failed either because they did not meet the accuracy requirem
 
 > The chart below depicts the accuracy vs performance tradeoff of our various optimizations.
 
-![speed vs accuracy](assets/pareto_accuracy.svg)
+![speed vs accuracy](assets/accuracy.png)
+
 ---
 
 ## Agentic Auto Research
 
-### Implementation & Validation loop
-```mermaid
-flowchart TD
-    P["Profiler subagent<br/>(haiku, maxTurns 8, tools-limited)<br/>25k-100k tokens of ncu -> 20-line JSON"]
-    P --> D["Read DIAGNOSIS.md<br/>map profiled fact -> lever"]
-    D --> C["Pick ONE candidate from CATALOGUE.md<br/>cite the profiled fact"]
-    C --> I["Implement one diff in the model<br/>behind an eager gate + exact fallback"]
-    I --> V["tools/check_validity.py<br/>static gate, free, no GPU"]
-    V -->|fail| I
-    V -->|pass| S["Smoke: 1-2 shapes"]
-    S --> A["Full 40-seed accuracy sweep<br/>all shapes, via sbatch"]
-    A -->|failed != 0| RESC["Numerical rescue patch,<br/>or drop the candidate"]
-    RESC --> A
-    A -->|failed == 0| B["Matched BEFORE/AFTER benchmark<br/>one sbatch job, exclusive GPU, locked clocks"]
-    B --> G{"gain &ge; min-gain floor<br/>and EV positive?<br/>see docs/ACCURACY_BUDGET.md"}
-    G -->|no| DOC1["Document the negative<br/>with the same rigor as a win"]
-    G -->|yes| ARCH["tools/archive.py commit<br/>(MAP-Elites: regime x family)"]
-    ARCH --> DOC2["PROGRESS.md step N + commit"]
-    DOC1 --> C
-    DOC2 --> C
-```
+![agentic loop](assets/agentic.png)
 
-### Research Loop
-```mermaid
-flowchart LR
-    subgraph inputs ["Where candidates come from"]
-      CAT["docs/CATALOGUE.md<br/>33 catalogued optimizations,<br/>risk-ordered G0 -> G4"]
-      MAN["Manual research injection<br/>papers + owner-specified protocols<br/>(e.g. the G6.9 4-phase cuBLASLt spec,<br/>Ootomo-Yokota split-precision, Stream-K)"]
-      PROF["Profiler subagent<br/>per-shape ncu facts:<br/>hot kernels, % of peak, DRAM GB/s,<br/>occupancy, stalls, graph replay"]
-    end
-    CAT --> Q["Candidate queue<br/>(one per iteration, cite a fact)"]
-    MAN --> Q
-    PROF --> Q
-    Q --> LOOP["Implementation & validation loop"]
-    LOOP -->|negative| REC["docs/PROGRESS.md<br/>+ docs/DOCUMENTATION.md sec 4<br/>so no dead end is re-tried"]
-    LOOP -->|shipped| ELITE["archive/ MAP-Elites cell"]
-    REC --> Q
-```
+* **Stage Based**. Escalation of optimization efforts based on stages, categorising different types of optimization and risk level.
 
+* **Auto Research with Manual Input**. Facilitates wide exploration of optimization techniques.
+
+* **Comprehensive Validation Loop**. Testing on official harness, with anti-gaming mechanisms to prevent AI from gaming the system.
+
+* **Token Concious**. Single Sonet ochestrator summons subagents with appropriate models based on the task assigned.
 ---
 
 ## Performance - Accuracy Tradeoff
 Optimizations are judged on the **performance-accuracy tradeoff**. Each optimization (whenever precision reducing), must provide substantial performance gains to warrant the precision reduction, as we have a fixed **accuracy budget**.
 
-```
-EV(ship X) ≈ P(gain real)·gain − P(X Pushes an unseen shape over budget)·(Entire score → 0)
-```
+
+> $$\Delta EV = p_g G - p_f C$$
+> * $\Delta EV$: The net expected value of shipping update X.
+> * $p_g$: The probability that the observed gain is real (not just > noise or offline overfitting).
+> * $G$: The magnitude of the gain (e.g., improved accuracy).
+> * $p_f$: The probability of failure (encountering an "unseen shape" that breaks the system).
+> * $C$: The cost of failure (your current total score, since exceeding the budget drops the score to 0).
 
 A strict ceiling of `max_abs ≤ 0.00180` (90% of budget) and reserve target
 `≤ 0.00170` is applied. Minimum-gain floor **~0.3–0.5% whole-model** for anything with precission reduction. **Exact transforms (the G1 folds, CUDA graphs, the G4.7 exact-erf epilogue) cost
@@ -395,6 +326,7 @@ make entrypoint                     # self-hosting; only needed if the judges
 - **The last ~10–15% to roofline is left on the table** — Recovering it means CUTLASS-grade / persistent-kernel engineering that Ada cannot achieve on standard toolchains.
 - **The accept/reject heuristic is tuned to this exact budget** (`0.002 /
   0.02`), a tighter budget would retroactively un-ship the two FP16 casts.
+- **Support for Autoregressive Generation**. Expand to optimize KV-cache techniques if harness requires autoregressive generation instead of full sequence processing.
   
 ---
 
@@ -404,8 +336,4 @@ make entrypoint                     # self-hosting; only needed if the judges
 
 Built with [Claude Code](https://claude.com/claude-code). Frozen baseline and
 evaluation harness per the TikTok TechJam problem statement (Problem 3 —
-*Implement a GPU Kernel for a Transformer Layer*). Devpost write-up:
-[`docs/DEVPOST.md`](docs/DEVPOST.md). Full engineering log:
-[`docs/PROGRESS.md`](docs/PROGRESS.md) (55 steps) ·
-[`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) (every optimization,
-shipped/closed, with measured numbers).
+*Implement a GPU Kernel for a Transformer Layer*).
