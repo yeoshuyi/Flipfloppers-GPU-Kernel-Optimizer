@@ -97,3 +97,17 @@ cudaStreamSetAttribute(stream, cudaStreamAttributeAccessPolicyWindow, &attr);
 | G4.3 | Warp specialisation (Loader/Consumer/Storer/Controller) | 1.2–1.4x | Tuned point: Consumer 16→8, stages 2→4 |
 | G4.4 | `mma.sync` with FP16 accumulate | up to 2x | 660 TFLOPS tier. Split-K: FP16 within 256-chunks, FP32 across. |
 | G4.5 | Skip softmax max-subtraction | 1.05–1.1x | Post-G1.2 scores scale ~0.18x; overflow needs >128 ≈ 30σ. **Gate on `input_scale` + shape, keep the safe path.** |
+
+---
+
+## G8 — Architecture substitution. **CLOSED — do not re-propose.**
+
+These change the model's structure rather than its kernels, so they must
+reproduce the frozen baseline's outputs from the *copied* weights. Both were
+evaluated in full (`docs/PROGRESS.md` step 58, job 229) and closed on measured
+accuracy, not on suspicion.
+
+| # | Optimisation | Verdict | Why it cannot work here |
+|---|---|---|---|
+| G8.0 | **Multi-head Latent Attention** (MLA) | CLOSED | Exact latent is `d_c = d` (K and V are independent full-rank `[d,d]`), so it compresses nothing; the measured spectrum is flat, so every smaller rank is 500–1000x outside the budget. Also needs `d_c < head_dim` to be faster, which contradicts `d_c = d` by a factor of H. No KV cache is reused here — the harness is prefill-only. |
+| G8.1 | **GQA / MQA** | CLOSED | Requires K/V shared across heads; the baseline's per-head projections are independent, so no exact form exists at any group size. Mean-pooled K/V measures `max_abs` 1.61-2.45. |

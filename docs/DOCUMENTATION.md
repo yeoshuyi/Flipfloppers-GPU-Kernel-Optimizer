@@ -271,6 +271,13 @@ softened — a genuine negative result is reported as such.
 | **G6.4a v1 — FP16, both FFN GEMMs** | Smoke test (5 trials) passed, but 40-seed/6-shape rigor probe failed on **every shape** — tiny 12/40 trials (30%), default/long_seq/large_batch/padded all fail too, rare (single-to-low-double-digit) failing elements against 1.3M-671M-element tensors | closed under the 0.001/0.01 budget then in force; real speedups measured alongside the failure (default 1.894x, large_batch 2.241x, long_seq 2.784x) — a large win that had to be given up | step 27, `results/g6_4a_both_gemms_FAILED_run60.log` |
 | **G6.4a v2 — FP16, FFN-in only** (narrower slice of v1) | Failure counts dropped ~10x, tiny and default_padded passed cleanly, but default/long_seq/large_batch/long_seq_padded still failed under 0.001/0.01 | closed at the time per `CLAUDE.md` invariant 6 (full sweep, not one shape); **later revived and shipped as `G6.4a_v2` once the accuracy budget loosened to 0.002/0.02** — same code, different verdict under the new budget (§3.2) | step 27, `results/g6_4a_v2_ffnin_only_FAILED_run61.log`; revival evidenced in `benchmark.py`'s inline `_build_ffn_in_fold` comment and `archive/*.json` `g6_4a_v2` entries |
 
+### Architecture substitution (KV compression)
+
+| Attempt | Result | Real reason | Source |
+|---|---|---|---|
+| **G8.0 — Multi-head Latent Attention** (DeepSeek-V2/V3: cache one low-rank latent `c = x·W_D` instead of K and V, absorb the up-projections into `W_Q`/`W_O`) | Closed on accuracy, on all 13 scorable shapes | `[W_K; W_V]` are independent full-rank `[d,d]` weights, so the exact latent is `d_c = d` — **no compression at all**. The measured singular spectrum is flat (rank `d/2` keeps 79% of energy at every `d` in the matrix), so every reduced rank fails end-to-end at `max_abs` **1.0–2.3**, 500–1000× the 0.002 budget, 80–91% of elements. At `d_c = d` MLA reproduces the baseline exactly but costs 0.8–10.8× the arithmetic (analytic; measured 30–52× with an untuned eager implementation) and cannot use flash at `d ≥ 512` (`head_dim` limit, measured). MLA's premise — a KV cache reused across decode steps — does not exist in a prefill-only harness | step 58, `results/logs/g8_0_mla_evaluation_run229.log` |
+| **G8.0b — Grouped-query / multi-query attention** (share one K/V across a group of heads) | Closed, strictly worse-placed than MLA | GQA/MQA need K/V to be *shared* across heads, but the baseline's per-head projections are independently initialised, so — unlike MLA — **no exact form exists at any group size**. Mean-pooling K/V per group measures `max_abs` **1.61–2.45** with 87–91% of elements failing, on rows 1, 8 and 11 | step 58, same log |
+
 ### Compiler / toolchain-level
 
 | Attempt | Result | Real reason | Source |

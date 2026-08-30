@@ -1,0 +1,110 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+VRAM 23.13/23.52 GB
+
+== 1. rank_spectrum (SVD of the real stacked [W_K; W_V]) ==
+  A sharp spectral decay is what would make a small latent legal.
+       d   rank  energy kept  Frobenius error
+      32     32      100.00%           0.0000
+      32     16       79.10%           0.4572
+      32      8       50.08%           0.7065
+      32      4       28.90%           0.8432
+     128    128      100.00%           0.0000
+     128     64       78.90%           0.4593
+     128     32       50.74%           0.7018
+     128     16       29.28%           0.8410
+    1024   1024      100.00%           0.0000
+    1024    512       78.96%           0.4587
+    1024    256       50.63%           0.7026
+    1024    128       29.20%           0.8414
+  (a flat spectrum => truncation is expensive; measured, not assumed)
+
+== 2. accuracy_vs_rank (vs the frozen BaselineTransformer) ==
+  budget: abs < 0.002 OR rel < 0.02
+   shape     d   H   hd  rank     max_abs             failed  verdict
+   row01   128   4   32   128   1.249e-03          0/1048576  PASS   <- exact rank, sanity check
+   row01   128   4   32    64   1.073e+00     855564/1048576  FAIL
+   row01   128   4   32    32   1.689e+00     909379/1048576  FAIL
+   row02   128   4   32   128   1.071e-03            0/16384  PASS   <- exact rank, sanity check
+   row02   128   4   32    64   7.645e-01        13769/16384  FAIL
+   row02   128   4   32    32   1.269e+00        14272/16384  FAIL
+   row03   128   4   32   128   1.071e-03            0/65536  PASS   <- exact rank, sanity check
+   row03   128   4   32    64   8.204e-01        53412/65536  FAIL
+   row03   128   4   32    32   1.288e+00        57001/65536  FAIL
+   row04   128   4   32   128   1.247e-03           0/262144  PASS   <- exact rank, sanity check
+   row04   128   4   32    64   9.702e-01      213186/262144  FAIL
+   row04   128   4   32    32   1.403e+00      226600/262144  FAIL
+   row05   128   4   32   128   1.352e-03          0/2097152  PASS   <- exact rank, sanity check
+   row05   128   4   32    64   1.132e+00    1706137/2097152  FAIL
+   row05   128   4   32    32   1.689e+00    1819478/2097152  FAIL
+   row06   128   4   32   128   1.871e-03        0/163840000  PASS   <- exact rank, sanity check
+   row06   128   4   32    64   1.300e+00 133709340/163840000  FAIL
+   row06   128   4   32    32   1.990e+00 142267916/163840000  FAIL
+   row07    32   4    8    32   1.433e-03           0/262144  PASS   <- exact rank, sanity check
+   row07    32   4    8    16   1.274e+00      221679/262144  FAIL
+   row07    32   4    8     8   1.533e+00      236605/262144  FAIL
+   row08  1024   4  256  1024   1.688e-03          0/8388608  PASS   <- exact rank, sanity check
+   row08  1024   4  256   512   1.108e+00    6678365/8388608  FAIL
+   row08  1024   4  256   256   1.857e+00    7204075/8388608  FAIL
+   row09   128   1  128   128   1.369e-03          0/1048576  PASS   <- exact rank, sanity check
+   row09   128   1  128    64   1.073e+00     856316/1048576  FAIL
+   row09   128   1  128    32   1.689e+00     909546/1048576  FAIL
+   row10   128   2   64   128   1.265e-03          0/1048576  PASS   <- exact rank, sanity check
+   row10   128   2   64    64   1.073e+00     855264/1048576  FAIL
+   row10   128   2   64    32   1.689e+00     908579/1048576  FAIL
+   row11   128  16    8   128   1.460e-03          0/1048576  PASS   <- exact rank, sanity check
+   row11   128  16    8    64   1.073e+00     855908/1048576  FAIL
+   row11   128  16    8    32   1.689e+00     909722/1048576  FAIL
+   row11   128  16    8     8   2.294e+00     939652/1048576  FAIL
+   row12   128   4   32   128   1.555e-03           0/262144  PASS   <- exact rank, sanity check
+   row12   128   4   32    64   1.055e+00      230015/262144  FAIL
+   row12   128   4   32    32   1.582e+00      239706/262144  FAIL
+   row13   128   4   32   128   1.462e-03          0/8388608  PASS   <- exact rank, sanity check
+   row13   128   4   32    64   1.162e+00    6275349/8388608  FAIL
+   row13   128   4   32    32   1.535e+00    6745233/8388608  FAIL
+
+  smallest in-budget latent rank per shape: {'row01': 128, 'row02': 128, 'row03': 128, 'row04': 128, 'row05': 128, 'row06': 128, 'row07': 32, 'row08': 1024, 'row09': 128, 'row10': 128, 'row11': 128, 'row12': 128, 'row13': 128}
+  MLA only pays when that rank is BELOW head_dim (see check 3).
+
+== 3. speed_ab (absorbed MLA at the exact rank vs shipped) ==
+   shape     d   H  shipped ms    MLA ms   ratio  predicted
+   row08  1024   4       4.415   224.928  50.94x        ~4x
+   row11   128  16       0.372    19.305  51.94x       ~16x
+   row09   128   1       0.290    13.529  46.68x        ~1x
+   row13   128   4       2.332    70.696  30.32x        ~4x
+
+== 4. row14_latent (the only real KV cache here) ==
+  shipped K+V cache fp16     : 12.21 GB
+  exact latent (d_c = d = 1024) : 6.10 GB   -- halves it
+  but re-projecting the prefix to K,V once per chunk costs 0.67e15 FLOPs
+  against an attention cost of 1.31e15 FLOPs -> ~+51% work
+
+  can a fused kernel run attention at head_dim = d_c = 1024?
+    head_dim=   64: flash=yes                    mem-efficient=yes
+    head_dim=  256: flash=yes                    mem-efficient=yes
+    head_dim=  512: flash=NO (RuntimeError)      mem-efficient=yes
+    head_dim= 1024: flash=NO (RuntimeError)      mem-efficient=yes
+
+== 5. gqa_mqa ==
+  GQA/MQA share ONE K/V across a group of heads. The baseline's per-head
+  projections are independently initialised, so no exact form exists at any
+  group size -- unlike MLA, which at least has the trivial exact d_c = d.
+  Quantify how far off the closest thing (mean-pooled K/V per group) lands:
+   shape   H  groups     max_abs             failed  verdict
+   row11  16       8   1.612e+00     917734/1048576  FAIL
+   row11  16       1   2.446e+00     949452/1048576  FAIL
+   row01   4       2   1.628e+00     926254/1048576  FAIL
+   row01   4       1   2.024e+00     941272/1048576  FAIL
+   row08   4       2   2.062e+00    7226020/8388608  FAIL
+   row08   4       1   2.156e+00    7412695/8388608  FAIL
+
+== SUMMARY ==
+  rank_spectrum        ok
+  accuracy_vs_rank     ok
+  speed_ab             ok
+  row14_latent         ok
+  gqa_mqa              ok
+
+OVERALL: PASS   (PASS = the probe itself is sound; the VERDICT on MLA is the data above)
+
+G8_0_DONE

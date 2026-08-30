@@ -3980,3 +3980,92 @@ is FP16 while the baseline returns FP32. `compare_outputs` prints a dtype-mismat
 warning and compares correctly (it casts both to float). This is unreachable from
 the harness — the only shape that routes there cannot be constructed by it — and
 casting back would need a 13.1 GB buffer that does not fit.
+
+### 58. G8.0 — Multi-head Latent Attention (and GQA/MQA): evaluated on all 14 shapes, CLOSED on accuracy
+
+Asked whether MLA (DeepSeek-V2/V3) is a possible optimization here. It had never
+been considered — `latent`, `low-rank`, `MLA`, `SVD` returned nothing from the
+catalogue or the logs — so it was evaluated from scratch, with measurement
+rather than argument. Probe: `experiments/g8_0_mla_evaluation.py`, job 229,
+`results/logs/g8_0_mla_evaluation_run229.log`. **Nothing shipped was touched**;
+the MLA path lives in the probe, the way the CUTLASS phase-2 work was driven.
+
+**MLA's premise is absent here.** It caches one low-rank latent `c = x·W_D`
+instead of K and V, to shrink a KV cache *reused across autoregressive decode
+steps*. This harness only ever runs full-sequence prefill: nothing is cached
+between calls, and rows 1–13 never materialise a K/V cache at all — flash
+consumes K and V as transients. The only persistent cache in the project is row
+14's, inside `_chunked_forward_causal`.
+
+**1 — Accuracy is the hard blocker, and it is implementation-independent.**
+K and V are independent full-rank `[d,d]` `nn.Linear` weights, so the stacked
+`[W_K; W_V]` has rank `d` and a latent of dimension `d_c = d` is needed to
+reproduce them — i.e. no compression at all. The measured singular spectrum is
+flat, exactly as random-matrix theory predicts, at every `d` in the matrix:
+
+| d | rank d/2 | rank d/4 | rank d/8 |
+|---|---|---|---|
+| 32 | 79.1% energy | 50.1% | 28.9% |
+| 128 | 78.9% | 50.7% | 29.3% |
+| 1024 | 79.0% | 50.6% | 29.2% |
+
+Propagated end to end and scored with the harness's own `compare_outputs` on all
+13 scorable shapes: at the exact rank `r = d` MLA reproduces the baseline
+(`max_abs` 1.07e-03 – 1.87e-03, `failed 0`, which also validates the probe's own
+implementation). At **every** reduced rank it fails catastrophically —
+`max_abs` **1.0 – 2.3**, i.e. 500–1000× the 0.002 budget, with 80–91% of
+elements failing. There is no rank between "no compression" and "far outside the
+budget".
+
+**2 — Even at the exact rank it is slower, and the analytic model UNDER-predicted
+by how much.** The prediction was ~H× from the `S²` terms
+(`4·H·S²·d_c` vs `4·S²·d`, so MLA needs `d_c < head_dim` to win while exactness
+needs `d_c = d = H·head_dim` — a contradiction by a factor of H). Extending the
+FLOP count to the query projection, which absorbed MLA also pays H× on
+(H separate `[d,d_c]` projections instead of one `[d,d]`), gives 0.8×–10.8×.
+**Measured: 30.3×–51.9×.**
+
+| shape | H | S²-share of work | analytic MLA/MHA | measured |
+|---|---|---|---|---|
+| row 8 | 4 | 6% | 2.4× | 50.9× |
+| row 11 | 16 | 33% | 10.8× | 51.9× |
+| row 9 | 1 | 33% | **0.8×** | 46.7× |
+| row 13 | 4 | 80% | 3.6× | 30.3× |
+
+Row 9 is the control that explains the gap: at `H=1` the FLOP model says MLA is
+marginally *cheaper*, yet it measures 46.7× slower. That entire factor is
+implementation, not arithmetic — the probe's MLA is eager PyTorch that
+materialises `[B,H,S,S]` scores, while the shipped path is a fused flash kernel
+inside a CUDA graph. **The 30–52× is therefore an upper bound from an untuned
+implementation, not MLA's intrinsic cost**; a tuned MLA on the `d=128` shapes
+could use flash and would land nearer the analytic 0.8–10.8×. The verdict does
+not rest on this number.
+
+**3 — At `d ≥ 512` the exact latent cannot use flash at all.** Absorbed MLA runs
+attention at `head_dim = d_c`. Measured kernel support:
+
+| head_dim | flash | mem-efficient |
+|---|---|---|
+| 64, 256 | yes | yes |
+| 512, 1024 | **no** | yes |
+
+So rows 8 and 14 (`d = 1024`) would be forced onto the mem-efficient kernel,
+itself +19.3% against flash (job 208).
+
+**4 — The row-14 memory angle does not pay either.** The exact latent (cache the
+normalised input, `d_c = d`) halves that cache, 12.21 GB → 6.10 GB. But
+re-projecting the prefix to K,V once per chunk costs 0.67e15 FLOPs against an
+attention cost of 1.31e15 — **+51% work** — and the `chunk_q` sweep (step 55)
+already showed the freed memory is worth ~0.3%.
+
+**5 — GQA/MQA are strictly worse-placed than MLA.** They require K/V to be
+*shared* across heads; the baseline's per-head projections are independently
+initialised, so unlike MLA there is no exact form at any group size. Quantified
+rather than argued — mean-pooling K/V per group gives `max_abs` **1.61–2.45**
+with 87–91% of elements failing, at every group size tried on rows 1, 8 and 11.
+
+**Verdict: CLOSED on accuracy.** MLA is an architectural change that only pays
+when `d_c ≪ d`, and every `d_c < d` here is 500–1000× outside the budget. At
+`d_c = d` it compresses nothing, costs more arithmetic, and forfeits flash at
+`d ≥ 512`. This is a property of the frozen baseline's weights, not of tuning,
+so it will not become viable with more effort.
