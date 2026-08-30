@@ -110,4 +110,5 @@ accuracy, not on suspicion.
 | # | Optimisation | Verdict | Why it cannot work here |
 |---|---|---|---|
 | G8.0 | **Multi-head Latent Attention** (MLA) | CLOSED | Exact latent is `d_c = d` (K and V are independent full-rank `[d,d]`), so it compresses nothing; the measured spectrum is flat, so every smaller rank is 500–1000x outside the budget. Also needs `d_c < head_dim` to be faster, which contradicts `d_c = d` by a factor of H. No KV cache is reused here — the harness is prefill-only. |
+| G8.2 | **FlashAttention-3** | CLOSED | Needs sm_90a (Hopper `wgmma` + TMA + async warp specialisation); this card is sm_89. PyTorch already dispatches its vendored FA2 kernel, and step 44 showed flash is fastest-or-tied among the backends that DO run. Ceiling if it could run: attention is only 7.6-38.2% of the forward on rows 1-13. |
 | G8.1 | **GQA / MQA** | CLOSED | Requires K/V shared across heads; the baseline's per-head projections are independent, so no exact form exists at any group size. Mean-pooled K/V measures `max_abs` 1.61-2.45. |

@@ -1,0 +1,64 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+
+== 1. fa3_availability ==
+USDT:2026-08-30 11:32:49 291604:291604 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:32:49 291604:291604 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  device            : NVIDIA GeForce RTX 4090
+  compute capability: sm_89
+  FA3 requires      : sm_90a (Hopper) -- wgmma + TMA + async warp specialisation
+  can FA3 run here  : NO   PASS
+  torch             : 2.13.0+cu130
+  flash_attn          : not installed
+  flash_attn_interface: not installed
+  flash_attn_3        : not installed
+  dispatched kernel : void pytorch_flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<64, 64, 256, 4, false, false, cutlass::half_t, Flash_kernel_traits<64, 64, 256, 4, cutlass::half_t> >, true, false, false, true, true, false, true, false>(pytorch_flash::Flash_fwd_params)
+  -> PyTorch vendors FlashAttention-2 style kernels; there is no FA3 path on sm_89.
+
+== 2. attention_share (one shape per process) ==
+  row01 FAILED
+  row02 FAILED
+  row03 FAILED
+  row04 FAILED
+  row05 FAILED
+  row06 FAILED
+  row07 FAILED
+  row08 FAILED
+  row09 FAILED
+  row10 FAILED
+  row11 FAILED
+  row12 FAILED
+  row13 FAILED
+SHARE row14 9653.124574 8705.134673 666.124079
+  row14: device 9653.125 ms   SDPA 8705.135 ms (90.2%)   GEMM 6.9%   other 2.9%
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+
+== 3. amdahl_ceiling (what ANY faster attention could ever buy) ==
+  FA3's reported gain over FA2 on Hopper is ~1.5-2.0x. Applied to the
+  MEASURED attention share, the whole-model ceiling per shape is:
+   shape  device ms   SDPA %    @1.5x    @2.0x  @infinite
+   row01 (not measured)
+   row02 (not measured)
+   row03 (not measured)
+   row04 (not measured)
+   row05 (not measured)
+   row06 (not measured)
+   row07 (not measured)
+   row08 (not measured)
+   row09 (not measured)
+   row10 (not measured)
+   row11 (not measured)
+   row12 (not measured)
+   row13 (not measured)
+   row14   9653.125    90.2%    30.1%    45.1%      90.2%
+
+  Those are ceilings on a kernel that CANNOT run on sm_89, so the
+  realisable gain from FA3 on this hardware is exactly 0%.
+
+== SUMMARY ==
+  fa3_runnable_here      NO (sm_89 < sm_90a)
+  shapes_profiled        1/14
+
+OVERALL: FAIL   (PASS = the probe is sound; the VERDICT is the data above)
+
+G8_1_DONE

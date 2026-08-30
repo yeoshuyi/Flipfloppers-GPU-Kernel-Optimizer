@@ -4069,3 +4069,89 @@ when `d_c ≪ d`, and every `d_c < d` here is 500–1000× outside the budget. A
 `d_c = d` it compresses nothing, costs more arithmetic, and forfeits flash at
 `d ≥ 512`. This is a property of the frozen baseline's weights, not of tuning,
 so it will not become viable with more effort.
+
+### 59. G8.2 — FlashAttention-3: evaluated on all 14 shapes, CLOSED on hardware
+
+**FA3 cannot run on this card, and that is not a tuning question.** FA3 (Shah et
+al. 2024) draws its speed from three Hopper-only mechanisms — `wgmma`
+asynchronous tensor-core issue, TMA bulk async copies, and the warp-specialised
+producer/consumer overlap those enable — plus optional FP8. Measured, job 232:
+
+- device compute capability **sm_89** (Ada); FA3 requires **sm_90a**
+- `flash_attn`, `flash_attn_interface`, `flash_attn_3` — none installed
+- what PyTorch 2.13 actually dispatches for fp16 causal attention:
+  `pytorch_flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<...>>`
+  — i.e. the **FlashAttention-2** family it vendors
+
+This is the same wall that disqualified ThunderKittens, and it is the wall
+already stated in the README's *Our Context*: no TMA, no `wgmma`. The
+alternative backends were not re-measured because step 44 already swept them
+(`g5_0_sdpa_backend_audit_run146.log`): flash is fastest-or-tied everywhere and
+cuDNN loses at every shape tried (13.06 vs 8.07 µs, 1778 vs 1444 µs, 44.40 vs
+24.06 µs).
+
+**The more useful question — what is the ceiling on ANY faster attention
+kernel?** That is measurable without FA3, and it bounds every future attention
+idea, not just this one. Attention's share of the shipped forward, per shape
+(SDPA kernel time from job 232 over the shipped median from run 216):
+
+| row | SDPA % | ceiling @1.5× | @2.0× | @∞ |
+|---|---|---|---|---|
+| 1 | 15.3% | 5.1% | 7.6% | 15.3% |
+| 2 | 25.7% | 8.6% | 12.8% | 25.7% |
+| 3 | 23.2% | 7.7% | 11.6% | 23.2% |
+| 4 | 18.7% | 6.2% | 9.3% | 18.7% |
+| 5 | 22.8% | 7.6% | 11.4% | 22.8% |
+| 6 | 20.3% | 6.8% | 10.1% | 20.3% |
+| 7 | 32.7% | 10.9% | 16.4% | 32.7% |
+| 8 | 7.6% | 2.5% | 3.8% | 7.6% |
+| 9 | 13.8% | 4.6% | 6.9% | 13.8% |
+| 10 | 16.0% | 5.3% | 8.0% | 16.0% |
+| 11 | 38.2% | 12.7% | 19.1% | 38.2% |
+| 12 | 26.4% | 8.8% | 13.2% | 26.4% |
+| 13 | 33.0% | 11.0% | 16.5% | 33.0% |
+| **14** | **90.2%** | **30.1%** | **45.1%** | **90.2%** |
+
+Cross-checked against the independent run-171 stage breakdown
+(`docs/FINAL_SCORECARD.md`): **mean deviation 1.9 pp**, max 8.5 pp.
+
+So even on Hopper, at FA3's own reported 1.5–2.0× over FA2, the whole-model
+ceiling is **2.5–19.1% for rows 1–13**. Row 14 is the only shape where attention
+dominates (90.2%), and it is already at **91% of the roofline** after G7.4
+(step 55) — leaving ~762 ms of headroom in a 9.65 s forward, not the 45% the
+Amdahl bound would permit. **Realisable gain from FA3 on this hardware: 0%.**
+
+**Two failed attempts kept as evidence, because both are traps worth recording.**
+Job 230 drove all 14 shapes through one interpreter and reported "SDPA 0.0%,
+other 100%" for rows 1–11: dynamo blew its recompile limit so later shapes
+silently fell back to eager, and CUDA-graph replay collapsed the kernel→op
+correlation the split depends on. Job 231 then ran one shape per process but
+called `_optimized_forward_causal` directly, which skips the folded-weight
+construction `forward()` performs — every scorable row errored. The fix for both
+is in `experiments/g8_1_fa3_evaluation.py`: one shape per process, entered
+through `forward()` with `_compiled_causal` pre-empted so the folds are built
+but the kernels stay individually attributable.
+`results/logs/g8_1_fa3_evaluation_run230_BROKEN_cudagraph_attribution.log` is
+kept deliberately.
+
+### 59b. Clarification — how many distinct inputs does the harness actually use?
+
+Asked directly, and worth pinning because the MLA verdict (step 58) leans on it.
+Read from the frozen harness:
+
+| phase | distinct inputs | model calls | fresh full prefill each call? |
+|---|---|---|---|
+| `run_accuracy_tests` | **5** — regenerated per trial at `seed + trial` | 5 per model | yes |
+| `benchmark_models` | **1** — generated once at `seed + 100000` | 20 warmup + 3 rounds × 100 repeats = **320, on the same tensor** | yes |
+
+So "brand new inputs" is **not** accurate for the timing phase — one tensor is
+reused 320 times. What *is* accurate, and what the MLA argument actually needs,
+is that **no state survives between calls**: every retained attribute on the
+model is derived from weights (the G1.1/G1.2 folds and their fp16 copies) or is
+a compile/plan artefact (`_compiled_*`, `_ffn_cur`, `_lt_cur`, `_ws_cur`) or the
+mask-property cache; none is derived from activations, and the chunked path's
+`kbuf`/`vbuf` are locals that are explicitly deleted. Every call therefore
+recomputes K and V for the whole sequence — a true prefill — so there is no
+cross-step KV reuse for MLA to exploit. The repetition is also why probe check 9
+asserts the output still depends on the input: a model that cached results keyed
+on the input tensor would look enormously fast here and be worthless.

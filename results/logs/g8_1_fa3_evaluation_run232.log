@@ -1,0 +1,77 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+
+== 1. fa3_availability ==
+USDT:2026-08-30 11:35:08 293175:293175 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:35:08 293175:293175 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  device            : NVIDIA GeForce RTX 4090
+  compute capability: sm_89
+  FA3 requires      : sm_90a (Hopper) -- wgmma + TMA + async warp specialisation
+  can FA3 run here  : NO   PASS
+  torch             : 2.13.0+cu130
+  flash_attn          : not installed
+  flash_attn_interface: not installed
+  flash_attn_3        : not installed
+  dispatched kernel : void pytorch_flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<64, 64, 256, 4, false, false, cutlass::half_t, Flash_kernel_traits<64, 64, 256, 4, cutlass::half_t> >, true, false, false, true, true, false, true, false>(pytorch_flash::Flash_fwd_params)
+  -> PyTorch vendors FlashAttention-2 style kernels; there is no FA3 path on sm_89.
+
+== 2. attention_share (one shape per process) ==
+SHARE row01 0.364392 0.032415 0.129162
+  row01: device 0.364 ms   SDPA 0.032 ms (8.9%)   GEMM 35.4%   other 55.7%
+SHARE row02 0.118938 0.019986 0.041581
+  row02: device 0.119 ms   SDPA 0.020 ms (16.8%)   GEMM 35.0%   other 48.2%
+SHARE row03 0.126949 0.020415 0.045472
+  row03: device 0.127 ms   SDPA 0.020 ms (16.1%)   GEMM 35.8%   other 48.1%
+SHARE row04 0.169743 0.020863 0.060966
+  row04: device 0.170 ms   SDPA 0.021 ms (12.3%)   GEMM 35.9%   other 51.8%
+SHARE row05 0.653452 0.085048 0.214239
+  row05: device 0.653 ms   SDPA 0.085 ms (13.0%)   GEMM 32.8%   other 54.2%
+SHARE row06 82.205488 10.644926 17.132158
+  row06: device 82.205 ms   SDPA 10.645 ms (12.9%)   GEMM 20.8%   other 66.2%
+SHARE row07 0.229217 0.033854 0.043711
+  row07: device 0.229 ms   SDPA 0.034 ms (14.8%)   GEMM 19.1%   other 66.2%
+SHARE row08 4.988360 0.328398 3.158449
+  row08: device 4.988 ms   SDPA 0.328 ms (6.6%)   GEMM 63.3%   other 30.1%
+SHARE row09 0.358734 0.028979 0.127249
+  row09: device 0.359 ms   SDPA 0.029 ms (8.1%)   GEMM 35.5%   other 56.5%
+SHARE row10 0.365694 0.034117 0.128579
+  row10: device 0.366 ms   SDPA 0.034 ms (9.3%)   GEMM 35.2%   other 55.5%
+SHARE row11 0.440688 0.109202 0.129137
+  row11: device 0.441 ms   SDPA 0.109 ms (24.8%)   GEMM 29.3%   other 45.9%
+SHARE row12 0.181515 0.032492 0.061055
+  row12: device 0.182 ms   SDPA 0.032 ms (17.9%)   GEMM 33.6%   other 48.5%
+SHARE row13 3.224404 0.729846 0.608503
+  row13: device 3.224 ms   SDPA 0.730 ms (22.6%)   GEMM 18.9%   other 58.5%
+SHARE row14 9653.475151 8705.618087 666.010328
+  row14: device 9653.475 ms   SDPA 8705.618 ms (90.2%)   GEMM 6.9%   other 2.9%
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+
+== 3. amdahl_ceiling (what ANY faster attention could ever buy) ==
+  FA3's reported gain over FA2 on Hopper is ~1.5-2.0x. Applied to the
+  MEASURED attention share, the whole-model ceiling per shape is:
+   shape  device ms   SDPA %    @1.5x    @2.0x  @infinite
+   row01      0.364     8.9%     3.0%     4.4%       8.9%
+   row02      0.119    16.8%     5.6%     8.4%      16.8%
+   row03      0.127    16.1%     5.4%     8.0%      16.1%
+   row04      0.170    12.3%     4.1%     6.1%      12.3%
+   row05      0.653    13.0%     4.3%     6.5%      13.0%
+   row06     82.205    12.9%     4.3%     6.5%      12.9%
+   row07      0.229    14.8%     4.9%     7.4%      14.8%
+   row08      4.988     6.6%     2.2%     3.3%       6.6%
+   row09      0.359     8.1%     2.7%     4.0%       8.1%
+   row10      0.366     9.3%     3.1%     4.7%       9.3%
+   row11      0.441    24.8%     8.3%    12.4%      24.8%
+   row12      0.182    17.9%     6.0%     9.0%      17.9%
+   row13      3.224    22.6%     7.5%    11.3%      22.6%
+   row14   9653.475    90.2%    30.1%    45.1%      90.2%
+
+  Those are ceilings on a kernel that CANNOT run on sm_89, so the
+  realisable gain from FA3 on this hardware is exactly 0%.
+
+== SUMMARY ==
+  fa3_runnable_here      NO (sm_89 < sm_90a)
+  shapes_profiled        14/14
+
+OVERALL: PASS   (PASS = the probe is sound; the VERDICT is the data above)
+
+G8_1_DONE

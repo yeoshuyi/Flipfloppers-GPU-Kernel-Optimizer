@@ -1,0 +1,96 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+
+== 1. fa3_availability ==
+USDT:2026-08-30 11:30:56 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:56 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  device            : NVIDIA GeForce RTX 4090
+  compute capability: sm_89
+  FA3 requires      : sm_90a (Hopper) -- wgmma + TMA + async warp specialisation
+  can FA3 run here  : NO   PASS
+  torch             : 2.13.0+cu130
+  flash_attn          : not installed
+  flash_attn_interface: not installed
+  flash_attn_3        : not installed
+  dispatched kernel : void pytorch_flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<64, 64, 256, 4, false, false, cutlass::half_t, Flash_kernel_traits<64, 64, 256, 4, cutlass::half_t> >, true, false, false, true, true, false, true, false>(pytorch_flash::Flash_fwd_params)
+  -> PyTorch vendors FlashAttention-2 style kernels; there is no FA3 path on sm_89.
+
+== 2. attention_share (measured on the shipped model) ==
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:30:59 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:01 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:01 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:02 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:02 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:02 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:02 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:03 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:03 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+W0830 11:31:04.717000 291066 torch/_dynamo/convert_frame.py:1994] [0/8] torch._dynamo hit config.recompile_limit (8)
+W0830 11:31:04.717000 291066 torch/_dynamo/convert_frame.py:1994] [0/8]    function: '_optimized_forward_causal' (/work/torch_transformer_benchmark.py:1264)
+W0830 11:31:04.717000 291066 torch/_dynamo/convert_frame.py:1994] [0/8]    last reason: 0/7: tensor 'x' size mismatch at index 1. expected 128, actual 32
+W0830 11:31:04.717000 291066 torch/_dynamo/convert_frame.py:1994] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W0830 11:31:04.717000 291066 torch/_dynamo/convert_frame.py:1994] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-08-30 11:31:04 291066:291066 SyncActivityProfilerHandler.cpp:59] profiler_stop
+   shape  device ms   SDPA ms   SDPA %  GEMM %  other %
+   row01      0.210     0.000     0.0%    0.0%   100.0%
+   row02      0.075     0.000     0.0%    0.0%   100.0%
+   row03      0.086     0.000     0.0%    0.0%   100.0%
+   row04      0.112     0.000     0.0%    0.0%   100.0%
+   row05      0.379     0.000     0.0%    0.0%   100.0%
+   row06     52.487     0.000     0.0%    0.0%   100.0%
+   row07      0.103     0.000     0.0%    0.0%   100.0%
+   row08      4.332     0.000     0.0%    0.0%   100.0%
+   row09      0.205     0.000     0.0%    0.0%   100.0%
+   row10      0.208     0.000     0.0%    0.0%   100.0%
+   row11      0.280     0.000     0.0%    0.0%   100.0%
+   row12      0.181     0.032    17.9%   33.7%    48.4%
+   row13      3.225     0.730    22.6%   18.9%    58.4%
+[g7.0] chunked causal  B=32 S=100000 d=1024 H=16 ffn=1024 store=float16  chunk_q=512 n_chunks=196  kv_cache=12.21GB free=12.18GB  compile=True
+[W830 11:31:04.522916898 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+[W830 11:31:05.641109262 CUDACachingAllocator.cpp:508] expandable_segments: memory mapping failed with OOM on device 0 while trying to map 20971520 bytes (free: 14417920, total: 25250627584).
+   row14 ERROR: CUDA out of memory. Tried to allocate 6.10 GiB. GPU 0 has a total capacity of 23.52 GiB of
+
+== 3. amdahl_ceiling (what a faster attention could ever buy) ==
+  FA3's reported gain over FA2 on Hopper is ~1.5-2.0x. Applied to
+  the measured SDPA share, the WHOLE-MODEL ceiling per shape is:
+   shape   SDPA %    @1.5x    @2.0x  @infinite
+   row01     0.0%     0.0%     0.0%       0.0%
+   row02     0.0%     0.0%     0.0%       0.0%
+   row03     0.0%     0.0%     0.0%       0.0%
+   row04     0.0%     0.0%     0.0%       0.0%
+   row05     0.0%     0.0%     0.0%       0.0%
+   row06     0.0%     0.0%     0.0%       0.0%
+   row07     0.0%     0.0%     0.0%       0.0%
+   row08     0.0%     0.0%     0.0%       0.0%
+   row09     0.0%     0.0%     0.0%       0.0%
+   row10     0.0%     0.0%     0.0%       0.0%
+   row11     0.0%     0.0%     0.0%       0.0%
+   row12    17.9%     6.0%     9.0%      17.9%
+   row13    22.6%     7.5%    11.3%      22.6%
+
+  Those are ceilings on a kernel that CANNOT run on sm_89, so the
+  realisable gain from FA3 on this hardware is exactly 0%.
+
+== SUMMARY ==
+  fa3_runnable_here      NO (sm_89 < sm_90a)
+  shapes_profiled        13/14
+
+OVERALL: PASS   (PASS = the probe is sound; the VERDICT is the data above)
+
+G8_1_DONE
