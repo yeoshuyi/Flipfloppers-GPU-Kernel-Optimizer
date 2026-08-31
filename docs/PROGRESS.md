@@ -4267,3 +4267,52 @@ off-the-shelf CUTLASS mechanism does not implement it at all.
 the K=128 generalisation. The correction matters: the tier is worth ×1.66 at
 `K=1024` and ~×1.01 at `K=128`, so any future accumulate-tier idea should be
 priced at the shape it targets, not from step 60's blanket claim.
+
+### 60c. G8.2 Phase 1c — the FP32-workspace variant: measured as an upper bound, and it closes the direction
+
+**CUTLASS's stock `GemmSplitKParallel` cannot express the idea.** At
+`.cutlass/include/cutlass/gemm/device/gemm_splitk_parallel.h:286` the workspace
+is `TensorRef<ElementAccumulator_, ...>` — the *same* template parameter the
+mainloop mma accumulates in. `ElementAccumulator = half_t` gives the 330 TF tier
+**and** an fp16 workspace; `= float` gives an fp32 workspace but drops the mma to
+the 165 TF tier. There is no stock combination of the two, so a custom epilogue
+would be needed.
+
+Rather than write one, job 239 measured the **upper bound the direction could
+ever reach**: slice K by hand, FP16-accumulate each slice with the CUTLASS
+FP16-accum config, and combine the partials *exactly* in FP32. No workspace
+implementation can beat an exact sum.
+
+| row | K | 1 slice | 2 | 4 | 8 | 16 | 32 |
+|---|---|---|---|---|---|---|---|
+| 1 | 128 | 2.724e-03 | 1.961e-03 | 1.869e-03 | — | — | — |
+| 9 | 128 | 2.724e-03 | 1.953e-03 | 1.835e-03 | — | — | — |
+| **11** | 128 | 2.724e-03 | 1.953e-03 | **1.735e-03 SHIP** | — | — | — |
+| 8 | 1024 | 7.392e-03 | 4.916e-03 | 4.403e-03 | 2.708e-03 | 2.295e-03 | 1.828e-03 |
+
+So an FP32 combine **is** the best of the three rebuilds tried — better than
+CUTLASS's `SplitKSerial` (which rounds through the fp16 output between slices:
+4.916e-03 vs 5.465e-03 at row 8) and marginally better than the hand kernel's
+within-block register carry (1.869e-03 vs 2.005e-03 at row 1, same 4 chunks).
+The instinct behind the proposal was sound.
+
+**But it closes anyway, on the shape of the curve.** Exactly one row clears the
+0.00180 ceiling, on one seed, at four slices — and `docs/ACCURACY_BUDGET.md`
+requires *more* than 40 seeds within 15% of the ceiling, which 1.735e-03 is.
+Row 8 needs **32 slices** to reach 1.828e-03, still over. And the speed is long
+gone by then: job 237 measured CUTLASS's own efficient split-K at 4 slices as
+**1.03× slower** than cuBLAS at row 8, and a hand-sliced version is 4–32
+separate GEMM launches plus that many full `[M,N]` FP32 accumulations.
+
+**The structural reason, now measured rather than argued:** the loss is *inside*
+each slice. The mma's `.f16` accumulator rounds the partial before any reduction
+ever sees it, so accuracy is bought only by making slices short — and short
+slices mean many launches. That is also why the hand kernel's within-loop
+register carry is the right implementation of the idea: it promotes to FP32
+every 32 columns with no extra launches and no HBM traffic. It simply cannot
+promote often enough to matter before the tier gain disappears.
+
+**G8.2 CLOSED**, with the trade curve mapped at both K regimes and across three
+independent rebuild implementations (within-block FP32 register carry, CUTLASS
+`SplitKSerial`, exact FP32 combine). Every one lands accuracy and speed on
+opposite sides of the ship ceiling.

@@ -1,0 +1,15 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+mainloop: cfg[2] = accF16 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB
+ship ceiling 0.0018;  budget abs<0.002 OR rel<0.02
+
+ shape     K    shipped         1 slice         2 slice         4 slice         8 slice        16 slice        32 slice
+-----------------------------------------------------------------------------------------------------------------------
+ row01   128    0.00137 2.724e-03  FAIL 1.961e-03   rel 1.869e-03   rel        slice<32        slice<32        slice<32
+ row08  1024    0.00141 7.392e-03  FAIL 4.916e-03  FAIL 4.403e-03  FAIL 2.708e-03  FAIL 2.295e-03   rel 1.828e-03   rel
+ row09   128    0.00145 2.724e-03  FAIL 1.953e-03   rel 1.835e-03   rel        slice<32        slice<32        slice<32
+ row11   128    0.00137 2.724e-03  FAIL 1.953e-03   rel 1.735e-03  SHIP        slice<32        slice<32        slice<32
+
+  shippable with an EXACT FP32 combine: {'row11': [4]}
+
+G8_2E_DONE
