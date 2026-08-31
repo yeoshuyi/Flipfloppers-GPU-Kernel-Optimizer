@@ -77,7 +77,7 @@ invariant 2) — accuracy is a hard gate, never a footnote.
 given historical number was measured against:**
 
 - **`atol=0.001, rtol=0.01`** (1%) — the *original* bound, and the one
-  `/home/techjam2/CLAUDE.md`'s own "ACCURACY" section states. Essentially
+  `CLAUDE.md`'s own "ACCURACY" section states. Essentially
   every step in `docs/PROGRESS.md` (steps 1–40) and the early rows of
   `docs/CAUSAL_LEDGER.md` (`G0.1c` through the causal shape-sweep row) were
   measured, gated, and reported against this tighter bound. Several closures
