@@ -4152,3 +4152,65 @@ recomputes K and V for the whole sequence — a true prefill — so there is no
 cross-step KV reuse for MLA to exploit. The repetition is also why probe check 9
 asserts the output still depends on the input: a model that cached results keyed
 on the input tensor would look enormously fast here and be worthless.
+
+### 60. G8.2 — FP16-accumulate + FP32 carry on the official matrix: CLOSED on arithmetic intensity
+
+The proposal: run the tensor core at the un-throttled FP16-accumulate rate
+(330.3 vs 165.2 TF — NVIDIA's own Ada whitepapers confirm GeForce halves the
+FP32-accumulate path while the same AD102 die does not on RTX 6000 Ada, see
+step 59c) and rebuild FP32 precision outside it. That is exactly `SPLIT` in
+`csrc/g4_4_mma_gemm.cu`, built in step 37 and closed in step 41 — **but only ever
+measured at `K = 512`**, the project's internal d512 shapes. The official matrix
+runs these GEMMs at `K = d_model`, which is 128 on ten of fourteen rows.
+
+**Phase 0 (job 235) — the K=128 hypothesis was right, and it is a new result.**
+Two finer carries were added (`cfg26` BK32/SPLIT64, `cfg27` BK32/SPLIT32 — the
+finest promotion that is still not FP32 accumulation, keeping two k=16 mma steps
+in FP16). Scored end to end against the frozen baseline on every expressible row,
+against the **`docs/ACCURACY_BUDGET.md` hard ship ceiling of 0.00180**, not merely
+the harness's disjunctive `failed==0`:
+
+| row | shipped | SPLIT 64 | BK32/SPLIT32 |
+|---|---|---|---|
+| 9 | 0.00145 | 2.323e-03 rel-only | **1.793e-03 SHIP** |
+| 10 | 0.00138 | 2.323e-03 rel-only | **1.701e-03 SHIP** |
+| 11 | 0.00137 | 2.323e-03 rel-only | **1.780e-03 SHIP** |
+| 1, 4, 5, 12 | ~0.00138 | 2.32–2.55e-03 | 2.005–2.005e-03 rel-only |
+| 6 | 0.00195 | 2.896e-03 FAIL | 2.367e-03 FAIL |
+| 8 (K=1024) | 0.00141 | 2.309e-03 FAIL | 2.253e-03 rel-only |
+
+Five of twelve expressible rows (2, 3, 9, 10, 11) land under the ship ceiling.
+Row 7 is not expressible with this tiling (`N = 96`, `N = 32` against `BN = 128`).
+So the step-41 closure — correct for `K = 512` — was **misleading for the official
+matrix**, and that is worth recording.
+
+**Phase 2 (job 236) — but the tier is worth nothing at these shapes.** Run
+*before* the CUTLASS phase, because the carry cost bounds what any kernel could
+deliver. Measured against `F.linear` at the surviving rows' real GEMM dimensions:
+
+| GEMM | M | K | N | cuBLAS | best FP16-accum |
+|---|---|---|---|---|---|
+| row02 qkv | 128 | 128 | 384 | 1.0 TF | 1.1 TF (0.93×) |
+| row03 qkv | 512 | 128 | 384 | 4.2 TF | 4.4 TF (0.95×) |
+| row09-11 qkv | 8192 | 128 | 384 | **44.3 TF** | 37.1 TF (**1.19× slower**) |
+| row09-11 out/ffn | 8192 | 128 | 128 | 21.8 TF | 20.4 TF (1.07× slower) |
+
+**These GEMMs achieve 0.6–27% of even the 165.2 TF lower tier.** They are not
+tensor-core bound, so halving the cost of a unit that is idle most of the time
+buys nothing. The pure tier A/B proves it directly: `accF32` (cfg15) against
+`accF16 no carry` (cfg0) differ by **~1%** here, where step 37 measured
+**x1.43–1.53** at `K=512, N=1536, M≤32768`. At `K=128` the arithmetic intensity
+is too low for the accumulate tier to engage at all.
+
+**Verdict: CLOSED, and Phase 1 (CUTLASS + split-K) is explicitly not justified.**
+CUTLASS improves tensor-core *efficiency*; efficiency is not the binding
+constraint here, arithmetic intensity is. The three tiny-shape "wins" (0.93–0.99×)
+are 1–7% on GEMMs running at ~1 TF — noise, on work that is a rounding error of
+the forward. This also retro-explains why every earlier accumulate-tier attempt
+(G4.4 step 37, G4.6 step 40) only ever found a prize at `large_batch`: that is the
+one regime with enough M to be tensor-core bound.
+
+Assets kept: `cfg26`/`cfg27` in `csrc/g4_4_mma_gemm.cu` (additive, experiment-only
+— the shipped model does not reference this extension), and the Phase-0 harness,
+which is the first thing in this project to score a candidate against the ship
+ceiling rather than the harness gate. Nothing shipped changed.

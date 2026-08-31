@@ -1,0 +1,18 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+cuBLAS is the bar: it already runs at 91.2% of the 165.2 TF FP32-accum tier.
+
+           GEMM       M     K     N  cuBLAS TF     accF32 tier accF16 no carry  accF16 SPLIT64accF16 BK32/SPLIT64accF16 BK32/SPLIT32
+------------------------------------------------------------------------------------------------------------------------------------
+ row02 qkv          128   128   384        1.0      1.1  0.94x      1.1  0.93x      1.1  0.97x      1.1  0.94x      1.1  0.97x
+ row02 out/ffn      128   128   128        0.3      0.4  0.95x      0.4  0.94x      0.4  0.97x      0.4  0.97x      0.3  0.98x
+ row03 qkv          512   128   384        4.2      4.4  0.96x      4.4  0.95x      4.4  0.95x      4.4  0.96x      4.2  0.99x
+ row03 out/ffn      512   128   128        1.5      1.5  1.01x      1.5  1.00x      1.5  1.01x      1.5  1.02x      1.4  1.03x
+ row09-11 qkv      8192   128   384       44.3     34.2  1.30x     37.1  1.19x     37.2  1.19x     36.3  1.22x     35.8  1.24x
+ row09-11 o/ffn    8192   128   128       21.8     20.2  1.08x     20.4  1.07x     20.4  1.07x     20.5  1.07x     20.7  1.05x
+
+  (each cell: achieved TFLOP/s, and time relative to cuBLAS -- <1.00x means faster)
+
+  shapes where the BEST FP16-accumulate config beats cuBLAS: ['row02 qkv     ', 'row02 out/ffn ', 'row03 qkv     ']
+
+G8_2B_DONE

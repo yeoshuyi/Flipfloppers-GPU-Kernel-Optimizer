@@ -1,0 +1,18 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+extension built: 26 configs
+  cfg[15] = accF32 BM64 BN128 BK64 stg3 split0 smem=72KB   (accF32 (reference tier))
+  cfg[0] = accF16 BM64 BN128 BK64 stg3 split0 smem=72KB   (accF16 no carry)
+  cfg[5] = accF16 BM64 BN128 BK64 stg3 split256 smem=72KB   (accF16 SPLIT 256)
+  cfg[7] = accF16 BM64 BN128 BK64 stg3 split128 smem=72KB   (accF16 SPLIT 128)
+  cfg[9] = accF16 BM64 BN128 BK64 stg3 split64 smem=72KB   (accF16 SPLIT 64)
+Traceback (most recent call last):
+  File "/work/experiments/g8_2_fp16accum_carry.py", line 230, in <module>
+    raise SystemExit(run())
+                     ^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/work/experiments/g8_2_fp16accum_carry.py", line 161, in run
+    print(f"  cfg[{c}] = {ext.cfg_name(c)}   ({name})")
+                          ^^^^^^^^^^^^^^^
+RuntimeError: bad cfg

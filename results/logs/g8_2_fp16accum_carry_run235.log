@@ -1,0 +1,33 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+extension built: 28 configs
+  cfg[15] = accF32 BM64 BN128 BK64 stg3 split0 smem=72KB   (accF32 (reference tier))
+  cfg[0] = accF16 BM64 BN128 BK64 stg3 split0 smem=72KB   (accF16 no carry)
+  cfg[5] = accF16 BM64 BN128 BK64 stg3 split256 smem=72KB   (accF16 SPLIT 256)
+  cfg[7] = accF16 BM64 BN128 BK64 stg3 split128 smem=72KB   (accF16 SPLIT 128)
+  cfg[9] = accF16 BM64 BN128 BK64 stg3 split64 smem=72KB   (accF16 SPLIT 64)
+  cfg[26] = accF16 BM64 BN128 BK32 stg7 split64 smem=84KB   (accF16 BK32 SPLIT 64)
+  cfg[27] = accF16 BM64 BN128 BK32 stg7 split32 smem=84KB   (accF16 BK32 SPLIT 32)
+
+budget: abs < 0.002 OR rel < 0.02
+
+ shape     d     K    shipped accF32 (reference tier)          no carry         SPLIT 256         SPLIT 128          SPLIT 64     BK32 SPLIT 64     BK32 SPLIT 32
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ row01   128   128    0.00137   1.445e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.323e-03  rel-only   2.323e-03  rel-only   2.005e-03  rel-only
+ row02   128   128    0.00137   1.094e-03      SHIP   2.025e-03  rel-only            K%SPLIT!=0   2.025e-03  rel-only   1.407e-03      SHIP   1.407e-03      SHIP   1.568e-03      SHIP
+ row03   128   128    0.00137   1.214e-03      SHIP   2.362e-03  rel-only            K%SPLIT!=0   2.362e-03  rel-only   1.721e-03      SHIP   1.721e-03      SHIP   2.005e-03  rel-only
+ row04   128   128    0.00137   1.445e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.323e-03  rel-only   2.323e-03  rel-only   2.005e-03  rel-only
+ row05   128   128    0.00137   1.566e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.475e-03  rel-only   2.475e-03  rel-only   2.005e-03  rel-only
+ row06   128   128    0.00195   2.238e-03  rel-only   3.673e-03      FAIL            K%SPLIT!=0   3.673e-03      FAIL   2.896e-03      FAIL   2.896e-03      FAIL   2.367e-03      FAIL
+ row07    32    32    0.00211   NOT EXPRESSIBLE with the existing tiling (N=96, N=32; BM/BN/BK = 64/128/32)
+ row08  1024  1024    0.00141   1.563e-03      SHIP   7.392e-03      FAIL   3.931e-03      FAIL   2.782e-03      FAIL   2.309e-03      FAIL   2.309e-03      FAIL   2.253e-03  rel-only
+ row09   128   128    0.00145   1.415e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.323e-03  rel-only   2.323e-03  rel-only   1.793e-03      SHIP
+ row10   128   128    0.00138   1.519e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.323e-03  rel-only   2.323e-03  rel-only   1.701e-03      SHIP
+ row11   128   128    0.00137   1.572e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.323e-03  rel-only   2.323e-03  rel-only   1.780e-03      SHIP
+ row12   128   128    0.00141   1.514e-03      SHIP   2.724e-03      FAIL            K%SPLIT!=0   2.724e-03      FAIL   2.552e-03  rel-only   2.552e-03  rel-only   2.005e-03  rel-only
+ row13   128   128    0.00137   1.472e-03      SHIP   2.437e-03  rel-only            K%SPLIT!=0   2.437e-03  rel-only   2.327e-03  rel-only   2.327e-03  rel-only   2.104e-03  rel-only
+
+rows where an FP16-accumulate config is SHIPPABLE (max_abs <= 0.00180): {'row02': 'accF16 BK32 SPLIT 32', 'row03': 'accF16 BK32 SPLIT 64', 'row09': 'accF16 BK32 SPLIT 32', 'row10': 'accF16 BK32 SPLIT 32', 'row11': 'accF16 BK32 SPLIT 32'}
+
+Phase 0 leaves live shapes -> proceed to Phase 1 (CUTLASS + split-K) for those K/M only.
+
+G8_2_PHASE0_DONE

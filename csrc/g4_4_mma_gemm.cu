@@ -463,10 +463,18 @@ int mma_gemm_launch(int cfg, const void *In, const void *W, const void *bias,
     CFG(23, 128, 256, 64, 2,   0, 1)
     CFG(24, 256, 128, 64, 2,   0, 1)
     CFG(25, 128, 256, 64, 2, 256, 0)
+    // G8.2: finer FP32 carry. `SPLIT % BK == 0` forces BK=32 to promote more
+    // often than every 64 columns of K. At the official matrix's K=128 a
+    // SPLIT-64 carry is only 2 chunks; these give 2 and 4, shortening the FP16
+    // accumulate chain to 2 and 1 mma k-steps respectively. SPLIT=BK=32 (cfg 27)
+    // is the finest carry that is still not FP32 accumulation -- it keeps two
+    // k=16 mma steps in FP16 before each promotion.
+    CFG(26,  64, 128, 32, 7,  64, 0)
+    CFG(27,  64, 128, 32, 7,  32, 0)
     default: return -1;
   }
 }
 #undef CFG
 
-int mma_gemm_num_cfg() { return 26; }
+int mma_gemm_num_cfg() { return 28; }  // G8.2: +cfg26/27 finer carry
 #endif  // G4_4_NO_HOST_DISPATCH
