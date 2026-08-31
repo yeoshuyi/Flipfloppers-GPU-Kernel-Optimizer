@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stage 1a (plan: /home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md).
+Stage 1a
 
 Fixes two real methodology gaps found this iteration (see docs/PROGRESS.md
 step 21 for the full debugging story):
