@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stage 1c (plan: /home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md)
+Stage 1c
 -- the decisive experiment. Uses REAL float8_e4m3fn hardware casts
 throughout (not a simulated mantissa truncation like Stage 1a -- see
 docs/PROGRESS.md step 21 for why that needed no further calibration
