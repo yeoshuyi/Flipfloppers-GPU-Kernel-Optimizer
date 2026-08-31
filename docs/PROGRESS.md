@@ -1134,8 +1134,7 @@ CUDA, citing real production techniques. Researched deeply (DeepSeek-V3's
 fine-grained block quantization + FP32 accumulation promotion, QuaRot/
 SpinQuant Hadamard rotation, confirmed Ada has no native MXFP8 hardware —
 Blackwell only). A Plan-mode pass produced a staged, gate-driven
-investigation plan (`/home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md`,
-approved) built around one key finding: `CLAUDE.md`'s `eps/√K` claim for
+investigation plan built around one key finding: `CLAUDE.md`'s `eps/√K` claim for
 why FP8 "survives" appears arithmetically wrong for this model's random-sign
 reductions (relative error doesn't shrink with K the way the doc assumes) —
 and the one technique that actually attacks mantissa width, split/residual
@@ -1319,9 +1318,7 @@ unilateral call). The design itself (host-side `B,S=x.shape` dispatch,
 computed and quantified as ~0.16% of tiny's wall time — 8x below this
 project's own measurement noise floor — a `{regime: compiled_fn}`
 registry memoized by implementation identity, boundary-shape sweep,
-multi-regime CUDA-graph-pool safety probe) is fully specified in
-`/home/techjam2/.claude/plans/stateless-snuggling-mccarthy.md` if a
-future candidate ever needs it.
+multi-regime CUDA-graph-pool safety probe).
 
 ## Investigation summary: regime arbiter + FP8 re-visit
 
