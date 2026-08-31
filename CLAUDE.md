@@ -13,7 +13,6 @@ Optimise `UserOptimizedTransformer` in `benchmark.py` against the frozen
 - `docs/MEGAKERNEL.md` — read only when working on G4
 - `docs/SETUP.md` — infra, Phase 0 probe, measurement protocol (read once, day 1)
 - `docs/AGENTS.md` — agent roles, limits, best practices (read once, at bootstrap)
-- `/scratch/work/docs` and `/scratch/techjam2` - various docs here which were suppose to be combined (some outdated)
 
 ---
 
