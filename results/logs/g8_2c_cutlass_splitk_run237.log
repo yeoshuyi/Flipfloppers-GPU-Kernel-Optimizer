@@ -1,0 +1,31 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+built 28 CUTLASS TUs in 17s
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+  cfg[2] = accF16 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB
+  cfg[12] = accF32 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB
+  cfg[24] = accF16 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB
+  cfg[25] = accF16 TB128x128x32 W64x64x32 stg4 swz1 smem=64KB
+  cfg[26] = accF16 TB64x128x64 W32x64x64 stg4 swz1 smem=96KB
+  cfg[27] = accF16 TB128x256x32 W64x64x32 stg4 swz1 smem=96KB
+
+tier ceilings: FP32-accum 165.2 TF, FP16-accum 330.3 TF. cuBLAS is the bar (91.2% of the lower tier).
+
+           GEMM        M     K     N  cuBLAS TF           cfg2          cfg12          cfg24          cfg25          cfg26          cfg27
+-----------------------------------------------------------------------------------------------------------------------------------------
+ row09-11 qkv       8192   128   384       39.9    43.7  0.91x    39.7  1.00x    35.7  1.12x    26.2  1.52x    30.4  1.31x    36.2  1.10x
+ row09-11 o/ffn     8192   128   128       21.8    23.4  0.93x    20.2  1.08x    17.5  1.25x    14.3  1.53x    17.5  1.25x    16.4  1.33x
+ row06    qkv    1280000   128   384       85.7    55.2  1.55x    55.4  1.55x    27.2  3.16x    12.3  6.94x    27.1  3.16x    30.2  2.83x
+ row13    qkv      65536   128   384      106.6   104.6  1.02x    82.0  1.30x    66.2  1.61x    38.8  2.75x    50.0  2.13x    64.2  1.66x
+ row08    qkv       8192  1024  3072      154.3   239.4  0.64x   143.8  1.07x   198.9  0.78x   150.2  1.03x   137.5  1.12x   216.6  0.71x
+ row03    qkv        512   128   384        4.3     4.5  0.97x     3.8  1.13x     3.8  1.14x     3.1  1.41x     4.1  1.06x     3.2  1.37x
+
+  (cell: achieved TFLOP/s, and time relative to cuBLAS -- <1.00x is faster)
+
+  cfg2  = FP16-accum, no split   (control)
+  cfg12 = FP32-accum twin        (control)
+  cfg24/25 = FP16-accum + split-K 2 / 4
+  cfg26/27 = FP16-accum + split-K 2, other tiles
+
+  configs beating cuBLAS: [('row09-11 qkv  ', 2, 1.0954860263723138), ('row09-11 o/ffn', 2, 1.0696379272689598), ('row08    qkv  ', 2, 1.5513449888677953), ('row08    qkv  ', 24, 1.2894021567203273), ('row08    qkv  ', 27, 1.4036573915103756), ('row03    qkv  ', 2, 1.0340909203656368)]
+
+G8_2C_DONE

@@ -40,8 +40,12 @@
 // CUTLASS example default). Raising it changes threadblock rasterisation order
 // and therefore L2 reuse; it is the one lever in this template that is neither
 // a tile size nor a pipeline depth.
+// G8.2: SPLITK threads CUTLASS's own split-K serial reduction through, so
+// the FP16-accumulate mainloop can be broken into slices whose partials are
+// combined outside it -- the CUTLASS-grade twin of csrc/g4_4_mma_gemm.cu's
+// within-block SPLIT carry. SPLITK=1 is the original behaviour.
 template <typename Acc, int BM, int BN, int BK, int WM, int WN, int WK,
-          int STAGES, int SWIZ = 1>
+          int STAGES, int SWIZ = 1, int SPLITK = 1>
 struct G46Gemm {
   using ElementA = cutlass::half_t;
   using ElementB = cutlass::half_t;
@@ -69,7 +73,10 @@ struct G46Gemm {
       cutlass::gemm::GemmShape<16, 8, 16>,       // mma.sync.m16n8k16
       Epilogue,
       cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<SWIZ>,
-      STAGES>;
+      STAGES,
+      128 / cutlass::sizeof_bits<ElementA>::value,   // AlignmentA (default)
+      128 / cutlass::sizeof_bits<ElementB>::value,   // AlignmentB (default)
+      (SPLITK > 1)>;                                 // SplitKSerial
 
   // Returns 0 on success; -1000 if the caller's workspace is too small
   // (*need is then set); otherwise -(int)cutlass::Status.
@@ -96,7 +103,7 @@ struct G46Gemm {
                                   ref_c,
                                   ref_d,
                                   {ElementCompute(1)},
-                                  1 /* split_k_slices */};
+                                  SPLITK /* split_k_slices */};
 
     size_t n = Gemm::get_workspace_size(args);
     if (need) *need = n;
@@ -116,11 +123,13 @@ struct G46Gemm {
   }
 };
 
-#define G46_DEFINE(IDX, ACC, BM, BN, BK, WM, WN, WK, STG, SWZ)               \
+#define G46_DEFINE_SK(IDX, ACC, BM, BN, BK, WM, WN, WK, STG, SWZ, SK)        \
   int g46_launch_##IDX(const void *A, const void *B, const void *bias,       \
                        void *D, int M, int N, int K, void *ws,               \
                        size_t ws_bytes, cudaStream_t stream, size_t *need,   \
                        int *smem_bytes) {                                    \
-    return G46Gemm<ACC, BM, BN, BK, WM, WN, WK, STG, SWZ>::launch(           \
+    return G46Gemm<ACC, BM, BN, BK, WM, WN, WK, STG, SWZ, SK>::launch(       \
         A, B, bias, D, M, N, K, ws, ws_bytes, stream, need, smem_bytes);     \
   }
+#define G46_DEFINE(IDX, ACC, BM, BN, BK, WM, WN, WK, STG, SWZ)               \
+  G46_DEFINE_SK(IDX, ACC, BM, BN, BK, WM, WN, WK, STG, SWZ, 1)

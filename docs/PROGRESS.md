@@ -4214,3 +4214,56 @@ Assets kept: `cfg26`/`cfg27` in `csrc/g4_4_mma_gemm.cu` (additive, experiment-on
 — the shipped model does not reference this extension), and the Phase-0 harness,
 which is the first thing in this project to score a candidate against the ship
 ceiling rather than the harness gate. Nothing shipped changed.
+
+### 60b. G8.2 Phase 1 — CUTLASS + split-K built and measured. The generalisation in 60 was wrong; the closure is not.
+
+Built on request, for completeness. Split-K was threaded through
+`csrc/g4_6_cutlass_gemm.cuh` (CUTLASS's `SplitKSerial` slot plus the
+`split_k_slices` argument, both previously hardcoded to 1) and four configs
+added via `experiments/g4_6_gen_cfgs.py` — **the one cell the accumulate-tier
+work had never covered**, since none of the original 24 CUTLASS configs used
+split-K and the hand kernel had the carry but only 55.1% efficiency.
+
+**Step 60's generalisation was too broad, and job 237 refutes it.** "Not
+tensor-core bound" is true at `K=128` but **false at `K=1024`**:
+
+| row08 qkv, M=8192 K=1024 N=3072 | TFLOP/s | vs cuBLAS |
+|---|---|---|
+| cuBLAS | 154.3 | — |
+| cfg12 FP32-accum twin | 143.8 | 1.07× slower |
+| **cfg2 FP16-accum, no split** | **239.4** | **1.55× faster** |
+| cfg27 FP16-accum + split-K 2 | 216.6 | 1.40× faster |
+| cfg24 FP16-accum + split-K 2 | 198.9 | 1.29× faster |
+| cfg25 FP16-accum + split-K 4 | 150.2 | 1.03× slower |
+
+239.4 TF is **above the 165.2 TF FP32-accum ceiling**, so the tier is genuinely
+engaged, and the twin A/B (239.4 vs 143.8 = **×1.66**) confirms it directly.
+Row 8's GEMMs are ~63% of its device time, so a 1.40× GEMM win is worth ~18% of
+that forward. A real candidate, not a rounding error.
+
+**Job 238 closes it on accuracy, and the trade curve is the reason.** Scored end
+to end against the ship ceiling:
+
+| row08 config | max_abs | speed |
+|---|---|---|
+| cfg2 (no split) | 7.392e-03 FAIL | 1.55× faster |
+| cfg24/27 (split-K 2) | 5.465e-03 FAIL | 1.29–1.40× faster |
+| cfg25 (split-K 4) | 3.532e-03 FAIL | **1.03× slower** |
+
+More carry buys accuracy and costs speed — and it **runs out of speed before it
+reaches the budget**. At four slices the win is already gone and `max_abs` is
+still ~2× the 0.00180 ceiling. No config on any official row is shippable.
+
+**A real technical finding worth recording: CUTLASS's serial split-K is the
+wrong tool for this rebuild.** At row 8 it reaches only 5.465e-03 where the hand
+kernel's within-block carry reached 2.253e-03 (job 235) — because
+`SplitKSerial` accumulates partials *through the fp16 output tensor* between
+slices, rounding to FP16 at each boundary, whereas `csrc/g4_4_mma_gemm.cu`'s
+`SPLIT` keeps an FP32 register accumulator. The proposal ("rebuild FP32 outside
+the tensor core") is sound and the hand kernel implements it correctly; the
+off-the-shelf CUTLASS mechanism does not implement it at all.
+
+**Verdict: G8.2 CLOSED**, now on measurement at both K regimes rather than on
+the K=128 generalisation. The correction matters: the tier is worth ×1.66 at
+`K=1024` and ~×1.01 at `K=128`, so any future accumulate-tier idea should be
+priced at the shape it targets, not from step 60's blanket claim.

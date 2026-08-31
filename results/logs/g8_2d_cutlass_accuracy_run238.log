@@ -1,0 +1,17 @@
+INFO:    gocryptfs not found, will not be able to use gocryptfs
+torch 2.13.0+cu130  NVIDIA GeForce RTX 4090
+budget: abs < 0.002 OR rel < 0.02;  ship ceiling 0.0018
+
+ shape     K    shipped               cfg12                cfg2               cfg24               cfg27               cfg25
+---------------------------------------------------------------------------------------------------------------------------
+ row01   128    0.00137   1.416e-03   SHIP   2.724e-03   FAIL   2.244e-03    rel   2.244e-03    rel   2.095e-03    rel
+ row06   128    0.00195   1.572e-03   SHIP   3.673e-03   FAIL   3.146e-03   FAIL   3.146e-03   FAIL   2.735e-03   FAIL
+ row07    32    0.00211   1.402e-03   SHIP   1.919e-03    rel   1.919e-03    rel   1.919e-03    rel   1.919e-03    rel
+ row08  1024    0.00141   1.305e-03   SHIP   7.392e-03   FAIL   5.465e-03   FAIL   5.465e-03   FAIL   3.532e-03   FAIL
+ row09   128    0.00145   1.370e-03   SHIP   2.724e-03   FAIL   2.244e-03    rel   2.244e-03    rel   2.095e-03    rel
+ row11   128    0.00137   1.513e-03   SHIP   2.724e-03   FAIL   2.244e-03    rel   2.244e-03    rel   2.095e-03    rel
+ row13   128    0.00137   1.142e-03   SHIP   2.437e-03    rel   2.211e-03   FAIL   2.211e-03   FAIL   2.095e-03    rel
+
+  shippable (max_abs <= 0.0018): NONE
+
+G8_2D_DONE
