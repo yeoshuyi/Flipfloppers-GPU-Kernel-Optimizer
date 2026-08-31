@@ -83,7 +83,6 @@ claim that its numbers are as trustworthy as a scored row rests on three
 measured legs, not on assertion.
 
 * 1 — The chunking is algebraically exact, not an approximation.
-
 * 2 — Where the real baseline fits, the chunked path matches it.
 * 3 — The only precision spend is FP16 storage, and it is priced at the full
 shape.
@@ -166,7 +165,7 @@ floor. Per representative shape:
 | Regime | Shapes | Binding wall | Shipped vs roofline |
 |---|---|---|---|
 | Latency / launch | 2–4, 12 | Kernel-body floor + Tensor-core pipeline fill on sub-roofline GEMMs | At the wall, without Hopper style Megakernel available (RTX 4090 runs Ada) |
-| Compute | 8 | 165.2 TFLOP/s | GEMMs at **94–96%** isolated, 84% in-model (L2 contention across 34 kernels) |
+| Compute | 8 | 165.2 TFLOP/s (FP16 Tensor + FP32 Accumulate)  | GEMMs at **94–96%** isolated, 84% in-model (L2 contention across 34 kernels) |
 | Memory bandwidth | 6 | DRAM GB/s | Elementwise at the roofline — **23.6 GB predicted vs 22.7 GB measured** |
 | O(S²) attention + memory | 13 | Flash `O(S²)` + LayerNorm/residual traffic | SDPA at its achievable floor, LN traffic runs against L2 |
 
