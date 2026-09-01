@@ -56,7 +56,7 @@ Evaluated by running the generated judge drop-in `torch_transformer_benchmark.py
 | 11 | 64 | 128 | 16 | 128 | 4.3858 ms | **0.2857 ms** | 15.35× | 0.00137 |
 | 12 | 64 | 128 | 4 | 32 | 1.0363 ms | **0.1229 ms** | 8.43× | 0.00141 |
 | 13 | 64 | 128 | 4 | 1024 | 70.153 ms | **2.2108 ms** | 31.73× | 0.00137 |
-| **14** | 32 | 1024 | 16 | 100000 | **OOM** | **9952.6 ms** | n/a | 0.00581 † |
+| **14** | 32 | 1024 | 16 | 100000 | **OOM** | **9952.6 ms** | n/a | n/a |
 
 All 13 scorable rows from one run of the generated judge drop-in
 (`results/logs/official_causal_sweep_run216.log`, `python3
