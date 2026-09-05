@@ -74,6 +74,36 @@ accuracy-checked](#how-row-14-is-benchmarked-and-accuracy-checked).
 
 </details>
 
+### Tail Latency: Speedup Holds Beyond the Median
+
+The harness scores median latency over a handful of calls. We went further:
+500 `torch.cuda.Event`-timed calls per shape, for both the baseline and
+shipped model, to check whether the optimization holds up away from the
+average case — not just whether the number the harness prints looks good.
+
+![worst-case latency vs baseline](assets/tail_latency.svg)
+
+**Worst-case (max, over 500 calls) latency improved 1.90×–21.37× per shape,
+geomean 5.64× — nearly matching the 7.01× geomean of the scored mean
+speedup. Every shape's worst observed call improved; none regressed.**
+Absolute latency variation (SD) also dropped on 11 of the 13 shapes (geomean
+2.4× tighter). The two exceptions — rows 5 and 8 — are shapes where the
+baseline itself was already jittering at a ~3.6 µs noise floor; a nominal
+rise to ~5 µs there is not a meaningful regression in absolute terms.
+
+We anchor this claim in *absolute* worst-case latency (ms), not "reduced
+variance": relative variability (coefficient of variation) is actually
+*higher* for the shipped model on the fastest, sub-millisecond shapes, since
+fixed dispatch/launch overhead now consumes a larger share of a much smaller
+mean — arithmetic, not a regression. On the compute-bound shapes (6, 8, 13),
+where real GPU work dominates the call, relative variability stays tight on
+both sides (well under 0.1% CV).
+
+Raw per-iteration timing logs and an interactive per-shape distribution
+explorer live at `results/artifacts/latency_distribution_20260905_141258_*.json`
+(`tools/latency_distribution_sweep.py` collects the samples,
+`tools/plot_latency_distribution.py` renders the explorer).
+
 ### How Row 14 is benchmarked and accuracy-checked
 
 Row 14 is unscorable, so every number for it comes from our own driver

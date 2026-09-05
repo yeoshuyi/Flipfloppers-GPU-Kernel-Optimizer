@@ -325,12 +325,99 @@ def fig_roofline():
     return svg(W, H, "".join(b), "roofline proximity")
 
 
+# ===========================================================================
+# 4. tail latency: min-max envelope, baseline vs shipped
+#    source: results/artifacts/latency_distribution_20260905_141258_rows1-13.json
+#    (500 torch.cuda.Event-timed calls per shape/variant; row 14 -- fp16 input,
+#    optimized-only, not comparable in absolute ms -- omitted, see
+#    tools/latency_distribution_sweep.py / the interactive chart for it)
+# ===========================================================================
+# row, shape_tag, base_min, base_mean, base_max, opt_min, opt_mean, opt_max, mean_sp, max_sp
+TAIL = [
+    (1,  "",         0.9892, 1.0137, 1.1998,  0.2099, 0.2125, 0.2898,  4.771,  4.140),
+    (2,  "B=1",      0.9902, 1.0021, 1.1673,  0.0768, 0.0885, 0.1649, 11.318,  7.081),
+    (3,  "B=4",      1.2043, 1.2263, 1.3804,  0.0870, 0.0934, 0.1741, 13.126,  7.929),
+    (4,  "B=16",     1.2060, 1.2252, 1.4409,  0.1096, 0.1120, 0.1997, 10.936,  7.216),
+    (5,  "B=128",    1.6968, 1.7053, 1.7347,  0.3523, 0.3573, 0.4762,  4.773,  3.643),
+    (6,  "B=10000",  290.4453, 290.5341, 290.6745, 52.5527, 52.5960, 52.7114, 5.524, 5.514),
+    (7,  "d=32",     1.0794, 1.2240, 1.2800,  0.1024, 0.1041, 0.1792, 11.763,  7.143),
+    (8,  "d=1024",   8.3436, 8.3534, 8.3876,  4.3213, 4.3294, 4.4186,  1.929,  1.898),
+    (9,  "H=1",      0.9158, 0.9283, 0.9926,  0.2099, 0.2118, 0.2836,  4.384,  3.499),
+    (10, "H=2",      1.2216, 1.2399, 1.6650,  0.2130, 0.2158, 0.2929,  5.745,  5.685),
+    (11, "H=16",     4.3994, 4.4115, 4.4810,  0.2857, 0.2881, 0.3665, 15.310, 12.227),
+    (12, "S=32",     1.2144, 1.2336, 1.3916,  0.4722, 0.4847, 0.5714,  2.545,  2.435),
+    (13, "S=1024",   70.1133, 70.1534, 70.2587, 3.2102, 3.2208, 3.2870, 21.781, 21.374),
+]
+TAIL_GEOMEAN_MEAN = 7.01
+TAIL_GEOMEAN_MAX = 5.64
+
+
+def fig_tail_latency():
+    W, H = 960, 610
+    x0, x1 = 210, 620          # per-row bar track (each row scaled to its own baseline max)
+    top, rowh = 138, 34
+    bottom = top + len(TAIL) * rowh
+    H = bottom + 40
+
+    b = []
+    b.append(T(36, 40, "Speedup holds at the tail, not just the mean", 18, INK, weight="600"))
+    b.append(T(36, 61, "official causal matrix · fp32 · min–max envelope over "
+                       "500 torch.cuda.Event-timed calls per shape (● marks the mean)",
+              12, SUB))
+    b.append(T(36, 88, f"worst-case (max) speedup 1.90×–21.37× per shape · "
+                       f"geomean {TAIL_GEOMEAN_MAX:.2f}× — "
+                       f"nearly matches the {TAIL_GEOMEAN_MEAN:.2f}× geomean mean speedup: "
+                       f"no shape's worst observed call got worse",
+              12.5, C_OK, weight="600"))
+    b.append(T(36, 106, "each row's axis is independently scaled to that row's own baseline "
+                        "range — bars are not comparable across rows, only within one (exact "
+                        "ms at right); row 14 (fp16 input, optimized-only) omitted, see the "
+                        "interactive chart", 10.5, SUB))
+
+    # legend
+    b.append(R(x0, 118, 11, 8, C_ROOF, rx=2)); b.append(T(x0 + 16, 126, "baseline range", 11, SUB))
+    lx = x0 + 16 + len("baseline range") * 6.4 + 24
+    b.append(R(lx, 118, 11, 8, C_OK, rx=2)); b.append(T(lx + 16, 126, "shipped range", 11, SUB))
+
+    for i, (row, tag, bmin, bmean, bmax, omin, omean, omax, mean_sp, max_sp) in enumerate(TAIL):
+        y = top + i * rowh
+        b.append(T(x0 - 12, y + 12, f"row {row}", 12, INK, anchor="end", mono=True))
+        if tag:
+            b.append(T(x0 - 12, y + 25, tag, 10, SUB, anchor="end", mono=True))
+
+        axis_max = bmax * 1.08
+
+        def px(v, axis_max=axis_max):
+            return x0 + (x1 - x0) * v / axis_max
+
+        # baseline range (min-max), mean tick
+        b.append(R(px(bmin), y + 1, px(bmax) - px(bmin), 9, C_ROOF, rx=2))
+        mx = px(bmean)
+        b.append(LN_(mx, y - 1, mx, y + 12, INK, 1.5))
+
+        # shipped range (min-max), mean tick
+        b.append(R(px(omin), y + 15, max(px(omax) - px(omin), 1.5), 9, C_OK, rx=2))
+        mx = px(omean)
+        b.append(LN_(mx, y + 13, mx, y + 26, INK, 1.5))
+
+        b.append(T(x1 + 14, y + 12, f"{max_sp:.1f}× worst  ·  {mean_sp:.1f}× mean",
+                   12, C_OK, weight="600"))
+        b.append(T(x1 + 14, y + 26, f"{bmax:g}→{omax:g} ms max", 10, SUB, mono=True))
+
+    b.append(LN_(x0, top - 10, x0, bottom - 4, GRID, 1))
+    b.append(T(36, H - 14,
+              "source: results/artifacts/latency_distribution_20260905_141258_rows1-13.json "
+              "(job 240, tools/latency_distribution_sweep.py)", 10, SUB, mono=True))
+    return svg(W, H, "".join(b), "worst-case latency vs baseline")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for name, fn in [("results_speedup", fig_speedup),
                      ("latency_breakdown", fig_latency),
                      ("pareto_accuracy", fig_pareto),
-                     ("roofline", fig_roofline)]:
+                     ("roofline", fig_roofline),
+                     ("tail_latency", fig_tail_latency)]:
         p = os.path.join(OUT, name + ".svg")
         with open(p, "w") as f:
             f.write(fn())
